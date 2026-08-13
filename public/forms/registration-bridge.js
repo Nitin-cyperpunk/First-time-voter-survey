@@ -1890,6 +1890,7 @@
             referrerCode: attribution.code || undefined,
             referralPlatform: attribution.platform || undefined,
             answers: collectScreenerAnswers(),
+            answerJson: collectFtvAnswerJson(),
             responseTimes: tracking.responseTimes,
             analytics: tracking.analytics || undefined,
             startedAt: tracking.startedAt || submitRegistration.startedAt,
@@ -2677,6 +2678,20 @@
     };
   }
 
+  function collectFtvAnswerJson() {
+    try {
+      if (typeof window.buildPayload === "function") {
+        const payload = window.buildPayload();
+        if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+          return payload;
+        }
+      }
+    } catch (error) {
+      console.warn("FTV buildPayload unavailable:", error);
+    }
+    return undefined;
+  }
+
   function collectTerminationPayload() {
     if (typeof window.__concaveCollectTerminations === "function") {
       const collected = window.__concaveCollectTerminations();
@@ -2794,6 +2809,7 @@
           acquisitionSource: acquisition.source || undefined,
           otherSource: acquisition.other || undefined,
           answers: collectScreenerAnswers(),
+          answerJson: collectFtvAnswerJson(),
           responseTimes: tracking.responseTimes,
           analytics: tracking.analytics || undefined,
           startedAt: tracking.startedAt,
