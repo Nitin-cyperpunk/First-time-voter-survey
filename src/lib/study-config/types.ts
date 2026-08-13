@@ -27,6 +27,14 @@ export type StudyConfig = {
   survey_reward_amount: number;
   /** Referral incentive per qualified friend (₹). Default 0. */
   referral_reward_amount: number;
+  /** Global urban share of each state allocation. Default 50 (50:50 with rural). */
+  urban_non_urban_pct: number;
+  /** Soft reallocation: donor cell fill % must be at or below this. */
+  quota_reallocation_min_fill_pct: number;
+  /** Soft reallocation: days since last completion in the donor cell. */
+  quota_reallocation_after_days: number;
+  /** Soft reallocation: max transfer as % of donor remaining. */
+  quota_reallocation_max_transfer_pct: number;
 };
 
 export type StudyConfigPatch = Partial<StudyConfig>;

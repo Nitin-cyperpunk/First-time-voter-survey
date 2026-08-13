@@ -2,22 +2,26 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getCurrentAdmin } from "@/lib/auth/admin-session";
+import { INDIA_REGIONS } from "@/lib/india-states";
 import { canAccess } from "@/lib/roles";
-import { getStudyConfig } from "@/server/repositories/form-settings.repository";
 import { logConfigChange } from "@/server/repositories/config-audit.repository";
+import { createCity } from "@/server/repositories/cities.repository";
 import {
-  createCity,
-  listCitiesWithCapacity,
-  sumActiveCityCapacities,
-} from "@/server/repositories/cities.repository";
+  buildQuotaSnapshot,
+  ensureStateAllocation,
+  normalizeCityInput,
+  validateCityClosesAt,
+} from "@/server/services/quota.service";
 
 export const dynamic = "force-dynamic";
 
 const createSchema = z.object({
   name: z.string().trim().min(2).max(80),
   state: z.string().trim().min(2).max(80),
-  areaType: z.enum(["urban", "local"]),
-  capacity: z.number().int().min(0).max(10_000),
+  areaType: z.enum(["urban", "rural", "non_urban", "local"]),
+  capacity: z.number().int().min(0).max(10_000).optional(),
+  buffer: z.number().int().min(0).max(10_000).optional(),
+  isOpen: z.boolean().optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -28,21 +32,23 @@ export async function GET() {
   }
 
   try {
-    const [cities, config] = await Promise.all([
-      listCitiesWithCapacity(),
-      getStudyConfig(),
-    ]);
-    const activeSum = cities
-      .filter((city) => city.isActive)
-      .reduce((sum, city) => sum + city.capacity, 0);
+    const snapshot = await buildQuotaSnapshot();
     return NextResponse.json({
-      cities,
-      totalCapacity: config.total_capacity,
-      activeCityCapacitySum: activeSum,
-      unallocated: config.total_capacity - activeSum,
+      ...snapshot,
+      regions: INDIA_REGIONS,
+      totalCapacity: snapshot.totalCapacity,
+      activeCityCapacitySum: snapshot.totalClosesAt,
+      unallocated: snapshot.unallocated,
     });
   } catch (error) {
     console.error("GET /api/admin/cities failed:", error);
+    const message = error instanceof Error ? error.message : "";
+    if (/study_state_allocations|quota_cell|PGRST205|schema cache/i.test(message)) {
+      return NextResponse.json(
+        { error: "Quota migration 013 is pending. Run supabase/migrations/013_state_area_quota.sql." },
+        { status: 503 },
+      );
+    }
     return NextResponse.json({ error: "Failed to load cities." }, { status: 500 });
   }
 }
@@ -59,21 +65,43 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid city payload." }, { status: 400 });
     }
 
-    const config = await getStudyConfig();
-    const wouldBeActive = parsed.data.isActive !== false;
-    const activeSum = await sumActiveCityCapacities();
-    const nextSum = activeSum + (wouldBeActive ? parsed.data.capacity : 0);
-    if (nextSum > config.total_capacity) {
+    let normalized;
+    try {
+      normalized = normalizeCityInput(parsed.data);
+    } catch {
       return NextResponse.json(
-        {
-          error: `Active city capacities would be ${nextSum}, which exceeds total capacity (${config.total_capacity}). Unallocated: ${config.total_capacity - activeSum}.`,
-        },
+        { error: "State must be a Q15_1 India State / UT label." },
         { status: 400 },
       );
     }
 
+    const snapshot = await buildQuotaSnapshot();
+    const closesAt = parsed.data.capacity ?? 0;
+    try {
+      validateCityClosesAt(
+        snapshot,
+        normalized.state,
+        normalized.areaType,
+        null,
+        closesAt,
+      );
+    } catch (error) {
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Closes At exceeds cell." },
+        { status: 400 },
+      );
+    }
+
+    await ensureStateAllocation(normalized.state, admin.id);
+
     const city = await createCity({
-      ...parsed.data,
+      name: normalized.name,
+      state: normalized.state,
+      areaType: normalized.areaType,
+      capacity: closesAt,
+      buffer: parsed.data.buffer ?? 0,
+      isOpen: parsed.data.isOpen,
+      isActive: parsed.data.isActive,
       actorId: admin.id,
     });
 
@@ -84,12 +112,13 @@ export async function POST(request: Request) {
       entityId: city.id,
       field: "city.created",
       oldValue: null,
-      newValue: `${city.name} / ${city.state} / ${city.areaType} / cap ${city.capacity}`,
+      newValue: `${city.name} / ${city.state} / ${city.areaType} / closes ${city.capacity}`,
     });
 
     return NextResponse.json({ city }, { status: 201 });
   } catch (error) {
     console.error("POST /api/admin/cities failed:", error);
-    return NextResponse.json({ error: "Failed to create city." }, { status: 400 });
+    const message = error instanceof Error ? error.message : "Failed to create city.";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }

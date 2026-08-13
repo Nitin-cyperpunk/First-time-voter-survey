@@ -1,6 +1,7 @@
+import { parseAreaType, type AreaType } from "@/lib/india-states";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
-export type CityAreaType = "urban" | "local";
+export type CityAreaType = AreaType;
 
 export type CityRecord = {
   id: string;
@@ -8,6 +9,8 @@ export type CityRecord = {
   state: string;
   areaType: CityAreaType;
   capacity: number;
+  buffer: number;
+  isOpen: boolean;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -19,6 +22,7 @@ export type CityWithCapacity = CityRecord & {
   achieved: number;
   remaining: number;
   pctFull: number;
+  target: number;
 };
 
 type CityRow = {
@@ -27,6 +31,8 @@ type CityRow = {
   state: string;
   area_type: string;
   capacity: number;
+  buffer?: number | null;
+  is_open?: boolean | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -39,8 +45,10 @@ function mapCity(row: CityRow): CityRecord {
     id: row.id,
     name: row.name,
     state: row.state,
-    areaType: row.area_type === "local" ? "local" : "urban",
+    areaType: parseAreaType(row.area_type),
     capacity: row.capacity,
+    buffer: Math.max(0, row.buffer ?? 0),
+    isOpen: row.is_open !== false,
     isActive: row.is_active,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -49,16 +57,27 @@ function mapCity(row: CityRow): CityRecord {
   };
 }
 
-export async function countQualifiedCompletions(
-  cityId?: string | null,
-): Promise<number> {
-  const { data, error } = await getSupabaseAdmin().rpc(
-    "count_qualified_completions",
-    { p_city_id: cityId ?? null },
-  );
+export async function countQualifiedCompletions(filter?: {
+  cityId?: string | null;
+  state?: string | null;
+  areaType?: AreaType | null;
+}): Promise<number> {
+  const admin = getSupabaseAdmin();
+  const full = await admin.rpc("count_qualified_completions", {
+    p_city_id: filter?.cityId ?? null,
+    p_state: filter?.state ?? null,
+    p_area_type: filter?.areaType ?? null,
+  });
+  if (!full.error) {
+    return typeof full.data === "number" ? full.data : Number(full.data ?? 0);
+  }
+  if (filter?.state || filter?.areaType) throw full.error;
 
-  if (error) throw error;
-  return typeof data === "number" ? data : Number(data ?? 0);
+  const legacy = await admin.rpc("count_qualified_completions", {
+    p_city_id: filter?.cityId ?? null,
+  });
+  if (legacy.error) throw legacy.error;
+  return typeof legacy.data === "number" ? legacy.data : Number(legacy.data ?? 0);
 }
 
 export async function listCities(): Promise<CityRecord[]> {
@@ -87,7 +106,7 @@ export async function listCitiesWithCapacity(): Promise<CityWithCapacity[]> {
   const cities = await listCities();
   const withCounts = await Promise.all(
     cities.map(async (city) => {
-      const achieved = await countQualifiedCompletions(city.id);
+      const achieved = await countQualifiedCompletions({ cityId: city.id });
       const remaining = Math.max(0, city.capacity - achieved);
       const pctFull =
         city.capacity <= 0
@@ -95,20 +114,16 @@ export async function listCitiesWithCapacity(): Promise<CityWithCapacity[]> {
             ? 100
             : 0
           : Math.min(100, Math.round((achieved / city.capacity) * 1000) / 10);
-      return { ...city, achieved, remaining, pctFull };
+      return {
+        ...city,
+        achieved,
+        remaining,
+        pctFull,
+        target: Math.max(0, city.capacity - city.buffer),
+      };
     }),
   );
   return withCounts;
-}
-
-/** Active cities that still have remaining qualified slots. */
-export async function listSelectableCities(): Promise<
-  Array<Pick<CityRecord, "id" | "name" | "state" | "areaType">>
-> {
-  const cities = await listCitiesWithCapacity();
-  return cities
-    .filter((city) => city.isActive && city.remaining > 0)
-    .map(({ id, name, state, areaType }) => ({ id, name, state, areaType }));
 }
 
 export async function sumActiveCityCapacities(
@@ -124,7 +139,9 @@ export async function createCity(input: {
   name: string;
   state: string;
   areaType: CityAreaType;
-  capacity: number;
+  capacity?: number;
+  buffer?: number;
+  isOpen?: boolean;
   isActive?: boolean;
   actorId: string;
 }): Promise<CityRecord> {
@@ -134,7 +151,9 @@ export async function createCity(input: {
       name: input.name.trim(),
       state: input.state.trim(),
       area_type: input.areaType,
-      capacity: input.capacity,
+      capacity: input.capacity ?? 0,
+      buffer: input.buffer ?? 0,
+      is_open: input.isOpen ?? true,
       is_active: input.isActive ?? true,
       created_by: input.actorId,
       updated_by: input.actorId,
@@ -153,6 +172,8 @@ export async function updateCity(
     state?: string;
     areaType?: CityAreaType;
     capacity?: number;
+    buffer?: number;
+    isOpen?: boolean;
     isActive?: boolean;
     actorId: string;
   },
@@ -163,12 +184,16 @@ export async function updateCity(
     state?: string;
     area_type?: CityAreaType;
     capacity?: number;
+    buffer?: number;
+    is_open?: boolean;
     is_active?: boolean;
   } = { updated_by: input.actorId };
   if (input.name !== undefined) patch.name = input.name.trim();
   if (input.state !== undefined) patch.state = input.state.trim();
   if (input.areaType !== undefined) patch.area_type = input.areaType;
   if (input.capacity !== undefined) patch.capacity = input.capacity;
+  if (input.buffer !== undefined) patch.buffer = input.buffer;
+  if (input.isOpen !== undefined) patch.is_open = input.isOpen;
   if (input.isActive !== undefined) patch.is_active = input.isActive;
 
   const { data, error } = await getSupabaseAdmin()

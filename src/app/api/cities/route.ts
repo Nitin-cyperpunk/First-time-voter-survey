@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { listSelectableCities } from "@/server/repositories/cities.repository";
+import { listSelectableCities } from "@/server/services/quota.service";
 
 export const dynamic = "force-dynamic";
 

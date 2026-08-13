@@ -4,7 +4,7 @@ import { getCurrentAdmin } from "@/lib/auth/admin-session";
 import { canAccess } from "@/lib/roles";
 import { mergeStudyConfig } from "@/lib/study-config/parse";
 import { logConfigChange } from "@/server/repositories/config-audit.repository";
-import { sumActiveCityCapacities } from "@/server/repositories/cities.repository";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   getStudyConfig,
   updateStudyConfig,
@@ -46,11 +46,16 @@ export async function PUT(request: Request) {
     const body = await request.json();
     const previous = await getStudyConfig();
     const config = mergeStudyConfig(body?.config ?? body);
-    const activeSum = await sumActiveCityCapacities();
-    if (activeSum > config.total_capacity) {
+    const { data: allocRows } = await getSupabaseAdmin()
+      .from("study_state_allocations")
+      .select("allocation");
+    const stateSum = (
+      (allocRows ?? []) as Array<{ allocation?: number | null }>
+    ).reduce((sum, row) => sum + Number(row.allocation ?? 0), 0);
+    if (stateSum > config.total_capacity) {
       return NextResponse.json(
         {
-          error: `Sum of active city capacities (${activeSum}) exceeds total capacity (${config.total_capacity}). Unallocated would be ${config.total_capacity - activeSum}.`,
+          error: `Sum of state allocations (${stateSum}) exceeds total capacity (${config.total_capacity}). Unallocated would be ${config.total_capacity - stateSum}.`,
         },
         { status: 400 },
       );
@@ -92,8 +97,8 @@ export async function PUT(request: Request) {
     return NextResponse.json({
       success: true,
       config: saved,
-      activeCityCapacitySum: activeSum,
-      unallocated: config.total_capacity - activeSum,
+      activeCityCapacitySum: stateSum,
+      unallocated: config.total_capacity - stateSum,
     });
   } catch (error) {
     console.error("PUT /api/admin/study-config failed:", error);

@@ -27,7 +27,7 @@
  *   - showScreen(0)      Enamor wizard boot. FTV uses go(0). Bridge attach accepts either
  *                        plus a closing </script></body>.
  *
- * cities.area_type (urban|local) ≠ Q15_2 (5-point self-reported area). Never merge.
+ * cities.area_type (urban|rural) ≠ Q15_2 (5-point self-reported area). Never merge.
  */
 
 import type { FormType } from "@/lib/forms/types";

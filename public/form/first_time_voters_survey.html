@@ -839,7 +839,7 @@ S.push({ id:"QA", html:function(){
     ageOpts += '<label class="opt'+(on?' sel':'')+'"><input type="radio" name="qa_age" value="'+band+'"'+(on?' checked':'')+'><span>'+esc(band === "23+" ? "23 or older" : band)+'</span></label>';
   }
   var f = '<div class="fields">' +
-    '<div class="field wide"><label class="lbl" for="fCityId">Study city</label><select id="fCityId"><option value="">Select city</option></select></div>' +
+    '<div class="field wide"><label class="lbl" for="fCityId">City</label><select id="fCityId"><option value="">Select city</option></select></div>' +
     '<div class="field wide"><label class="lbl">Age</label><div class="opts" data-single="qa_age">'+ageOpts+'</div></div>' +
     '<div class="field"><label class="lbl" for="fEmail">Email (optional)</label><input type="email" id="fEmail" autocomplete="email"></div>' +
     '<div class="field"><label class="lbl" for="fArea">Area you reside</label><input type="text" id="fArea"></div>' +
@@ -879,7 +879,7 @@ S.push({ id:"QA", html:function(){
   var ageEl = document.querySelector('input[name="qa_age"]:checked');
   var ageBand = ageEl ? ageEl.value : "";
 
-  if(!cityId) return err("QA","Please select your study city.");
+  if(!cityId) return err("QA","Please select your city.");
   if(!ageBand) return err("QA","Please select your age.");
   if(email && !/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)) return err("QA","Please enter a valid email address.");
   if(!area) return err("QA","Please enter the area you reside in.");
@@ -1589,7 +1589,7 @@ function fillVisibleCitySelect(sel, current){
     var c = cities[i];
     var o = document.createElement("option");
     o.value = c.id;
-    o.textContent = c.name + (c.state ? " (" + c.state + ")" : "");
+    o.textContent = c.name;
     sel.appendChild(o);
   }
   if(keep) sel.value = keep;

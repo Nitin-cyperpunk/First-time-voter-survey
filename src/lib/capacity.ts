@@ -4,13 +4,17 @@
  * WHAT COUNTS: screener_responses.completion_status = 'Completed' only.
  * Terminated, partial, and NULL rows never consume a slot.
  *
- * Enforcement runs inside insert_screener_response_with_capacity (Postgres):
- * pg_advisory_xact_lock + count + INSERT in one transaction. Do not
- * select-count then insert from the app — that races.
+ * Four-level enforcement inside insert_screener_response_with_capacity:
+ * pg_advisory_xact_lock + city / cell / state / study counts + INSERT
+ * in one transaction. Do not select-count then insert from the app.
  */
 
 export type CapacityRejectCode =
   | "form_closed"
+  | "city_full"
+  | "cell_full"
+  | "state_full"
+  | "study_full"
   | "region_full"
   | "global_full"
   | "city_inactive"
@@ -19,8 +23,16 @@ export type CapacityRejectCode =
 export const CAPACITY_REJECT_MESSAGES: Record<CapacityRejectCode, string> = {
   form_closed:
     "This survey is no longer accepting responses. Please contact the admin if you believe this is an error.",
+  city_full:
+    "This city is no longer accepting responses. Please choose another city if one is available.",
+  cell_full:
+    "This area group is no longer accepting responses. Please choose another city if one is available.",
+  state_full:
+    "This state is no longer accepting responses. Please choose another city if one is available.",
+  study_full:
+    "This survey has reached its respondent capacity and is no longer accepting new completions.",
   region_full:
-    "This city is no longer accepting responses — the region is full. Please choose another city if one is available, or contact the admin.",
+    "This city is no longer accepting responses. Please choose another city if one is available.",
   global_full:
     "This survey has reached its respondent capacity and is no longer accepting new completions.",
   city_inactive:
@@ -41,6 +53,10 @@ export class CapacityError extends Error {
 export function isCapacityRejectCode(value: unknown): value is CapacityRejectCode {
   return (
     value === "form_closed" ||
+    value === "city_full" ||
+    value === "cell_full" ||
+    value === "state_full" ||
+    value === "study_full" ||
     value === "region_full" ||
     value === "global_full" ||
     value === "city_inactive" ||
@@ -60,7 +76,7 @@ const Q15_VALUES = new Set([
 
 /**
  * Pull Q15 self-reported area type from answers jsonb only.
- * Never use cities.area_type (urban|local) here.
+ * Never use cities.area_type (urban|rural) here.
  */
 export function extractSelfReportedAreaType(
   answers: Record<string, unknown> | null | undefined,

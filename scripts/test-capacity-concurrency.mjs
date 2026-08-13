@@ -186,11 +186,13 @@ async function main() {
     );
 
     const successes = results.filter((row) => row.ok === true);
-    const globalFull = results.filter((row) => row.code === "global_full");
+    const globalFull = results.filter(
+      (row) => row.code === "global_full" || row.code === "study_full",
+    );
     const finalCount = await countQualified();
 
     console.log(
-      `Concurrent Completed: ${successes.length} ok, ${globalFull.length} global_full, ${results.length - successes.length - globalFull.length} other`,
+      `Concurrent Completed: ${successes.length} ok, ${globalFull.length} study_full/global_full, ${results.length - successes.length - globalFull.length} other`,
     );
     console.log("Final qualified count:", finalCount);
 
@@ -198,7 +200,7 @@ async function main() {
       fail(`Expected exactly 1 success at cap-1, got ${successes.length}`);
     }
     if (globalFull.length !== 9) {
-      fail(`Expected 9 global_full rejects, got ${globalFull.length}`);
+      fail(`Expected 9 study_full/global_full rejects, got ${globalFull.length}`);
     }
     if (finalCount !== baselineQualified + 1) {
       fail(

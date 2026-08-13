@@ -138,7 +138,7 @@ export async function updateResponse(
     totalDurationSec?: number | null;
     ipAddress?: string | null;
     cityId?: string | null;
-    configAreaType?: "urban" | "local" | null;
+    configAreaType?: "urban" | "rural" | "non_urban" | "local" | null;
   },
 ) {
   const answersRecord =

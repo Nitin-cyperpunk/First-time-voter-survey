@@ -66,6 +66,30 @@ export function parseStudyConfig(raw: unknown): StudyConfig {
       0,
       1_000_000,
     ),
+    urban_non_urban_pct: asInt(
+      record.urban_non_urban_pct,
+      base.urban_non_urban_pct,
+      0,
+      100,
+    ),
+    quota_reallocation_min_fill_pct: asInt(
+      record.quota_reallocation_min_fill_pct,
+      base.quota_reallocation_min_fill_pct,
+      0,
+      100,
+    ),
+    quota_reallocation_after_days: asInt(
+      record.quota_reallocation_after_days,
+      base.quota_reallocation_after_days,
+      0,
+      3650,
+    ),
+    quota_reallocation_max_transfer_pct: asInt(
+      record.quota_reallocation_max_transfer_pct,
+      base.quota_reallocation_max_transfer_pct,
+      0,
+      100,
+    ),
   };
 }
 

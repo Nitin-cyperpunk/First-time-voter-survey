@@ -72,22 +72,31 @@ export async function listFtvExportBundle(
     ...new Set(respondents.map((row) => row.city_id).filter(Boolean)),
   ] as string[];
 
-  const cityAreaById = new Map<string, string>();
+  const cityById = new Map<string, { area_type: string; state: string }>();
   if (cityIds.length > 0) {
     const { data: cities, error: cityError } = await supabase
       .from("cities")
-      .select("id, area_type")
+      .select("id, area_type, state")
       .in("id", cityIds);
     if (cityError) throw cityError;
     for (const city of cities ?? []) {
-      cityAreaById.set(city.id, city.area_type);
+      cityById.set(city.id, { area_type: city.area_type, state: city.state });
     }
   }
 
-  const respondentsWithCity = respondents.map((row) => ({
-    ...row,
-    city_area_type: row.city_id ? (cityAreaById.get(row.city_id) ?? "") : "",
-  }));
+  const respondentsWithCity = respondents.map((row) => {
+    const city = row.city_id ? cityById.get(row.city_id) : undefined;
+    const areaType =
+      city?.area_type === "local" || city?.area_type === "non_urban"
+        ? "rural"
+        : (city?.area_type ?? "");
+    return {
+      ...row,
+      city_area_type: areaType,
+      city_state: city?.state ?? "",
+      quota_cell: city?.state && areaType ? `${city.state}|${areaType}` : "",
+    };
+  });
 
   const respondentIds = respondents
     .map((row) => row.respondent_id)

@@ -1,6 +1,10 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
-export type ConfigAuditEntityType = "study_config" | "city";
+export type ConfigAuditEntityType =
+  | "study_config"
+  | "city"
+  | "state_quota"
+  | "quota_reallocation";
 
 export type ConfigAuditEntry = {
   id: string;
@@ -61,7 +65,12 @@ export async function listConfigAuditLog(limit = 100): Promise<ConfigAuditEntry[
     id: row.id,
     actorId: row.actor_id,
     actorEmail: row.actor_email,
-    entityType: row.entity_type === "city" ? "city" : "study_config",
+    entityType:
+      row.entity_type === "city" ||
+      row.entity_type === "state_quota" ||
+      row.entity_type === "quota_reallocation"
+        ? row.entity_type
+        : "study_config",
     entityId: row.entity_id,
     field: row.field,
     oldValue: row.old_value,
