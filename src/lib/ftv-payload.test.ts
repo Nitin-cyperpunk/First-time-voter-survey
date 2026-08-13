@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { resolveFtvStatus } from "@/lib/ftv-payload";
+import { resolveFtvStatus, stampFtvRespondentId } from "@/lib/ftv-payload";
 
 test("uses COMPLETE when payload and terminations are empty", () => {
   assert.equal(resolveFtvStatus({}), "COMPLETE");
@@ -35,5 +35,12 @@ test("returns null for unknown terminate so CHECK is not violated", () => {
       terminations: [{ ruleKey: "consent" }],
     }),
     null,
+  );
+});
+
+test("stamps CI_FTV lead_id as respondent_id", () => {
+  assert.deepEqual(
+    stampFtvRespondentId({ respondent_id: null, status: "COMPLETE" }, "CI_FTV_0001"),
+    { respondent_id: "CI_FTV_0001", status: "COMPLETE" },
   );
 });

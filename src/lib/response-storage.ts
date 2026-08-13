@@ -15,6 +15,7 @@ const INTERNAL_ANSWER_KEYS = new Set([
   "_last_screen",
   "_termreason",
   "_endreason",
+  "__ftv_payload",
 ]);
 
 export type StoredAnswerValue = string | string[];

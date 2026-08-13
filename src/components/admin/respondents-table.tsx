@@ -46,12 +46,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useBulkTableState } from "@/hooks/use-bulk-table-state";
-import { fetchScreenerExportRows } from "@/lib/bulk-selection/bulk-actions-client";
+import { fetchFtvExportBundle } from "@/lib/bulk-selection/bulk-actions-client";
 import {
   exportParticipantRows,
   rowsToParticipantExport,
 } from "@/lib/bulk-selection/participant-export";
-import { downloadCsv, downloadExcel } from "@/lib/export";
+import { downloadCsv, downloadExcelWorkbook } from "@/lib/export";
 import {
   DUPLICATE_FILTER_OPTIONS,
   formatDuplicateStatusLabel,
@@ -359,11 +359,23 @@ export function RespondentsTable({ participants }: RespondentsTableProps) {
   async function handleExportSelected(format: "csv" | "excel") {
     const loadingId = toastLoading("Exporting selected respondents...");
     try {
-      const exportRows = await fetchScreenerExportRows(bulk.selectedIdList);
+      const bundle = await fetchFtvExportBundle(bulk.selectedIdList);
       if (format === "csv") {
-        downloadCsv("screener-selected.csv", exportRows);
+        downloadCsv("ftv-responses-selected.csv", bundle.rows, bundle.headers);
       } else {
-        downloadExcel("screener-selected.xlsx", "Screener", exportRows);
+        downloadExcelWorkbook("ftv-responses-selected.xlsx", [
+          { name: "Responses", rows: bundle.rows, headers: bundle.headers },
+          {
+            name: "Codebook",
+            rows: bundle.codebook,
+            headers: ["qid", "question", "type", "code", "label"],
+          },
+          {
+            name: "Field Summary",
+            rows: bundle.fieldSummary,
+            headers: ["status", "n", "pct", "avg completion minutes"],
+          },
+        ]);
       }
       dismissToast(loadingId);
       toastSuccess("Export ready.");
@@ -381,7 +393,7 @@ export function RespondentsTable({ participants }: RespondentsTableProps) {
     },
     {
       id: "export-screener",
-      label: "Export Screener",
+      label: "Export Responses",
       onClick: () => void handleExportSelected("csv"),
     },
   ];

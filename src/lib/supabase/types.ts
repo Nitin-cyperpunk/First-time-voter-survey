@@ -467,6 +467,7 @@ export type Database = {
           completed_at: string | null;
           terminated_at: string | null;
           duration_seconds: number | null;
+          referral_code: string | null;
           payload: Json;
           created_at: string;
         },
@@ -475,6 +476,7 @@ export type Database = {
           respondent_id: string;
           lead_id?: string | null;
           city_id?: string | null;
+          referral_code?: string | null;
           survey_version: string;
           status: string;
           started_at?: string | null;
@@ -530,6 +532,9 @@ export type Database = {
           respondent_id: string | null;
           lead_id: string | null;
           city_id: string | null;
+          inbound_referral_code: string | null;
+          own_referral_code: string | null;
+          referred_by_lead_id: string | null;
           survey_version: string | null;
           status: string | null;
           started_at: string | null;
@@ -592,6 +597,7 @@ export type Database = {
           p_duration_seconds?: number | null;
           p_lead_id?: string | null;
           p_city_id?: string | null;
+          p_referral_code?: string | null;
         };
         Returns: Json;
       };

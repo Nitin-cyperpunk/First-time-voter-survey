@@ -123,7 +123,7 @@ export function expandQuestionExportColumns(
     }
     return rows.map((row) => ({
       header: rowColumnHeader(qLabel, row.label),
-      storageKey: `${alias}::row::${row.label}`,
+      storageKey: `${alias}::row::${matrixItemCode(row)}`,
     }));
   }
 
@@ -184,22 +184,37 @@ function optionSelected(
   return false;
 }
 
+function matrixItemCode(row: {
+  label: string;
+  fieldName?: string;
+  qKey?: string;
+  key?: string;
+}): string {
+  return row.qKey || row.key || row.fieldName || row.label;
+}
+
 function matrixRating(
   value: unknown,
-  rowLabel: string,
+  row: { label: string; fieldName?: string; qKey?: string; key?: string },
 ): string {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return "";
   }
   const record = value as Record<string, unknown>;
-  const direct = record[rowLabel];
-  if (direct !== undefined && direct !== null && String(direct).trim()) {
-    return formatExportScalar(direct as string | number | boolean);
+  const candidates = [row.qKey, row.key, row.fieldName, row.label].filter(
+    (key): key is string => Boolean(key),
+  );
+  for (const candidate of candidates) {
+    const direct = record[candidate];
+    if (direct !== undefined && direct !== null && String(direct).trim()) {
+      return formatExportScalar(direct as string | number | boolean);
+    }
   }
-  // Case-insensitive / cleaned label fallback
-  const target = cleanExportLabel(rowLabel).toLowerCase();
+  const targets = new Set(
+    candidates.map((key) => cleanExportLabel(key).toLowerCase()),
+  );
   for (const [key, rating] of Object.entries(record)) {
-    if (cleanExportLabel(key).toLowerCase() === target) {
+    if (targets.has(cleanExportLabel(key).toLowerCase())) {
       return formatExportScalar(rating as string | number | boolean);
     }
   }
@@ -264,7 +279,7 @@ export function resolveQuestionExportCells(
     for (const row of rows) {
       cells[rowColumnHeader(qLabel, row.label)] = matrixRating(
         answerValue,
-        row.label,
+        row,
       );
     }
     return cells;

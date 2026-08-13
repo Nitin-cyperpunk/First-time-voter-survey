@@ -77,18 +77,29 @@ export async function runBulkActionWithToast(options: {
   }
 }
 
-export async function fetchScreenerExportRows(leadIds?: string[]) {
+export async function fetchFtvExportBundle(leadIds?: string[]) {
   const query =
     leadIds && leadIds.length > 0
       ? `?lead_ids=${encodeURIComponent(leadIds.join(","))}`
       : "";
-  const response = await fetch(`/api/admin/screener-responses/export${query}`);
+  const response = await fetch(`/api/admin/ftv-responses/export${query}`);
   const payload = await response.json();
 
   if (!response.ok) {
     throw new Error(payload.error ?? "Export failed.");
   }
 
-  return payload.rows as Record<string, string | number>[];
+  return payload as {
+    headers: string[];
+    rows: Record<string, string | number>[];
+    codebook: Array<Record<string, string | number>>;
+    fieldSummary: Array<Record<string, string | number>>;
+  };
+}
+
+/** @deprecated Use fetchFtvExportBundle */
+export async function fetchScreenerExportRows(leadIds?: string[]) {
+  const bundle = await fetchFtvExportBundle(leadIds);
+  return bundle.rows;
 }
 
