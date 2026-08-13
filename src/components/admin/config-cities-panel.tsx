@@ -179,7 +179,7 @@ export function ConfigCitiesPanel({
           onChange={(event) => setAreaType(event.target.value as CityAreaType)}
         >
           <option value="urban">Urban</option>
-          <option value="local">Local</option>
+          <option value="rural">Rural</option>
         </Select>
         <Input
           type="number"

@@ -81,6 +81,8 @@ function respondentFromPayload(payload: SamplePayload): FtvRespondentRow {
     lead_id: payload.respondent_id,
     city_id: "city-mumbai",
     city_area_type: "urban",
+    city_state: "Maharashtra",
+    quota_cell: "Maharashtra|urban",
     survey_version: payload.survey_version,
     status: payload.status,
     started_at: payload.started_at,
@@ -119,12 +121,12 @@ function respondentFromPayload(payload: SamplePayload): FtvRespondentRow {
   };
 }
 
-test("FTV export header count is 16 + 19 + 89 = 124", () => {
+test("FTV export header count is 16 + 21 + 89 = 126", () => {
   assert.equal(FTV_METADATA_HEADERS.length, 16);
-  assert.equal(FTV_PROFILE_HEADERS.length, 19);
+  assert.equal(FTV_PROFILE_HEADERS.length, 21);
   assert.equal(FTV_ANSWER_HEADERS.length, 89);
-  assert.equal(FTV_EXPORT_HEADERS.length, 124);
-  assert.equal(new Set(FTV_EXPORT_HEADERS).size, 124);
+  assert.equal(FTV_EXPORT_HEADERS.length, 126);
+  assert.equal(new Set(FTV_EXPORT_HEADERS).size, 126);
 });
 
 test("Q6b_10 header keys on item_code text after typo fix", () => {
@@ -159,6 +161,8 @@ test("complete sample pivots Q8 binaries, grids by item_code, and other text", (
   assert.equal(row.Q7_rank3_other, "Local water supply");
   assert.equal(row.Q15_3_other, "Diploma in Journalism");
   assert.equal(row.city_area_type, "urban");
+  assert.equal(row.city_state, "Maharashtra");
+  assert.equal(row.quota_cell, "Maharashtra|urban");
   assert.equal(row.Q15_2, "City");
   assert.notEqual(row.city_area_type, row.Q15_2);
 });

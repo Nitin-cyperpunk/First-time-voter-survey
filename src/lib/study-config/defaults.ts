@@ -23,6 +23,10 @@ export const DEFAULT_STUDY_CONFIG: StudyConfig = {
   term_q2_did_not_vote: true,
   survey_reward_amount: 50,
   referral_reward_amount: 0,
+  urban_non_urban_pct: 50,
+  quota_reallocation_min_fill_pct: 25,
+  quota_reallocation_after_days: 14,
+  quota_reallocation_max_transfer_pct: 50,
 };
 
 /** Registration capacity used as Registered /N denominator. */

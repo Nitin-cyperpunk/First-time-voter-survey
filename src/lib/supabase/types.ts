@@ -222,6 +222,7 @@ export type Database = {
           termination_reason: string | null;
           city_id: string | null;
           config_area_type: string | null;
+          config_state: string | null;
           self_reported_area_type: string | null;
         },
         {
@@ -242,6 +243,7 @@ export type Database = {
           termination_reason?: string | null;
           city_id?: string | null;
           config_area_type?: string | null;
+          config_state?: string | null;
           self_reported_area_type?: string | null;
         }
       >;
@@ -252,6 +254,8 @@ export type Database = {
           state: string;
           area_type: string;
           capacity: number;
+          buffer: number;
+          is_open: boolean;
           is_active: boolean;
           created_at: string;
           updated_at: string;
@@ -263,12 +267,78 @@ export type Database = {
           name: string;
           state: string;
           area_type: string;
-          capacity: number;
+          capacity?: number;
+          buffer?: number;
+          is_open?: boolean;
           is_active?: boolean;
           created_at?: string;
           updated_at?: string;
           created_by?: string | null;
           updated_by?: string | null;
+        }
+      >;
+      study_state_allocations: TableDefinition<
+        {
+          state: string;
+          allocation: number;
+          urban_pct: number;
+          allocation_manual: boolean;
+          urban_pct_manual: boolean;
+          updated_at: string;
+          updated_by: string | null;
+        },
+        {
+          state: string;
+          allocation: number;
+          urban_pct?: number;
+          allocation_manual?: boolean;
+          urban_pct_manual?: boolean;
+          updated_at?: string;
+          updated_by?: string | null;
+        }
+      >;
+      quota_cell_deltas: TableDefinition<
+        {
+          state: string;
+          area_type: string;
+          delta: number;
+        },
+        {
+          state: string;
+          area_type: string;
+          delta?: number;
+        }
+      >;
+      quota_reallocations: TableDefinition<
+        {
+          id: string;
+          actor_id: string | null;
+          actor_email: string | null;
+          from_state: string;
+          from_area_type: string;
+          to_state: string;
+          to_area_type: string;
+          amount: number;
+          reason: string | null;
+          from_achieved: number | null;
+          from_allocation_before: number | null;
+          from_days_since_last_completion: number | null;
+          created_at: string;
+        },
+        {
+          id?: string;
+          actor_id?: string | null;
+          actor_email?: string | null;
+          from_state: string;
+          from_area_type: string;
+          to_state: string;
+          to_area_type: string;
+          amount: number;
+          reason?: string | null;
+          from_achieved?: number | null;
+          from_allocation_before?: number | null;
+          from_days_since_last_completion?: number | null;
+          created_at?: string;
         }
       >;
       config_audit_log: TableDefinition<
@@ -582,7 +652,11 @@ export type Database = {
     };
     Functions: {
       count_qualified_completions: {
-        Args: { p_city_id?: string | null };
+        Args: {
+          p_city_id?: string | null;
+          p_state?: string | null;
+          p_area_type?: string | null;
+        };
         Returns: number;
       };
       insert_ftv_response: {

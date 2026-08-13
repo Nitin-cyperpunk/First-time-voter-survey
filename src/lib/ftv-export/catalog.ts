@@ -1,48 +1,11 @@
 /** FTV-v1 export catalog. Labels match the HTML questionnaire. */
 
+import { INDIA_STATES, INDIA_UTS } from "@/lib/india-states";
+
+export const FTV_STATES = INDIA_STATES;
+export const FTV_UTS = INDIA_UTS;
+
 export const EM_DASH = " — ";
-
-export const FTV_STATES = [
-  "Andhra Pradesh",
-  "Arunachal Pradesh",
-  "Assam",
-  "Bihar",
-  "Chhattisgarh",
-  "Goa",
-  "Gujarat",
-  "Haryana",
-  "Himachal Pradesh",
-  "Jharkhand",
-  "Karnataka",
-  "Kerala",
-  "Madhya Pradesh",
-  "Maharashtra",
-  "Manipur",
-  "Meghalaya",
-  "Mizoram",
-  "Nagaland",
-  "Odisha",
-  "Punjab",
-  "Rajasthan",
-  "Sikkim",
-  "Tamil Nadu",
-  "Telangana",
-  "Tripura",
-  "Uttar Pradesh",
-  "Uttarakhand",
-  "West Bengal",
-] as const;
-
-export const FTV_UTS = [
-  "Andaman and Nicobar Islands",
-  "Chandigarh",
-  "Dadra and Nagar Haveli and Daman and Diu",
-  "Delhi (NCT of Delhi)",
-  "Jammu and Kashmir",
-  "Ladakh",
-  "Lakshadweep",
-  "Puducherry",
-] as const;
 
 export const QTEXT = {
   Q1: "Were you eligible to vote for the first time in the 2024 Lok Sabha election?",
@@ -281,6 +244,8 @@ export const FTV_PROFILE_HEADERS = [
   "city",
   "city_id",
   "city_area_type",
+  "city_state",
+  "quota_cell",
   "state_code",
   "state",
   "zip",

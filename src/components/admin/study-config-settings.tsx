@@ -4,7 +4,7 @@ import { useMemo, useState, type ReactNode } from "react";
 
 import { BulkConfirmDialog } from "@/components/admin/bulk-selection";
 import { ConfigAuditLog } from "@/components/admin/config-audit-log";
-import { ConfigCitiesPanel } from "@/components/admin/config-cities-panel";
+import { CityTargetsPanel } from "@/components/admin/city-targets-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { closesAt } from "@/lib/study-config/defaults";
@@ -212,7 +212,8 @@ export function StudyConfigSettings({ initialConfig }: StudyConfigSettingsProps)
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-plum-muted">
           Hard cap on <strong>qualified completions</strong> only (passed
           terminate gates and submitted). Terminated and abandoned responses do
-          not count. Sum of active city capacities cannot exceed this number.
+          not count. Sum of <strong>state allocations</strong> cannot exceed this
+          number. City Closes At sums cannot exceed their urban / rural cell.
         </p>
         <label className="mt-4 block max-w-xs space-y-1.5">
           <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-plum-faint">
@@ -238,12 +239,12 @@ export function StudyConfigSettings({ initialConfig }: StudyConfigSettingsProps)
         >
           Unallocated: {unallocated}
           {unallocated < 0
-            ? " — save is blocked until city capacities fit."
+            ? " — save is blocked until state allocations fit."
             : null}
         </p>
       </section>
 
-      <ConfigCitiesPanel
+      <CityTargetsPanel
         totalCapacity={config.total_capacity}
         onCapacityHintChange={setActiveCitySum}
       />

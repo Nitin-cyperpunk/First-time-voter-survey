@@ -45,7 +45,7 @@ window.__concaveSelectableCities=${payload};
     cities.forEach(function(c){
       var o = document.createElement('option');
       o.value = c.id;
-      o.textContent = c.name + (c.state ? ' (' + c.state + ')' : '');
+      o.textContent = c.name;
       sel.appendChild(o);
     });
     if (current && cities.some(function(c){ return c.id === current; })) sel.value = current;

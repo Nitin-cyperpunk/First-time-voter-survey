@@ -93,6 +93,10 @@ export function toastRegistrationError(data: ApiErrorPayload) {
     data.code === "form_closed" ||
     data.code === "region_full" ||
     data.code === "global_full" ||
+    data.code === "city_full" ||
+    data.code === "cell_full" ||
+    data.code === "state_full" ||
+    data.code === "study_full" ||
     data.code === "city_inactive" ||
     data.code === "city_required"
   ) {

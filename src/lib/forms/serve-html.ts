@@ -8,7 +8,7 @@ import {
   injectSelectableCitiesScript,
 } from "@/lib/forms/inject-city-select";
 import { isRegistrationAccepting } from "@/lib/study-config/gates";
-import { listSelectableCities } from "@/server/repositories/cities.repository";
+import { listSelectableCities } from "@/server/services/quota.service";
 import { getActivePublishedForm } from "@/server/repositories/forms.repository";
 import { getStudyConfig } from "@/server/repositories/form-settings.repository";
 

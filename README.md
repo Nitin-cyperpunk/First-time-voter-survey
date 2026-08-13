@@ -52,7 +52,7 @@ Qualified completions consume city + global capacity. Terminated and abandoned r
 | Q16 | Household income |
 | Q17 | Open verbatim, **optional** |
 
-Q15 area type (`rural/village` · `small town` · `large town` · `city` · `metro`) is **not** the Config urban|local tag.
+Q15 area type (`rural/village` · `small town` · `large town` · `city` · `metro`) is **not** the Config `urban` / `rural` quota tag.
 
 ## Terminate logic
 
@@ -67,12 +67,18 @@ Superadmin only: **`/admin-ftv/settings`** (nav label: Config).
 
 - **Form open/close** (`form_status`) and auto-close when global cap is hit.
 - **Global total capacity** default **200** (qualified completions).
-- **Cities**: name, State/UT, operational **`urban` \| `local`** tag, per-city capacity. Sum of **active** city capacities cannot exceed total capacity (live Unallocated).
-- City full → hidden from the respondent selector; submit returns `region_full`.
+- **City Targets**: four-level quota — global → state → urban/rural cell → city Closes At. Sum of state allocations ≤ total capacity; sum of city Closes At ≤ cell.
+- State split defaults to equal (remainder first alphabetically). Odd 50:50 extra unit goes to **rural**. Per-state allocation and urban % can be overridden.
+- City **Target** is auto-divided inside the cell; **Buffer** is editable; submit enforces **Closes At** = target + buffer. Status = Achieved / Closes at only (no gender quota).
+- Config state must be a Q15_1 India State/UT label. `is_open` hides a city from the dropdown; `is_active` deactivates without deleting responses.
+- Dropdown shows **city names only** (no state / urban labels — that would bias Q15_2). A city appears only if there is remaining room at all four levels.
+- Submit codes: `city_full` · `cell_full` · `state_full` · `study_full` · `form_closed`. Completes only; terminates increment nothing.
+- Soft reallocation is **manual** (threshold X% after N days, up to Y% of remaining) and is audited from-cell / to-cell / amount.
 - Global full + auto-close → form closed screen; submit returns `form_closed`. Referral links still resolve to that closed screen (not 404).
-- Audit log for form status, total capacity, and city capacity.
 
-**Explicit:** Config `urban|local` is an operational quota tag. It is stored on `cities.area_type` and snapshotted to `screener_responses.config_area_type`. It is **separate** from Q15 self-reported 5-point area type (`screener_responses.self_reported_area_type`).
+**Sampling design:** 50:50 urban/rural within each state is **controlled, not PPS**. National estimates need weights. Report the unweighted urban:rural ratio at close. At N=200, more than 3 states pushes every 50:50 cell below 30.
+
+**Explicit:** Config `urban|rural` is an operational quota tag (`cities.area_type`, snapshotted to `screener_responses.config_area_type` + `config_state`). It is **separate** from Q15_1 (voter-roll state) and Q15_2 (5-point self-reported area). Export keeps `city_area_type`, `city_state`, and `quota_cell` independent of those answers.
 
 Admin login: `/admin-ftv/login`.
 
@@ -129,8 +135,14 @@ In the Supabase SQL editor, run **in order**:
 6. `supabase/migrations/006_fingerprint_admin.sql`
 7. `supabase/migrations/007_study_config.sql`
 8. `supabase/migrations/008_config_cities_capacity.sql`
+9. `supabase/migrations/009_ftv_lead_ids.sql`
+10. `supabase/migrations/010_ftv_responses_analysis.sql`
+11. `supabase/migrations/011_participants_age_band.sql`
+12. `supabase/migrations/012_ftv_contract_hardening.sql`
+13. `supabase/migrations/013_state_area_quota.sql`
+14. `supabase/migrations/014_area_type_rural.sql`
 
-Do not skip 008 — city quotas and atomic capacity enforcement live there.
+Already-applied DBs: do not replay 001–012. If 013 is not applied yet, run 013 then 014. If 013 already ran, run **014 only**.
 
 Then:
 
@@ -147,14 +159,14 @@ There is no SQL city seed. After login as superadmin:
 
 1. Open **Config** (`/admin-ftv/settings`).
 2. Set **Total capacity** (default 200).
-3. Add cities with State/UT, **urban or local**, and a capacity. Keep Unallocated ≥ 0.
-4. Only **active, non-full** cities appear on the respondent city selector.
+3. Add cities with a Q15_1 State/UT, **urban or rural**, and an optional buffer. Recalculate cell targets. Keep Unallocated ≥ 0.
+4. Only **open, active** cities with remaining room at city / cell / state / study appear on the respondent selector (city name only).
 
-Optional concurrency check (after 008 is applied): `pnpm test:capacity`.
+Optional concurrency check (after 013–014 are applied): `pnpm test:capacity`.
 
 ## Deployment
 
-1. Create a new Supabase project and run migrations 001–008.
+1. Create a new Supabase project and run migrations 001–014.
 2. Set the env vars above on the host (never commit real keys).
 3. `pnpm build` then `pnpm start`, or connect the repo to Vercel/Netlify with the same env.
 4. Set `NEXT_PUBLIC_APP_URL` to the production origin.
@@ -165,6 +177,7 @@ Optional concurrency check (after 008 is applied): `pnpm test:capacity`.
 Admin **Respondents** export (CSV / Excel) includes:
 
 - Lead ID (`CI_FTV_…`), name, mobile, DOB, city, status, timestamps
+- Config geography independent of Q15: `city_area_type`, `city_state`, `quota_cell`
 - Screener answers keyed as Q1…Q17 (plus contact fields)
 - Completion status (`Completed` / `Terminated`) and pipe-separated `termination_reason`
 - Timing / duration when captured
