@@ -6,38 +6,8 @@ import type { DashboardStatusConfig } from "@/features/participant-dashboard/typ
 
 const DASHBOARD_STATUS_CONFIG: Record<ParticipantStatus, DashboardStatusConfig> =
   {
-    lead: {
-      status: "lead",
-      badgeLabel: "UNDER REVIEW",
-      title: "Application Under Review",
-      message:
-        "We are reviewing your registration.\n\nPlease wait while we verify your eligibility.",
-      tone: "review",
-      showSurveyLocked: false,
-      showSurveyCta: false,
-    },
-    under_review: {
-      status: "under_review",
-      badgeLabel: "UNDER REVIEW",
-      title: "Application Under Review",
-      message:
-        "We are reviewing your registration.\n\nPlease wait while we verify your eligibility.",
-      tone: "review",
-      showSurveyLocked: false,
-      showSurveyCta: false,
-    },
-    eligible: {
-      status: "eligible",
-      badgeLabel: "",
-      title: "You're selected!",
-      message:
-        "Great news — you qualified for the study. One quick step: message us on Instagram to verify, and we'll send your survey link there.",
-      tone: "positive",
-      showSurveyLocked: false,
-      showSurveyCta: false,
-    },
-    not_eligible: {
-      status: "not_eligible",
+    terminated: {
+      status: "terminated",
       badgeLabel: "NOT ELIGIBLE",
       title: "Not a match this time",
       message:
@@ -48,7 +18,7 @@ const DASHBOARD_STATUS_CONFIG: Record<ParticipantStatus, DashboardStatusConfig> 
     },
     completed: {
       status: "completed",
-      badgeLabel: "SURVEY COMPLETED",
+      badgeLabel: "FORM COMPLETED",
       title: "Thank you!",
       message: "Your responses are under review.",
       tone: "positive",
@@ -105,7 +75,7 @@ const DASHBOARD_STATUS_CONFIG: Record<ParticipantStatus, DashboardStatusConfig> 
     },
   };
 
-const DEFAULT_CONFIG = DASHBOARD_STATUS_CONFIG.under_review;
+const DEFAULT_CONFIG = DASHBOARD_STATUS_CONFIG.completed;
 
 export function getDashboardStatusConfig(
   status: string,

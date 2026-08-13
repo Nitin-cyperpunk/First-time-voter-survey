@@ -8,11 +8,8 @@ export type ParticipantDashboardData = {
   screenerSubmitted: boolean;
   surveySubmitted: boolean;
   canSubmitSurvey: boolean;
-  refillRequired: boolean;
   showReferral: boolean;
   upiRequired: boolean;
-  surveyAccessGranted: boolean;
-  surveyUrl: string | null;
   mobile: string;
   leadId: string;
   upiId: string | null;

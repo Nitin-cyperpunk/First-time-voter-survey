@@ -1,0 +1,1933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Understanding First-Time Voters in India</title>
+<style>
+/* ============================================================
+   PALETTE
+   #F8F9FA Pearl White  - background
+   #1E3A8A Deep Navy    - primary text, headers, navigation
+   #F97316 Warm Saffron - accent: buttons, links, key data points
+   ============================================================ */
+:root{
+  --pearl:#F8F9FA;
+  --navy:#1E3A8A;
+  --saffron:#F97316;
+  --navy-soft:#42599f;
+  --navy-mist:#e5e9f4;
+  --line:#d7ddec;
+  --ink:#243149;
+  --muted:#6b7691;
+  --white:#ffffff;
+  --danger:#b42318;
+  --danger-bg:#fdecea;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --radius:6px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--pearl);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:16px;
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------- Progress rail ---------- */
+.rail{
+  position:sticky;top:0;z-index:40;
+  background:var(--white);
+  border-bottom:1px solid var(--line);
+}
+.rail-bar{height:4px;background:var(--navy-mist);}
+.rail-fill{height:100%;width:0%;background:var(--saffron);transition:width .35s ease;}
+.rail-meta{
+  max-width:760px;margin:0 auto;padding:9px 22px;
+  display:flex;justify-content:space-between;align-items:center;gap:12px;
+  font-size:12px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--muted);font-weight:600;
+}
+
+/* ---------- Shell ---------- */
+.shell{max-width:760px;margin:0 auto;padding:34px 22px 80px;}
+.screen{display:none;animation:rise .3s ease both;}
+.screen.on{display:block;}
+@keyframes rise{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+
+/* ---------- Type ---------- */
+h1{
+  font-family:var(--serif);font-weight:600;
+  font-size:clamp(26px,4.6vw,36px);line-height:1.18;
+  color:var(--navy);margin:0 0 18px;letter-spacing:-.01em;
+}
+h2.sect{
+  font-family:var(--sans);font-size:12px;font-weight:700;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--saffron);
+  margin:0 0 22px;display:flex;align-items:center;gap:10px;
+}
+h2.sect::after{content:"";flex:1;height:1px;background:var(--line);}
+.lede{font-size:16.5px;color:var(--ink);margin:0 0 14px;}
+.note{font-size:14px;color:var(--muted);margin:6px 0 0;}
+
+/* ---------- Question block ---------- */
+.q{
+  background:var(--white);border:1px solid var(--line);
+  border-radius:var(--radius);padding:22px 22px 20px;margin:0 0 18px;
+  position:relative;
+}
+.q.err{border-color:var(--danger);}
+/* Question codes (QA, QB, Q1 ...) stay in the DOM as anchors for
+   error targeting and export, but are never shown to the respondent. */
+.q-num{display:none;}
+.q-text{
+  font-family:var(--serif);font-size:19px;line-height:1.4;
+  color:var(--navy);font-weight:600;margin:0 0 4px;
+}
+.q-sub{font-size:14px;color:var(--muted);margin:6px 0 0;}
+.q-scale{
+  font-size:13px;color:var(--navy-soft);margin:10px 0 0;
+  background:var(--navy-mist);border-radius:4px;padding:8px 11px;
+}
+.opts{margin:16px 0 0;display:flex;flex-direction:column;gap:8px;}
+
+/* ---------- Choice rows ---------- */
+.opt{
+  display:flex;align-items:flex-start;gap:11px;
+  border:1px solid var(--line);border-radius:var(--radius);
+  padding:11px 13px;cursor:pointer;background:var(--white);
+  transition:border-color .15s,background .15s;
+}
+.opt:hover{border-color:var(--navy-soft);background:#fbfcfe;}
+.opt input{margin:3px 0 0;accent-color:var(--saffron);width:17px;height:17px;flex:none;cursor:pointer;}
+.opt span{flex:1;font-size:15.5px;}
+.opt.sel{border-color:var(--saffron);background:#fff7ed;}
+.opt.dim{opacity:.45;}
+
+/* ---------- Text inputs ---------- */
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;}
+.field{display:flex;flex-direction:column;gap:5px;}
+.field.wide{grid-column:1/-1;}
+label.lbl{font-size:13px;font-weight:600;color:var(--navy);letter-spacing:.01em;}
+input[type=text],input[type=email],input[type=tel],input[type=date],select,textarea{
+  font-family:var(--sans);font-size:15.5px;color:var(--ink);
+  border:1px solid var(--line);border-radius:var(--radius);
+  padding:10px 12px;background:var(--white);width:100%;
+}
+/* Safari/iOS ignore padding on date inputs, so pin the box height to match
+   the text fields exactly. */
+input[type=date]{height:44px;line-height:1.2;-webkit-appearance:none;appearance:none;}
+input:focus,select:focus,textarea:focus{
+  outline:2px solid var(--saffron);outline-offset:1px;border-color:var(--saffron);
+}
+textarea{resize:vertical;min-height:110px;line-height:1.5;}
+/* Date of birth inherits the shared field styling above; only the native
+   calendar button needs tinting to the palette navy. */
+.dobfield input[type=date]::-webkit-calendar-picker-indicator{
+  cursor:pointer;opacity:.75;
+  filter:invert(19%) sepia(56%) saturate(2300%) hue-rotate(215deg) brightness(93%) contrast(96%);
+}
+.dobfield input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1;}
+.other-in{margin:9px 0 0 28px;max-width:420px;}
+.counter{font-size:12.5px;color:var(--muted);text-align:right;margin-top:5px;}
+
+/* ---------- Grid (matrix) ---------- */
+.grid{margin-top:16px;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;}
+.grid-head{
+  display:grid;grid-template-columns:1fr repeat(5,50px);
+  background:var(--navy);color:var(--white);
+  font-size:12px;font-weight:700;
+}
+.grid-head div{padding:9px 4px;text-align:center;font-variant-numeric:tabular-nums;}
+.grid-head div:first-child{text-align:left;padding-left:13px;}
+.grid-row{
+  display:grid;grid-template-columns:1fr repeat(5,50px);
+  border-top:1px solid var(--line);align-items:center;
+}
+.grid-row:nth-child(even){background:#fbfcfe;}
+.grid-row.err{background:var(--danger-bg);}
+.grid-lab{padding:11px 13px;font-size:14.5px;}
+.grid-cell{display:flex;justify-content:center;padding:11px 0;}
+.grid-cell input{accent-color:var(--saffron);width:18px;height:18px;cursor:pointer;}
+.grid-key{display:none;}
+
+/* ---------- Rank ---------- */
+.rank-opt{
+  display:flex;align-items:center;gap:12px;
+  border:1px solid var(--line);border-radius:var(--radius);
+  padding:11px 13px;cursor:pointer;background:var(--white);
+  transition:border-color .15s,background .15s;
+}
+.rank-opt:hover{border-color:var(--navy-soft);}
+.rank-badge{
+  width:27px;height:27px;flex:none;border-radius:50%;
+  border:1.5px solid var(--line);color:transparent;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13.5px;font-weight:700;font-variant-numeric:tabular-nums;
+  background:var(--white);
+}
+.rank-opt.sel{border-color:var(--saffron);background:#fff7ed;}
+.rank-opt.sel .rank-badge{background:var(--saffron);border-color:var(--saffron);color:var(--white);}
+.rank-opt.full{opacity:.5;}
+.rank-opt span.t{font-size:15.5px;}
+
+/* ---------- Consent ---------- */
+.consent-box{
+  background:var(--white);border:1px solid var(--line);
+  border-left:3px solid var(--saffron);
+  border-radius:var(--radius);padding:20px 22px;margin:22px 0 20px;
+}
+.check{
+  display:flex;gap:11px;align-items:flex-start;padding:11px 0;
+  border-top:1px solid var(--line);
+}
+.check:first-child{border-top:none;padding-top:2px;}
+.check label{cursor:pointer;}
+
+/* ---------- Terms modal ---------- */
+.modal{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;padding:22px;}
+.modal[hidden]{display:none;}
+.modal-back{position:absolute;inset:0;background:rgba(30,58,138,.45);animation:fadeIn .2s ease both;}
+.modal-card{
+  position:relative;background:var(--white);border-radius:8px;
+  width:100%;max-width:620px;max-height:86vh;display:flex;flex-direction:column;
+  box-shadow:0 18px 50px rgba(30,58,138,.28);
+  animation:cardIn .24s ease both;
+}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+@keyframes cardIn{from{opacity:0;transform:translateY(14px) scale(.98);}to{opacity:1;transform:none;}}
+.modal-head{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  padding:20px 24px 14px;border-bottom:1px solid var(--line);
+}
+.modal-head h2{
+  font-family:var(--serif);font-size:22px;font-weight:600;
+  color:var(--navy);margin:0;
+}
+.modal-x{
+  background:none;color:var(--muted);font-size:26px;line-height:1;
+  padding:0 4px;flex:none;
+}
+.modal-x:hover{color:var(--saffron);}
+.modal-body{overflow-y:auto;padding:18px 24px 6px;font-size:14.5px;line-height:1.65;color:var(--ink);}
+.modal-body h3{
+  font-size:14px;font-weight:700;color:var(--navy);
+  margin:20px 0 8px;letter-spacing:.01em;
+}
+.modal-body p{margin:0 0 12px;}
+.modal-body ul{margin:0 0 6px;padding-left:20px;}
+.modal-body li{margin-bottom:9px;}
+.modal-body strong{color:var(--navy);}
+.modal-disc{
+  margin-top:18px;padding:12px 14px;background:var(--pearl);
+  border-left:3px solid var(--saffron);border-radius:0 4px 4px 0;
+  font-size:13.5px;color:var(--muted);
+}
+.modal-foot{padding:14px 24px 20px;text-align:right;border-top:1px solid var(--line);}
+body.locked{overflow:hidden;}
+@media (max-width:640px){
+  .modal{padding:0;align-items:flex-end;}
+  .modal-card{max-width:none;max-height:92vh;border-radius:10px 10px 0 0;}
+  .modal-foot .btn{width:100%;}
+}
+.check input{margin:3px 0 0;width:18px;height:18px;accent-color:var(--saffron);flex:none;cursor:pointer;}
+.check span{font-size:14.5px;}
+
+/* ---------- Two-step reveal (Q6) ---------- */
+.substep{opacity:1;}
+.substep.hide{display:none;}
+.substep.dissolve-out{opacity:0;transform:translateY(-6px);transition:opacity .28s ease,transform .28s ease;}
+.substep.dissolve-in{animation:dissolveIn .34s ease both;}
+@keyframes dissolveIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+.subnav{
+  display:flex;align-items:center;gap:12px;
+  justify-content:flex-end;margin:-4px 0 18px;
+}
+.subnav.back{justify-content:flex-start;margin:-4px 0 18px;}
+.subhint{font-size:13px;color:var(--muted);}
+.arrow{
+  width:46px;height:46px;flex:none;border-radius:50%;
+  background:var(--saffron);color:var(--white);
+  font-size:20px;line-height:1;display:flex;align-items:center;justify-content:center;
+  transition:filter .15s,background .15s;
+}
+.arrow:hover:not(:disabled){filter:brightness(1.08);}
+.arrow:disabled{background:var(--navy-mist);color:var(--muted);cursor:not-allowed;}
+.arrow.ghost{
+  background:var(--white);color:var(--navy);border:1px solid var(--line);
+  width:40px;height:40px;font-size:17px;
+}
+.arrow.ghost:hover{background:var(--navy);color:var(--white);border-color:var(--navy);}
+
+/* ---------- Voice input (Q17) ---------- */
+.voice{display:flex;align-items:center;gap:12px;margin-top:14px;}
+.voice.hide{display:none;}
+.mic{
+  width:44px;height:44px;flex:none;border-radius:50%;
+  background:var(--white);border:1px solid var(--line);color:var(--navy);
+  display:flex;align-items:center;justify-content:center;
+  transition:background .15s,color .15s,border-color .15s;
+}
+.mic:hover{border-color:var(--saffron);color:var(--saffron);}
+.mic.rec{
+  background:var(--saffron);border-color:var(--saffron);color:var(--white);
+  animation:pulse 1.5s ease-out infinite;
+}
+@keyframes pulse{
+  0%{box-shadow:0 0 0 0 rgba(249,115,22,.45);}
+  70%{box-shadow:0 0 0 12px rgba(249,115,22,0);}
+  100%{box-shadow:0 0 0 0 rgba(249,115,22,0);}
+}
+.voice-txt{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13.5px;color:var(--muted);}
+#micLang{
+  width:auto;padding:5px 8px;font-size:13px;
+  border:1px solid var(--line);border-radius:4px;color:var(--navy);background:var(--white);
+}
+#micLang.hide{display:none;}
+.linkish{
+  background:none;color:var(--navy);font-size:13px;font-weight:600;padding:0;
+  text-decoration:underline;text-underline-offset:2px;
+}
+.linkish:hover{color:var(--saffron);}
+.linkish.hide{display:none;}
+.chips{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.chip{
+  font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:20px;
+  border:1px solid var(--line);background:var(--white);color:var(--navy);
+  transition:background .15s,border-color .15s,color .15s;
+}
+.chip:hover{border-color:var(--saffron);color:var(--saffron);}
+.chip.on{background:var(--saffron);border-color:var(--saffron);color:var(--white);}
+.chip.more{color:var(--muted);font-weight:500;}
+.voice-note{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  margin-top:10px;font-size:12.5px;color:var(--muted);
+  background:var(--navy-mist);border-radius:4px;padding:7px 11px;
+}
+.voice-note.hide{display:none;}
+.voice-note.warn{
+  background:#fff7ed;color:var(--ink);
+  border-left:3px solid var(--saffron);
+}
+.chips-lab{font-size:13px;color:var(--muted);}
+.chip.fix{background:var(--saffron);border-color:var(--saffron);color:var(--white);}
+.chip.fix:hover{filter:brightness(1.08);color:var(--white);}
+.chip.fix.hide{display:none;}
+
+/* ---------- Errors ---------- */
+.msg{
+  display:none;margin-top:13px;padding:9px 12px;
+  background:var(--danger-bg);border-left:3px solid var(--danger);
+  color:var(--danger);font-size:13.5px;border-radius:0 4px 4px 0;
+}
+.msg.on{display:block;}
+
+/* ---------- Nav ---------- */
+.nav{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-top:26px;}
+button{font-family:var(--sans);cursor:pointer;border:none;border-radius:var(--radius);}
+.btn{
+  background:var(--saffron);color:var(--white);
+  font-size:15.5px;font-weight:600;padding:13px 30px;
+  letter-spacing:.01em;transition:filter .15s;
+}
+.btn:hover{filter:brightness(1.07);}
+.btn:disabled{background:var(--line);color:var(--muted);cursor:not-allowed;filter:none;}
+.btn-back{
+  background:transparent;color:var(--navy);font-size:14.5px;font-weight:600;
+  padding:12px 4px;text-decoration:underline;text-underline-offset:3px;
+}
+.btn-back:hover{color:var(--saffron);}
+.btn-ghost{
+  background:var(--white);color:var(--navy);border:1px solid var(--navy);
+  font-size:14px;font-weight:600;padding:10px 20px;
+}
+.btn-ghost:hover{background:var(--navy);color:var(--white);}
+
+/* ---------- End screens ---------- */
+.end{
+  background:var(--white);border:1px solid var(--line);
+  border-top:3px solid var(--saffron);
+  border-radius:var(--radius);padding:38px 30px;text-align:center;
+}
+.end h1{margin-bottom:12px;}
+.end p{color:var(--muted);font-size:16px;max-width:460px;margin:0 auto 8px;}
+.json-wrap{margin-top:28px;text-align:left;}
+.json-wrap h3{
+  font-size:12px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--saffron);margin:0 0 10px;
+}
+pre{
+  background:var(--navy);color:#dbe3f7;padding:16px;border-radius:var(--radius);
+  font-size:11.5px;line-height:1.55;max-height:300px;overflow:auto;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  white-space:pre-wrap;word-break:break-word;margin:0;
+}
+.json-btns{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;}
+
+/* ---------- Mobile ---------- */
+@media (max-width:640px){
+  .shell{padding:26px 15px 70px;}
+  .q{padding:18px 16px 17px;}
+  .fields{grid-template-columns:1fr;}
+  .grid{border:none;}
+  .grid-head{display:none;}
+  .grid-key{
+    display:block;font-size:12px;color:var(--muted);
+    margin-bottom:10px;font-weight:600;
+  }
+  .grid-row{
+    display:block;border:1px solid var(--line);
+    border-radius:var(--radius);margin-bottom:9px;background:var(--white);
+  }
+  .grid-row:nth-child(even){background:var(--white);}
+  .grid-lab{padding:11px 13px 7px;font-weight:600;color:var(--navy);font-size:14.5px;}
+  .grid-cell{
+    display:inline-flex;flex-direction:column;align-items:center;gap:3px;
+    width:19.5%;padding:4px 0 12px;
+  }
+  .grid-cell::after{
+    content:attr(data-v);font-size:11.5px;color:var(--muted);
+    font-weight:700;font-variant-numeric:tabular-nums;
+  }
+  .nav{flex-direction:column-reverse;align-items:stretch;}
+  .btn{width:100%;}
+  .btn-back{width:100%;text-align:center;}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important;}
+}
+</style>
+</head>
+<body>
+
+<div class="rail" id="rail">
+  <div class="rail-bar"><div class="rail-fill" id="railFill"></div></div>
+  <div class="rail-meta">
+    <span>Independent research study &middot; Voting behaviour in India</span>
+  </div>
+</div>
+
+<div class="shell" id="shell"></div>
+
+<div class="modal" id="tcModal" role="dialog" aria-modal="true" aria-labelledby="tcTitle" hidden>
+  <div class="modal-back" data-close="1"></div>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2 id="tcTitle">Terms and Conditions</h2>
+      <button type="button" class="modal-x" id="tcClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p>Welcome to Concave Insights (operated by Studio Concave LLP). By participating in this research study, you agree to the following terms:</p>
+
+      <h3>1. Eligibility &amp; Participation</h3>
+      <ul>
+        <li><strong>Age Requirement:</strong> You confirm you are between 18 and 75 years of age, responding on your own behalf, and using only one registered mobile number.</li>
+        <li><strong>Voluntary Action:</strong> Participation is entirely voluntary. You may withdraw at any point by closing this page. Partial or incomplete responses will not be analyzed.</li>
+        <li><strong>Honesty:</strong> There are no right or wrong answers. Please provide honest, accurate responses to the best of your ability.</li>
+      </ul>
+
+      <h3>2. Privacy &amp; Data Security</h3>
+      <ul>
+        <li><strong>Anonymized Reporting:</strong> Your responses will be used solely for research purposes and reported in aggregate. No individual response will be published, attributed to you, or shared with clients in a personally identifiable format.</li>
+        <li><strong>Strictly No Marketing:</strong> Contact details are collected strictly for verification, de-duplication, and incentive processing. They will not be used for marketing and will never be shared with any political party, candidate, or commercial third party.</li>
+        <li><strong>Data Retention:</strong> Your data is stored securely and retained only for the duration of the research project and standard compliance audits.</li>
+      </ul>
+
+      <h3>3. Incentives, Verification &amp; Referrals</h3>
+      <ul>
+        <li><strong>Verification First:</strong> All submitted responses undergo quality checks. You will receive your incentive (e.g., via UPI) only after your response has been successfully verified by our team.</li>
+        <li><strong>Mid-Survey Termination:</strong> If your survey is terminated before completion (e.g., due to disqualification, failing quality checks, or a demographic mismatch), you will not receive the survey incentive.</li>
+        <li><strong>Referral Conditions:</strong> Referral bonuses are tied to successful completions. If the person you referred is terminated mid-survey or fails response verification, you will not receive the incentive for that referral.</li>
+        <li><strong>Fraud Prevention:</strong> We reserve the right to withhold or cancel rewards for rushed, duplicate, fraudulent, or invalid participation.</li>
+      </ul>
+
+      <p class="modal-disc"><strong>Disclaimer:</strong> Survey content is for research purposes only and does not constitute professional advice. We reserve the right to update these terms as needed.</p>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn" id="tcOk">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   CONFIG
+   ============================================================ */
+var SURVEY_VERSION = "FTV-v1";
+/* ---- Supabase ----------------------------------------------------------
+   Fill these two in and every submission (completes AND terminates) inserts
+   straight into the table below. Leave blank to fall back to POST_URL, or to
+   run fully offline. The anon key is safe to ship here as long as the table
+   has an insert-only RLS policy (see the SQL supplied with this file). */
+var SUPABASE_URL   = "";      // e.g. https://xxxxxxxx.supabase.co
+var SUPABASE_ANON_KEY = "";
+var SUPABASE_TABLE = "ftv_responses";
+var POST_URL = "";            // optional plain webhook, used only if SUPABASE_URL is blank
+
+/* --- Age gate (Option C): ECI qualifying-date logic ---------
+   On the 2024 roll  -> 18 by 01 Jan 2024 -> born on/before 01 Jan 2006
+   NOT on 2019 roll  -> under 18 on 01 Jan 2019 -> born after 01 Jan 2001
+   Eligible DOB window: 02 Jan 2001 .. 01 Jan 2006 (inclusive)      */
+var DOB_MIN = new Date(2001, 0, 2);
+var DOB_MAX = new Date(2006, 0, 1);
+var POLL_DATE = new Date(2024, 4, 20);   // 20 May 2024, midpoint of Apr-Jun 2024 poll
+var QUAL_DATE = new Date(2024, 0, 1);    // 01 Jan 2024 ECI qualifying date
+
+var STATES = ["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal"];
+var UTS = ["Andaman and Nicobar Islands","Chandigarh","Dadra and Nagar Haveli and Daman and Diu","Delhi (NCT of Delhi)","Jammu and Kashmir","Ladakh","Lakshadweep","Puducherry"];
+
+var SCALE6 = ["1","2","3","4","5"];
+
+var Q6A = ["Jobs and employment opportunities","Rising cost and cost of living","Your family's financial situation","India\u2019s overall economic performance","Government welfare schemes","Financial assistance","Access to affordable education","Skill development","Perception of economic inequality"];
+var Q6B = ["Integrity of the local candidate","Past performance of the local candidate","Leadership qualities of national political leaders","Corruption and government accountability","National security","Religion issues","Communal issues","Women\u2019s safety","Family or community considerations","Political information gathered thsrough social media"];
+var Q7 = ["Jobs and employment opportunities","Inflation and cost of living","Household financial circumstances","Future income and career prospects","India\u2019s overall economic performance","Welfare schemes and financial assistance","Education and skill development","Poverty and inequality","Local candidate quality","National political leadership","Corruption and accountability","National security","Religion or communal issues","Caste or community","Women\u2019s safety","Family or community preferences","Other (please specify)"];
+var Q8 = ["Friends or peers of a similar age","Parents or older family members","Other family members","Instagram","YouTube","X (Twitter)","Facebook","WhatsApp","Other social media platforms","Local newspapers or local news websites","National newspapers or national news websites","Television news","Radio","Podcasts","Political parties\u2019 or candidates\u2019 official social media accounts or websites","Political rallies, speeches, or campaign materials","Teachers, professors, or educational institutions","Other (please specify)","I did not actively seek political information"];
+var Q14 = ["Job creation","Inflation and cost of living","Economic growth","Poverty reduction","Education and skill development","Welfare provision"];
+
+/* ============================================================
+   STATE
+   ============================================================ */
+var A = {};                 // all answers
+var seed = Math.floor(Math.random() * 1e9);
+var order = {};             // recorded display order
+var idx = 0;                // current screen index
+var startedAt = new Date().toISOString();
+var respondentId = "FTV-" + new Date().toISOString().slice(0,10).replace(/-/g,"") + "-" +
+                   Math.random().toString(36).slice(2,7).toUpperCase();
+
+/* Seeded PRNG so display order is reproducible from the seed */
+function rng(s){ return function(){ s|=0; s = s + 0x6D2B79F5 | 0;
+  var t = Math.imul(s ^ s>>>15, 1|s); t = t + Math.imul(t ^ t>>>7, 61|t) ^ t;
+  return ((t ^ t>>>14) >>> 0) / 4294967296; }; }
+var rand = rng(seed);
+function shuffle(n){
+  var a = []; for(var i=0;i<n;i++) a.push(i+1);
+  for(var j=a.length-1;j>0;j--){ var k=Math.floor(rand()*(j+1)); var t=a[j]; a[j]=a[k]; a[k]=t; }
+  return a;
+}
+order.Q6a = shuffle(Q6A.length);
+order.Q6b = shuffle(Q6B.length);
+order.Q6_blocks = rand() < 0.5 ? ["Q6a","Q6b"] : ["Q6b","Q6a"];
+order.Q14 = shuffle(Q14.length);
+
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+/* ============================================================
+   RENDER HELPERS
+   ============================================================ */
+function qBlock(num, text, sub, body, scale){
+  return '<div class="q" id="q_'+num.replace(/[^A-Za-z0-9]/g,"")+'">' +
+    '<span class="q-num">'+esc(num)+'</span>' +
+    '<p class="q-text">'+text+'</p>' +
+    (sub ? '<p class="q-sub">'+sub+'</p>' : '') +
+    (scale ? '<p class="q-scale">'+scale+'</p>' : '') +
+    body +
+    '<div class="msg"></div></div>';
+}
+/* otherCode (optional): the option code that should reveal a
+   "Please specify" text box when chosen. */
+function single(key, opts, otherCode){
+  var h = '<div class="opts" data-single="'+key+'"' + (otherCode ? ' data-other="'+otherCode+'"' : '') + '>';
+  for(var i=0;i<opts.length;i++){
+    var c = i+1, on = A[key] && A[key].code === c;
+    h += '<label class="opt'+(on?' sel':'')+'" data-code="'+c+'">' +
+         '<input type="radio" name="'+key+'" value="'+c+'"'+(on?' checked':'')+'>' +
+         '<span>'+esc(opts[i])+'</span></label>';
+    if(otherCode && c === otherCode){
+      var v = (A[key] && A[key].other_text) ? esc(A[key].other_text) : "";
+      h += '<input type="text" class="other-in" id="oth_'+key+'" maxlength="120" ' +
+           'placeholder="Please specify" value="'+v+'" style="display:'+(on?'block':'none')+'">';
+    }
+  }
+  return h + '</div>';
+}
+function gridBlock(key, items, ord){
+  var h = '<div class="grid-key">Tap a number for every row &middot; 1 = lowest, 5 = highest</div><div class="grid" data-grid="'+key+'">';
+  h += '<div class="grid-head"><div>Factor</div>';
+  for(var s=0;s<5;s++) h += '<div>'+SCALE6[s]+'</div>';
+  h += '</div>';
+  for(var i=0;i<ord.length;i++){
+    var code = ord[i];
+    var cur = A[key] ? A[key]["r"+code] : null;
+    h += '<div class="grid-row" data-row="'+code+'"><div class="grid-lab">'+esc(items[code-1])+'</div>';
+    for(var v=1;v<=5;v++){
+      h += '<div class="grid-cell" data-v="'+v+'"><input type="radio" name="'+key+'_'+code+'" value="'+v+'"'+(cur===v?' checked':'')+'></div>';
+    }
+    h += '</div>';
+  }
+  return h + '</div>';
+}
+
+/* Indic -> Roman transliteration, tuned for readable Hinglish rather than
+   academic ISO-15919. "माझ्याकडे आहे" should come out "majhyaakade aahe",
+   not "mājhyākaḍe āhe". */
+
+var DEV_C = {
+  "\u0915":"k","\u0916":"kh","\u0917":"g","\u0918":"gh","\u0919":"ng",
+  "\u091A":"ch","\u091B":"chh","\u091C":"j","\u091D":"jh","\u091E":"ny",
+  "\u091F":"t","\u0920":"th","\u0921":"d","\u0922":"dh","\u0923":"n",
+  "\u0924":"t","\u0925":"th","\u0926":"d","\u0927":"dh","\u0928":"n","\u0929":"n",
+  "\u092A":"p","\u092B":"ph","\u092C":"b","\u092D":"bh","\u092E":"m",
+  "\u092F":"y","\u0930":"r","\u0931":"r","\u0932":"l","\u0933":"l","\u0934":"l",
+  "\u0935":"v","\u0936":"sh","\u0937":"sh","\u0938":"s","\u0939":"h",
+  "\u0958":"q","\u0959":"kh","\u095A":"g","\u095B":"z","\u095C":"r","\u095D":"rh",
+  "\u095E":"f","\u095F":"y"
+};
+var DEV_V = {
+  "\u0905":"a","\u0906":"aa","\u0907":"i","\u0908":"ee","\u0909":"u","\u090A":"oo",
+  "\u090B":"ri","\u0960":"ri","\u090C":"li",
+  "\u090F":"e","\u0910":"ai","\u0913":"o","\u0914":"au",
+  "\u090D":"e","\u090E":"e","\u0911":"o","\u0912":"o"
+};
+var DEV_M = {
+  "\u093E":"aa","\u093F":"i","\u0940":"ee","\u0941":"u","\u0942":"oo",
+  "\u0943":"ri","\u0944":"ri","\u0962":"li",
+  "\u0947":"e","\u0948":"ai","\u094B":"o","\u094C":"au",
+  "\u0945":"e","\u0946":"e","\u0949":"o","\u094A":"o"
+};
+var DEV_S = {
+  "\u0902":"n","\u0901":"n","\u0903":"h","\u093C":"","\u0964":".","\u0965":".",
+  "\u200C":"","\u200D":"","\u094D":""
+};
+var DEV_D = {"\u0966":"0","\u0967":"1","\u0968":"2","\u0969":"3","\u096A":"4",
+             "\u096B":"5","\u096C":"6","\u096D":"7","\u096E":"8","\u096F":"9"};
+
+/* Other Brahmic scripts share Devanagari's codepoint ordering, so shifting
+   them onto the Devanagari block lets one table serve all of them. */
+var BLOCKS = [
+  {name:"Devanagari", lo:0x0900, hi:0x097F, off:0},
+  {name:"Bengali",    lo:0x0980, hi:0x09FF, off:-0x0080},
+  {name:"Gurmukhi",   lo:0x0A00, hi:0x0A7F, off:-0x0100},
+  {name:"Gujarati",   lo:0x0A80, hi:0x0AFF, off:-0x0180},
+  {name:"Oriya",      lo:0x0B00, hi:0x0B7F, off:-0x0200},
+  {name:"Tamil",      lo:0x0B80, hi:0x0BFF, off:-0x0280},
+  {name:"Telugu",     lo:0x0C00, hi:0x0C7F, off:-0x0300},
+  {name:"Kannada",    lo:0x0C80, hi:0x0CFF, off:-0x0380},
+  {name:"Malayalam",  lo:0x0D00, hi:0x0D7F, off:-0x0400}
+];
+
+function detectScript(t){
+  for(var i=0;i<t.length;i++){
+    var c = t.charCodeAt(i);
+    for(var b=0;b<BLOCKS.length;b++){
+      if(c >= BLOCKS[b].lo && c <= BLOCKS[b].hi) return BLOCKS[b].name;
+    }
+    if(c >= 0x0600 && c <= 0x06FF) return "Arabic";
+  }
+  return "Latin";
+}
+function toDevanagari(t){
+  var out = "";
+  for(var i=0;i<t.length;i++){
+    var c = t.charCodeAt(i), done = false;
+    for(var b=1;b<BLOCKS.length;b++){
+      if(c >= BLOCKS[b].lo && c <= BLOCKS[b].hi){
+        out += String.fromCharCode(c + BLOCKS[b].off); done = true; break;
+      }
+    }
+    if(!done) out += t.charAt(i);
+  }
+  return out;
+}
+function toRoman(text, keepSchwa){
+  if(!text) return "";
+  var s = toDevanagari(text);
+  var out = "", i = 0, syl = [];   /* syl: syllables of the word in progress */
+
+  function flush(){
+    /* Schwa deletion: Hindi/Marathi drop the inherent "a" of a medial
+       syllable when the next syllable carries its own vowel, which is why
+       naukaree should read naukri. Word-initial schwas are kept. */
+    if(!keepSchwa){
+      for(var k = syl.length - 2; k >= 1; k--){
+        if(syl[k].implicit && syl[k+1] && syl[k+1].vowel && !syl[k+1].implicit) syl[k].vowel = "";
+      }
+    }
+    if(syl.length && syl[syl.length-1].implicit) syl[syl.length-1].vowel = "";
+    var w = "";
+    for(var m=0;m<syl.length;m++) w += syl[m].cons + syl[m].vowel;
+    /* Word-final long vowels read more naturally short in Hinglish. */
+    w = w.replace(/ee$/,"i").replace(/oo$/,"u");
+    syl = [];
+    return w;
+  }
+
+  while(i < s.length){
+    var ch = s.charAt(i);
+    if(DEV_C[ch]){
+      var cons = DEV_C[ch], j = i + 1;
+      if(s.charAt(j) === "\u093C") j++;                  /* nukta */
+      var nx = s.charAt(j);
+      if(nx === "\u094D"){                                /* virama: bare consonant */
+        syl.push({cons:cons, vowel:"", implicit:false}); i = j + 1; continue;
+      }
+      if(DEV_M[nx] !== undefined){
+        syl.push({cons:cons, vowel:DEV_M[nx], implicit:false}); i = j + 1; continue;
+      }
+      syl.push({cons:cons, vowel:"a", implicit:true}); i = j; continue;
+    }
+    if(DEV_V[ch] !== undefined){ syl.push({cons:"", vowel:DEV_V[ch], implicit:false}); i++; continue; }
+    if(DEV_M[ch] !== undefined){ syl.push({cons:"", vowel:DEV_M[ch], implicit:false}); i++; continue; }
+    if(DEV_D[ch] !== undefined){ out += flush() + DEV_D[ch]; i++; continue; }
+    if(DEV_S[ch] !== undefined){
+      /* Anusvara attaches to the syllable it follows, not the next one. */
+      if(DEV_S[ch] && syl.length){
+        syl[syl.length-1].vowel += DEV_S[ch];
+        syl[syl.length-1].implicit = false;   /* nasal makes the vowel audible */
+      }
+      else if(DEV_S[ch]) out += flush() + DEV_S[ch];
+      i++; continue;
+    }
+    out += flush() + ch; i++;
+  }
+  out += flush();
+  return out.replace(/aaa+/g,"aa").replace(/\s+/g," ").trim();
+}
+
+
+/* Detects English spoken into a non-English recogniser. Chrome returns no
+   usable confidence score in continuous mode, so the check is lexical. */
+var EN_HINTS = ("a about above after again all also am an and another any are as at " +
+"back be because been before being between both but by call came can cant come coming could " +
+"day did didnt do does doing dont down each even every first for from get give go going good got " +
+"had has have he her here him his how i if in into is it its just know last like little long look " +
+"made make man many may me might more most much must my never new no not now of off on once one " +
+"only or other our out over own people said same say see she should since so some still such take " +
+"than that the their them then there these they thing think thinking this those though thought " +
+"three through time to too two under up us use used very want was way we well went were what when " +
+"where which while who why will with would you your yes really actually maybe something anything " +
+"nothing everything myself things lot bit " +
+/* the same words as an Indic recogniser tends to spell them */
+"aay ay aai voj vaaj vaas vas vor tok toking taak taaking abaaut abaut abaout haau hau vi vii " +
+"ken kaan du duu dont dount nou ivhan iven tho thou iph em aem speeking spiking inglish english " +
+"den dhen tu tuu yu yuu aar ar sam saam maraathi hindi langvej langvage vhaay vaay naau nau " +
+"kaming kamming det dat dis eneething enithing laaeek laik laaik veri vhen vhat vhich vith " +
+"pipal piipal gavarnment govarment vot voting paarti prais praises jab jab s emplaayment " +
+"inphleshan inflashan mani kaast kaste fiil filing bikaaj bikaaz").split(/\s+/);
+var EN_SET = {}; EN_HINTS.forEach(function(w){ if(w) EN_SET[w] = 1; });
+
+/* Roman-script Hindi/Marathi markers, for the mirror case: someone speaking
+   an Indian language into the English recogniser. */
+var IN_HINTS = ("hai hain tha thi the nahi nahin kya kyun kyunki matlab bhi hi ka ki ke ko " +
+"mera meri mere apna apne humko hamko mujhe mujhko tumko usko unko log logon sarkar sarkaar " +
+"mehngai mahangai naukri rozgar vikas bharat desh vote vot diya diye karna karta karte hota " +
+"hote raha rahe liye wala wale bahut thoda zyada jyada acha achha bura theek phir aur lekin " +
+"agar toh to par se me mein hum ham aap tum wo woh yeh ye jo koi kuch sab pura poora " +
+"majha majhya kade aahe ahe nahi mala tula tyala kaay kase kuthe pan ani mhanun tyamule").split(/\s+/);
+var IN_SET = {}; IN_HINTS.forEach(function(w){ if(w) IN_SET[w] = 1; });
+
+function tokens(t){
+  return String(t||"").toLowerCase().replace(/[^a-z\s]/g," ").split(/\s+/).filter(function(w){ return w.length > 0; });
+}
+/* Doubled vowels are an artefact of transliteration, not of the word. */
+function norm(w){
+  return w.replace(/aa+/g,"a").replace(/ee+/g,"i").replace(/oo+/g,"u")
+          .replace(/ii+/g,"i").replace(/uu+/g,"u").replace(/(.)\1+/g,"$1");
+}
+function ratio(t, SET){
+  var ws = tokens(t);
+  if(ws.length < 3) return 0;
+  var hit = 0;
+  for(var i=0;i<ws.length;i++){
+    if(SET[ws[i]] || SET[norm(ws[i])]) hit++;
+  }
+  return hit / ws.length;
+}
+function looksEnglish(t){ return ratio(t, EN_SET); }
+function looksIndian(t){ return ratio(t, IN_SET); }
+
+/* Most likely spoken language, inferred from the state already collected in
+   QA. Respondents never have to declare a language before speaking; they can
+   still override it if the guess is wrong. */
+var STATE_LANG = {
+  1:"te-IN",  2:"hi-IN",  3:"bn-IN",  4:"hi-IN",  5:"hi-IN",  6:"mr-IN",
+  7:"gu-IN",  8:"hi-IN",  9:"hi-IN", 10:"hi-IN", 11:"kn-IN", 12:"ml-IN",
+ 13:"hi-IN", 14:"mr-IN", 15:"en-IN", 16:"en-IN", 17:"en-IN", 18:"en-IN",
+ 19:"hi-IN", 20:"pa-Guru-IN", 21:"hi-IN", 22:"hi-IN", 23:"ta-IN", 24:"te-IN",
+ 25:"bn-IN", 26:"hi-IN", 27:"hi-IN", 28:"bn-IN", 29:"hi-IN", 30:"hi-IN",
+ 31:"gu-IN", 32:"hi-IN", 33:"hi-IN", 34:"hi-IN", 35:"ml-IN", 36:"ta-IN"
+};
+var LANG_NAME = {
+  "en-IN":"English", "hi-IN":"\u0939\u093F\u0928\u094D\u0926\u0940",
+  "mr-IN":"\u092E\u0930\u093E\u0920\u0940", "bn-IN":"\u09AC\u09BE\u0982\u09B2\u09BE",
+  "ta-IN":"\u0BA4\u0BAE\u0BBF\u0BB4\u0BCD", "te-IN":"\u0C24\u0C46\u0C32\u0C41\u0C17\u0C41",
+  "gu-IN":"\u0A97\u0AC1\u0A9C\u0AB0\u0ABE\u0AA4\u0AC0", "kn-IN":"\u0C95\u0CA8\u0CCD\u0CA8\u0CA1",
+  "ml-IN":"\u0D2E\u0D32\u0D2F\u0D3E\u0D33\u0D02", "pa-Guru-IN":"\u0A2A\u0A70\u0A1C\u0A3E\u0A2C\u0A40"
+};
+/* The regional language most likely to be OFFERED, based on the state already
+   collected. It is only a suggested chip - never the active default. Setting a
+   regional recogniser by default is dangerous: an English speaker in Maharashtra
+   gets their words spelled phonetically in Devanagari, which is unrecoverable
+   garbage. English is the safe default because it also copes with the Hinglish
+   code-mixing most respondents actually use. */
+function regionalLang(){
+  var st = (A.profile && A.profile.state) ? A.profile.state.code : null;
+  if(st && STATE_LANG[st] && STATE_LANG[st] !== "en-IN") return STATE_LANG[st];
+  return null;
+}
+
+/* ============================================================
+   SCREENS  (document order preserved exactly)
+   ============================================================ */
+var S = [];
+
+/* --- S0 Intro + Consent + T&C --- */
+S.push({ id:"intro", bare:true, html:function(){
+  return '<h1>Understanding First-Time Voters in India</h1>' +
+  '<p class="lede">Hello! We are conducting an independent research study on the factors shaping the voting behaviour of first-time voters in India.</p>' +
+  '<p class="lede">This survey is intended for individuals who were eligible to vote for the first time in the 2024 Lok Sabha election. It should take approximately 4 minutes to complete.</p>' +
+  '<p class="lede">Participation is voluntary. Responses will be used only for academic research and reported in aggregate.</p>' +
+  '<div class="consent-box">' +
+    '<div class="check">' +
+      '<input type="checkbox" id="ckTC">' +
+      '<span><label for="ckTC">I have read and agree to the </label>' +
+      '<button type="button" class="linkish" id="openTC">Terms &amp; Conditions</button>.</span>' +
+    '</div>' +
+    '<div class="check">' +
+      '<input type="checkbox" id="ckCon">' +
+      '<span><label for="ckCon">By continuing, you confirm that you agree and give consent to participating in this study.</label></span>' +
+    '</div>' +
+  '</div>' +
+  '<div class="msg" id="mIntro"></div>' +
+  '<div class="nav"><span></span><button class="btn" id="btnStart" disabled>Start the survey</button></div>';
+}, wire:function(){
+  var tc = document.getElementById("ckTC"), cn = document.getElementById("ckCon"), b = document.getElementById("btnStart");
+  document.getElementById("openTC").onclick = function(){ openTerms(); };
+  function sync(){ b.disabled = !(tc.checked && cn.checked); }
+  tc.onchange = sync; cn.onchange = sync;
+  b.onclick = function(){ A.consent = "Agree"; A.terms_accepted = true; go(1); };
+}});
+
+/* --- S1 QA Basic Contact Details --- */
+S.push({ id:"QA", html:function(){
+  /* max caps the picker at today; no min is set, so out-of-scope dates can
+     still be entered and recorded as T04 screen-outs. */
+  var t = new Date();
+  var today = t.getFullYear() + "-" + pad(t.getMonth()+1) + "-" + pad(t.getDate());
+  var opt = '<option value="">Select a state or union territory</option><optgroup label="States">';
+  for(var i=0;i<STATES.length;i++) opt += '<option value="'+(i+1)+'">'+esc(STATES[i])+'</option>';
+  opt += '</optgroup><optgroup label="Union Territories">';
+  for(var j=0;j<UTS.length;j++) opt += '<option value="'+(29+j)+'">'+esc(UTS[j])+'</option>';
+  opt += '</optgroup>';
+  /* Paired two per row: Name | Phone, Email | Area, City | State, Zip | DOB. */
+  var f = '<div class="fields">' +
+    '<div class="field"><label class="lbl" for="fName">Name</label><input type="text" id="fName" autocomplete="name"></div>' +
+    '<div class="field"><label class="lbl" for="fPhone">Phone Number</label><input type="tel" id="fPhone" inputmode="numeric" autocomplete="tel" maxlength="16" placeholder="10-digit mobile number"></div>' +
+    '<div class="field"><label class="lbl" for="fEmail">Email</label><input type="email" id="fEmail" autocomplete="email"></div>' +
+    '<div class="field"><label class="lbl" for="fArea">Area you reside</label><input type="text" id="fArea"></div>' +
+    '<div class="field"><label class="lbl" for="fCity">City</label><input type="text" id="fCity"></div>' +
+    '<div class="field"><label class="lbl" for="fState">State</label><select id="fState">'+opt+'</select></div>' +
+    '<div class="field"><label class="lbl" for="fZip">Zip</label><input type="text" id="fZip" inputmode="numeric" autocomplete="postal-code" maxlength="6" placeholder="6-digit PIN code"></div>' +
+    '<div class="field dobfield"><label class="lbl" for="dDOB">Date of Birth</label><input type="date" id="dDOB" max="'+today+'"></div>' +
+  '</div>';
+  return qBlock("QA","Basic Contact Details","", f, "");
+}, wire:function(){
+  var p = A.profile || {};
+  set("fName",p.name); set("fEmail",p.email); set("fPhone",p.phone);
+  set("fArea",p.area); set("fCity",p.city); set("fZip",p.zip);
+  if(p.state) document.getElementById("fState").value = p.state.code;
+  if(p.dob) document.getElementById("dDOB").value = p.dob;
+  function set(id,v){ if(v) document.getElementById(id).value = v; }
+
+  /* Live masking: digits only, prefixes peeled, hard-capped at 10 / 6. */
+  var ph = document.getElementById("fPhone");
+  ph.addEventListener("input", function(){ ph.value = normPhone(ph.value); clearErr(); });
+  ph.addEventListener("blur",  function(){ ph.value = normPhone(ph.value); });
+  var zp = document.getElementById("fZip");
+  zp.addEventListener("input", function(){ zp.value = normZip(zp.value); clearErr(); });
+}, validate:function(){
+  var g = function(id){ return document.getElementById(id).value.trim(); };
+  var name=g("fName"), email=g("fEmail"),
+      area=g("fArea"), city=g("fCity"), st=document.getElementById("fState").value;
+  var phone = normPhone(g("fPhone"));
+  var zip   = normZip(g("fZip"));
+  if(!name) return err("QA","Please enter your name.");
+
+  /* Phone: exactly 10 digits, Indian mobile series (starts 6-9). */
+  if(!phone) return err("QA","Please enter your phone number.");
+  if(phone.length < 10) return err("QA","Phone number is too short. Please enter all 10 digits.");
+  if(!/^[6-9]/.test(phone)) return err("QA","Please enter a valid 10-digit mobile number starting with 6, 7, 8 or 9.");
+  if(!/^[6-9]\d{9}$/.test(phone)) return err("QA","Please enter a valid 10-digit mobile number.");
+
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)) return err("QA","Please enter a valid email address.");
+  if(!area) return err("QA","Please enter the area you reside in.");
+  if(!city) return err("QA","Please enter your city.");
+  if(!st) return err("QA","Please select your state or union territory.");
+
+  /* Zip: exactly 6 digits, Indian PIN codes never start with 0. */
+  if(!zip) return err("QA","Please enter your PIN code.");
+  if(zip.length < 6) return err("QA","PIN code is too short. Please enter all 6 digits.");
+  if(!/^[1-9]\d{5}$/.test(zip)) return err("QA","Please enter a valid 6-digit PIN code.");
+
+  var raw = document.getElementById("dDOB").value;
+  if(!raw) return err("QA","Please enter your date of birth.");
+  var dp = raw.split("-"), y = +dp[0], mo = +dp[1], dy = +dp[2];
+  var dt = new Date(y, mo-1, dy);
+  if(dt.getFullYear()!==y || dt.getMonth()!==mo-1 || dt.getDate()!==dy) return err("QA","That date of birth does not exist. Please check the day and month.");
+  if(dt > new Date()) return err("QA","Date of birth cannot be in the future.");
+  if(y < 1900) return err("QA","Please check the year of birth.");
+
+  A.profile = A.profile || {};
+  A.profile.name=name; A.profile.email=email; A.profile.phone=phone;
+  A.profile.area=area; A.profile.city=city; A.profile.zip=zip;
+  A.profile.state = { code:+st, label:stateLabel(+st) };
+  A.profile.dob = y + "-" + pad(mo) + "-" + pad(dy);
+  A.profile.age_at_poll = yrs(dt, POLL_DATE);
+  A.profile.age_at_qualifying_date = yrs(dt, QUAL_DATE);
+  A.profile.age_today = yrs(dt, new Date());
+
+  /* T04 age gate */
+  if(dt < DOB_MIN || dt > DOB_MAX) return stop("TERMINATE_AGE_OUT_OF_RANGE");
+  return true;
+}});
+
+/* --- S2 QC / QD --- */
+S.push({ id:"QCD", html:function(){
+  return qBlock("QC","What is your Gender?","", single("QC",["Woman","Man","Non-binary","Prefer to self-describe","Prefer not to say"]), "") +
+         qBlock("QD","What is your Relationship Status?","", single("QD",["Single","In a Relationship","Married (with no kids)","Married (with Kid/s)","Divorced","Separated"]), "");
+}, validate:function(){
+  if(!A.QC) return err("QC","Please select an option.");
+  if(!A.QD) return err("QD","Please select an option.");
+  return true;
+}});
+
+/* --- S3 Q1 (T02) --- */
+S.push({ id:"Q1", html:function(){
+  return qBlock("Q1","Were you eligible to vote for the first time in the 2024 Lok Sabha election?","", single("Q1",["Yes","No"]), "");
+}, validate:function(){
+  if(!A.Q1) return err("Q1","Please select an option.");
+  if(A.Q1.code === 2) return stop("TERMINATE_NOT_FIRST_TIME");
+  return true;
+}});
+
+/* --- S4 Q2 (T03) --- */
+S.push({ id:"Q2", html:function(){
+  return qBlock("Q2","Did you vote in the 2024 Lok Sabha election?","", single("Q2",["Yes","No"]), "");
+}, validate:function(){
+  if(!A.Q2) return err("Q2","Please select an option.");
+  if(A.Q2.code === 2) return stop("TERMINATE_DID_NOT_VOTE");
+  return true;
+}});
+
+/* --- S5 Q3 + Q4 --- */
+S.push({ id:"Q34", html:function(){
+  return qBlock("Q3","Which party / candidate of your constituency did you vote for?","",
+    single("Q3",["A party or candidate belonging to the governing national alliance","A party or candidate belonging to the main opposition alliance","A regional or other party","An independent candidate","NOTA","Prefer not to say"]), "") +
+  qBlock("Q4","Before the election, how sure were you that you would vote for this party or candidate?","",
+    single("Q4",["Very sure","Somewhat sure","Not very sure","Not sure at all"]), "");
+}, validate:function(){
+  if(!A.Q3) return err("Q3","Please select an option.");
+  if(!A.Q4) return err("Q4","Please select an option.");
+  return true;
+}});
+
+/* --- S6 Q5 --- */
+S.push({ id:"Q5", html:function(){
+  return qBlock("Q5","When deciding who to vote for, which factors were more important to you?","",
+    single("Q5",["Economic factors were much more important","Economic factors were somewhat more important","Economic and other factors were equally important","Other factors were somewhat more important","Other factors were much more important"]), "");
+}, validate:function(){ return A.Q5 ? true : err("Q5","Please select an option."); }});
+
+/* --- S7 Q6 (randomised items + randomised block order) --- */
+S.push({ id:"Q6", html:function(){
+  var scale = "1 &mdash; Not at all &nbsp;&middot;&nbsp; 2 &mdash; A little &nbsp;&middot;&nbsp; 3 &mdash; Somewhat &nbsp;&middot;&nbsp; 4 &mdash; A lot &nbsp;&middot;&nbsp; 5 &mdash; A great deal / very critical";
+  var h = qBlock("Q6","How much did each of these affect your decision on who to vote for?","", "", scale);
+  var blocks = {
+    Q6a: qBlock("6.a","Economic factors","", gridBlock("Q6a", Q6A, order.Q6a), ""),
+    Q6b: qBlock("6.b","Non-economic factors","", gridBlock("Q6b", Q6B, order.Q6b), "")
+  };
+  /* The two blocks are shown one at a time: the first dissolves out and the
+     second dissolves in. Block order is still randomised upstream. */
+  var k1 = order.Q6_blocks[0], k2 = order.Q6_blocks[1];
+  return h +
+    '<div class="substep" id="q6s1" data-key="'+k1+'">' + blocks[k1] +
+      '<div class="subnav">' +
+        '<span class="subhint" id="q6hint">Rate every factor to continue</span>' +
+        '<button type="button" class="arrow" id="q6fwd" aria-label="Next set of factors" disabled>&rarr;</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="substep hide" id="q6s2" data-key="'+k2+'">' + blocks[k2] +
+      '<div class="subnav back">' +
+        '<button type="button" class="arrow ghost" id="q6bck" aria-label="Back to the previous set of factors">&larr;</button>' +
+        '<span class="subhint">Back to the previous set</span>' +
+      '</div>' +
+    '</div>';
+}, wire:function(){
+  var s1 = document.getElementById("q6s1"), s2 = document.getElementById("q6s2");
+  var fwd = document.getElementById("q6fwd"), bck = document.getElementById("q6bck");
+  var hint = document.getElementById("q6hint"), nx = document.getElementById("btnNext");
+  var k1 = s1.getAttribute("data-key"), k2 = s2.getAttribute("data-key");
+  var n1 = (k1 === "Q6a") ? Q6A.length : Q6B.length;
+  var n2 = (k2 === "Q6a") ? Q6A.length : Q6B.length;
+
+  function done(k, n){
+    for(var i=1;i<=n;i++){ if(!A[k] || !A[k]["r"+i]) return false; }
+    return true;
+  }
+  function refresh(){
+    var d1 = done(k1, n1), d2 = done(k2, n2);
+    fwd.disabled = !d1;
+    hint.style.visibility = d1 ? "hidden" : "visible";
+    /* Continue unlocks only once both blocks are fully rated. */
+    if(nx) nx.disabled = !(d1 && d2);
+  }
+  function show(step, animate){
+    var out  = (step === 2) ? s1 : s2;
+    var into = (step === 2) ? s2 : s1;
+    if(!animate){
+      out.classList.add("hide"); into.classList.remove("hide"); refresh(); return;
+    }
+    out.classList.add("dissolve-out");
+    setTimeout(function(){
+      out.classList.add("hide"); out.classList.remove("dissolve-out");
+      into.classList.remove("hide"); into.classList.add("dissolve-in");
+      setTimeout(function(){ into.classList.remove("dissolve-in"); }, 340);
+      window.scrollTo({top:0, behavior:"smooth"});
+      refresh();
+    }, 280);
+  }
+
+  fwd.onclick = function(){ if(!fwd.disabled) show(2, true); };
+  bck.onclick = function(){ show(1, true); };
+  /* Grid handlers in wireCommon sit on a descendant, so these fire afterwards. */
+  s1.addEventListener("change", refresh);
+  s2.addEventListener("change", refresh);
+
+  /* On resume or Back, land on the block the respondent left off at. */
+  show(done(k1, n1) ? 2 : 1, false);
+  refresh();
+}, validate:function(){
+  var a = gridCheck("Q6a", Q6A.length, "6a"); if(a !== true) return a;
+  var b = gridCheck("Q6b", Q6B.length, "6b"); if(b !== true) return b;
+  return true;
+}});
+
+/* --- S8 Q7 rank top 3 --- */
+S.push({ id:"Q7", html:function(){
+  var h = '<div class="opts" id="rankBox">';
+  for(var i=0;i<Q7.length;i++){
+    h += '<div class="rank-opt" data-code="'+(i+1)+'"><div class="rank-badge"></div><span class="t">'+esc(Q7[i])+'</span></div>';
+  }
+  h += '</div><div id="q7other" style="display:none"><input type="text" class="other-in" id="q7otherIn" placeholder="Please specify" style="margin-left:0;margin-top:12px"></div>';
+  return qBlock("Q7","Select the three factors that had the greatest influence on your voting decision, and rank them in order of importance (1 = most important).","Tap to select. Tap again to remove.", h, "");
+}, wire:function(){ wireRank(); }, validate:function(){
+  var r = A.Q7 || [];
+  if(r.length !== 3) return err("Q7","Please select and rank exactly three factors.");
+  for(var i=0;i<r.length;i++){
+    if(r[i].code === 17){
+      var t = document.getElementById("q7otherIn").value.trim();
+      if(!t) return err("Q7","Please specify your other factor.");
+      r[i].other_text = t;
+    }
+  }
+  return true;
+}});
+
+/* --- S9 Q8 multi max 3 --- */
+S.push({ id:"Q8", html:function(){
+  var sel = (A.Q8 && A.Q8.codes) || [];
+  var h = '<div class="opts" id="q8box">';
+  for(var i=0;i<Q8.length;i++){
+    var c=i+1, on = sel.indexOf(c) > -1;
+    h += '<label class="opt'+(on?' sel':'')+'" data-code="'+c+'"><input type="checkbox" value="'+c+'"'+(on?' checked':'')+'><span>'+esc(Q8[i])+'</span></label>';
+    if(c===18) h += '<input type="text" class="other-in" id="q8otherIn" placeholder="Please specify" style="display:'+(on?'block':'none')+'">';
+  }
+  return qBlock("Q8","Which sources did you rely on most for information about political parties, candidates, or election-related issues during the 2024 Lok Sabha election?","Select up to three.", h+'</div>', "");
+}, wire:function(){ wireQ8(); }, validate:function(){
+  var sel = (A.Q8 && A.Q8.codes) || [];
+  if(!sel.length) return err("Q8","Please select at least one source.");
+  if(sel.length > 3) return err("Q8","Please select no more than three sources.");
+  if(sel.indexOf(18) > -1){
+    var t = document.getElementById("q8otherIn").value.trim();
+    if(!t) return err("Q8","Please specify your other source.");
+    A.Q8.other_text = t;
+  } else { A.Q8.other_text = null; }
+  return true;
+}});
+
+/* --- S10 Q9 --- */
+S.push({ id:"Q9", html:function(){
+  return qBlock("Q9","Did you vote for the same political party or alliance preferred by most members of your family?","",
+    single("Q9",["Yes","No","My family did not have a clear shared preference","I do not know their preferences"]), "");
+}, validate:function(){ return A.Q9 ? true : err("Q9","Please select an option."); }});
+
+/* --- S11 Q10 + Q11 --- */
+S.push({ id:"Q1011", html:function(){
+  return qBlock("Q10","Compared with two years before the election, how had your household\u2019s financial situation changed by the time of the 2024 election?","",
+    single("Q10",["Improved significantly","Improved somewhat","Stayed approximately the same","Worsened somewhat","Worsened significantly","Unsure"]), "") +
+  qBlock("Q11","During the year before the election, how strongly did rising prices affect your household?","",
+    single("Q11",["Not at all","Slightly","Moderately","Significantly","Very significantly","Unsure"]), "");
+}, validate:function(){
+  if(!A.Q10) return err("Q10","Please select an option.");
+  if(!A.Q11) return err("Q11","Please select an option.");
+  return true;
+}});
+
+/* --- S12 Q12 + Q13 --- */
+S.push({ id:"Q1213", html:function(){
+  return qBlock("Q12","At the time of the election, how confident were you about obtaining suitable employment or career opportunities?","Select \u201cNot applicable\u201d if you were not seeking employment at the time (for example, already employed and not job-seeking, or continuing full-time study).",
+    single("Q12",["Very confident","Somewhat confident","Neither confident nor unconfident","Somewhat unconfident","Very unconfident","Not applicable"]), "") +
+  qBlock("Q13","At the time of the voting, how would you have rated the condition of India\u2019s economy?","",
+    single("Q13",["Very good","Good","Neither good nor poor","Poor","Very poor"]), "");
+}, validate:function(){
+  if(!A.Q12) return err("Q12","Please select an option.");
+  if(!A.Q13) return err("Q13","Please select an option.");
+  return true;
+}});
+
+/* --- S13 Q14 grid (randomised) --- */
+S.push({ id:"Q14", html:function(){
+  var scale = "1 &mdash; Very ineffectively &nbsp;&middot;&nbsp; 2 &mdash; Somewhat ineffectively &nbsp;&middot;&nbsp; 3 &mdash; Neither effectively nor ineffectively &nbsp;&middot;&nbsp; 4 &mdash; Somewhat effectively &nbsp;&middot;&nbsp; 5 &mdash; Very effectively";
+  return qBlock("Q14","At the time of the election, how effectively did you believe the national government had handled the following?","",
+    gridBlock("Q14", Q14, order.Q14), scale);
+}, validate:function(){ return gridCheck("Q14", Q14.length, "14"); }});
+
+/* --- S14 Q15.1 / 15.2 / 15.3 --- */
+S.push({ id:"Q15", html:function(){
+  var opt = '<option value="">Select a state or union territory</option><optgroup label="States">';
+  for(var i=0;i<STATES.length;i++) opt += '<option value="'+(i+1)+'">'+esc(STATES[i])+'</option>';
+  opt += '</optgroup><optgroup label="Union Territories">';
+  for(var j=0;j<UTS.length;j++) opt += '<option value="'+(29+j)+'">'+esc(UTS[j])+'</option>';
+  opt += '</optgroup>';
+  return '<p class="lede" style="font-family:var(--serif);color:var(--navy);font-size:19px;font-weight:600">Please provide the following background information.</p>' +
+  qBlock("15.1","State or union territory in which you were registered to vote","",
+    '<div style="margin-top:16px"><select id="q151">'+opt+'</select></div>', "") +
+  qBlock("15.2","Type of area in which you primarily lived at the time of the election","",
+    single("Q15_2",["Rural area or village","Small town","Large town","City","Major metropolitan city"]), "") +
+  qBlock("15.3","Highest level of education at the time of the voting","",
+    single("Q15_3",["Secondary school or below","Higher secondary school","Undergraduate education in progress","Undergraduate degree completed","Postgraduate education in progress or completed","Vocational or technical education","Other"], 7), "");
+}, wire:function(){
+  if(A.Q15_1) document.getElementById("q151").value = A.Q15_1.code;
+}, validate:function(){
+  var v = document.getElementById("q151").value;
+  if(!v) return err("151","Please select a state or union territory.");
+  A.Q15_1 = { code:+v, label:stateLabel(+v) };
+  if(!A.Q15_2) return err("152","Please select an option.");
+  if(!A.Q15_3) return err("153","Please select an option.");
+  if(A.Q15_3.code === 7){
+    var ot = document.getElementById("oth_Q15_3");
+    var t = ot ? ot.value.trim() : "";
+    if(!t) return err("153","Please specify your highest level of education.");
+    A.Q15_3.other_text = t;
+  } else { A.Q15_3.other_text = null; }
+  return true;
+}});
+
+/* --- S15 Q16 --- */
+S.push({ id:"Q16", html:function(){
+  return qBlock("Q16","Which range best describes your household\u2019s approximate annual income?","",
+    single("Q16",["Less than \u20B93 lakh","\u20B93 lakh\u2013\u20B96 lakh","\u20B96 lakh\u2013\u20B910 lakh","\u20B910 lakh\u2013\u20B920 lakh","\u20B920 lakh\u2013\u20B950 lakh","More than \u20B950 lakh","I do not know","Prefer not to say"]), "");
+}, validate:function(){ return A.Q16 ? true : err("Q16","Please select an option."); }});
+
+/* --- S16 Q17 (optional) --- */
+S.push({ id:"Q17", last:true, html:function(){
+  var body = '<div style="margin-top:16px">' +
+    '<textarea id="q17" maxlength="500" placeholder="Type your answer here\u2026">'+esc(A.Q17||"")+'</textarea>' +
+    '<div class="counter"><span id="q17c">0</span> / 500</div>' +
+    '<div class="voice hide" id="voiceRow">' +
+      '<button type="button" class="mic" id="micBtn" aria-label="Speak your answer">' +
+        '<svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true">' +
+          '<path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3z"/>' +
+          '<path fill="currentColor" d="M18 11a1 1 0 1 0-2 0 4 4 0 0 1-8 0 1 1 0 1 0-2 0 6 6 0 0 0 5 5.91V19H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-2.09A6 6 0 0 0 18 11z"/>' +
+        '</svg>' +
+      '</button>' +
+      '<div class="voice-txt">' +
+        '<span id="micLabel">Speak your answer instead</span>' +
+        '<span class="chips-lab">I\u2019ll speak in</span>' +
+        '<div class="chips" id="micChips"></div>' +
+        '<select id="micLang" class="hide" aria-label="Speaking language"></select>' +
+      '</div>' +
+    '</div>' +
+    '<div class="voice-note hide" id="voiceNote">' +
+      '<span id="voiceNoteTxt"></span>' +
+      '<button type="button" class="linkish hide" id="toggleOrig">View original</button>' +
+      '<button type="button" class="linkish" id="clearVoice">Clear and redo</button>' +
+      '<button type="button" class="chip fix hide" id="fixLang"></button>' +
+    '</div>';
+  return qBlock("Q17","In one or two sentences, what most shaped your voting decision in the 2024 Lok Sabha election?","Optional response.", body, "");
+}, wire:function(){
+  var t = document.getElementById("q17"), c = document.getElementById("q17c");
+  function count(){ c.textContent = t.value.length; }
+  count();
+  t.oninput = function(){
+    count(); A.Q17 = t.value.trim();
+    /* Typing by hand overrides anything captured by voice. */
+    A.Q17_original = null; A.Q17_script = null;
+    document.getElementById("voiceNote").classList.add("hide");
+    save();
+  };
+
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR) return;   /* unsupported browser: typing only */
+
+  var row = document.getElementById("voiceRow"), btn = document.getElementById("micBtn");
+  var lab = document.getElementById("micLabel"), sel = document.getElementById("micLang");
+  var chips = document.getElementById("micChips");
+  var note = document.getElementById("voiceNote"), noteTxt = document.getElementById("voiceNoteTxt");
+  var tog = document.getElementById("toggleOrig"), clr = document.getElementById("clearVoice");
+  var fix = document.getElementById("fixLang");
+  row.classList.remove("hide");
+
+  /* English by default. A wrong regional recogniser destroys the answer, a
+     wrong English one merely transcribes imperfectly, so English is the safe
+     side of the error. */
+  var lang = A.Q17_lang || "en-IN";
+  var opts = "";
+  for(var k in LANG_NAME) opts += '<option value="'+k+'">'+LANG_NAME[k]+'</option>';
+  sel.innerHTML = opts;
+  sel.value = lang;
+  function nameOf(l){ return LANG_NAME[l] || l; }
+
+  /* Two or three one-tap options, then the full list behind "More". */
+  function drawChips(){
+    var offer = ["en-IN"], rg = regionalLang();
+    if(rg) offer.push(rg);
+    if(offer.indexOf("hi-IN") === -1) offer.push("hi-IN");
+    if(offer.indexOf(lang) === -1) offer.push(lang);
+    var h = "";
+    for(var i=0;i<offer.length;i++){
+      h += '<button type="button" class="chip'+(offer[i]===lang?' on':'')+'" data-l="'+offer[i]+'">'+nameOf(offer[i])+'</button>';
+    }
+    h += '<button type="button" class="chip more" data-more="1">More</button>';
+    chips.innerHTML = h;
+  }
+  drawChips();
+
+  var rec = null, listening = false, baseText = "", finalNative = "", showingOriginal = false;
+  var confSum = 0, confN = 0;
+
+  function paint(on, msg){
+    listening = on;
+    btn.classList.toggle("rec", on);
+    lab.textContent = msg || (on ? "Listening\u2026 tap to stop" : "Speak your answer instead");
+  }
+  /* Speech in an Indian script is converted to English letters so every
+     verbatim in the export is readable in one alphabet. The original is
+     always kept alongside it. */
+  function render(interimNative){
+    var native = (finalNative + " " + interimNative).replace(/\s+/g," ").trim();
+    var script = detectScript(native);
+    var shown;
+    if(script === "Latin" || !native){
+      shown = (baseText + " " + native).replace(/\s+/g," ").trim();
+      A.Q17_original = null; A.Q17_script = null;
+      tog.classList.add("hide");
+      if(native){
+        note.classList.remove("hide");
+        /* Mirror case: an Indian language spoken into the English recogniser. */
+        if(looksIndian(shown) >= 0.35 && looksIndian(shown) > looksEnglish(shown)){
+          note.classList.add("warn");
+          noteTxt.textContent = "That sounds like " + nameOf(regionalLang() || "hi-IN") + ", not English. ";
+          fix.textContent = "Switch to " + nameOf(regionalLang() || "hi-IN") + " and redo";
+          fix.setAttribute("data-to", regionalLang() || "hi-IN");
+          fix.classList.remove("hide");
+        } else {
+          note.classList.remove("warn"); fix.classList.add("hide");
+          noteTxt.textContent = "Heard in " + nameOf(lang) + ". Wrong language? Pick another above, then ";
+        }
+      } else { note.classList.add("hide"); }
+    } else {
+      var roman = toRoman(native, lang === "mr-IN");
+      shown = (baseText + " " + roman).replace(/\s+/g," ").trim();
+      A.Q17_original = (baseText + " " + native).replace(/\s+/g," ").trim();
+      A.Q17_script = script;
+      note.classList.remove("hide");
+      showingOriginal = false;
+      tog.textContent = "View original";
+      /* The damaging case: English spoken into a regional recogniser comes back
+         spelled phonetically, so offer a one-tap recovery instead of leaving
+         the respondent with unusable text. */
+      if(lang !== "en-IN" && looksEnglish(roman) >= 0.30){
+        note.classList.add("warn");
+        noteTxt.textContent = "That sounds like English, but " + nameOf(lang) + " is selected. ";
+        fix.textContent = "Switch to English and redo";
+        fix.setAttribute("data-to", "en-IN");
+        fix.classList.remove("hide");
+        tog.classList.remove("hide");
+      } else {
+        note.classList.remove("warn"); fix.classList.add("hide");
+        noteTxt.textContent = "Converted to English letters. ";
+        tog.classList.remove("hide");
+      }
+    }
+    t.value = shown.slice(0,500);
+    count();
+    A.Q17 = t.value.trim();
+    A.Q17_lang = lang;
+  }
+  function start(){
+    rec = new SR();
+    rec.lang = lang; rec.continuous = true; rec.interimResults = true;
+    baseText = showingOriginal ? (A.Q17 || "") : t.value.trim();
+    finalNative = ""; confSum = 0; confN = 0;
+    rec.onresult = function(e){
+      var interim = "";
+      for(var i=e.resultIndex;i<e.results.length;i++){
+        var tr = e.results[i][0].transcript;
+        if(e.results[i].isFinal){
+          finalNative += " " + tr;
+          var cf = e.results[i][0].confidence;
+          if(typeof cf === "number" && cf > 0){ confSum += cf; confN++; }
+        } else interim += tr;
+      }
+      render(interim);
+      /* Persistently low confidence usually means the recogniser is set to the
+         wrong language, so nudge rather than let a bad verbatim through. */
+      if(confN >= 2 && (confSum / confN) < 0.62){
+        noteTxt.textContent = "That did not come through clearly \u2014 check the language above, then ";
+        note.classList.remove("hide");
+      }
+    };
+    rec.onerror = function(e){
+      var m = "Voice input unavailable. Please type instead.";
+      if(e.error === "not-allowed" || e.error === "service-not-allowed") m = "Microphone blocked. Allow access in your browser, or type instead.";
+      else if(e.error === "no-speech") m = "Didn\u2019t catch that. Tap the mic to try again.";
+      else if(e.error === "network") m = "Voice input needs a connection. Please type instead.";
+      paint(false, m); save();
+    };
+    rec.onend = function(){ if(listening) paint(false); save(); };
+    try{ rec.start(); paint(true); }
+    catch(err){ paint(false, "Voice input could not start. Please type instead."); }
+  }
+  function stop(){ if(rec){ try{ rec.stop(); }catch(e){} } paint(false); save(); }
+
+  btn.onclick = function(){ listening ? stop() : start(); };
+  chips.onclick = function(e){
+    var b = e.target.closest(".chip"); if(!b) return;
+    if(b.getAttribute("data-more")){
+      sel.classList.toggle("hide");
+      if(!sel.classList.contains("hide")) sel.focus();
+      return;
+    }
+    setLang(b.getAttribute("data-l"));
+  };
+  sel.onchange = function(){ sel.classList.add("hide"); setLang(sel.value); };
+  function setLang(l){
+    lang = l; sel.value = l; A.Q17_lang = l;
+    drawChips();
+    if(listening){ stop(); start(); }
+    save();
+  }
+  /* Recovery: a wrong-language attempt leaves unusable text, so wiping it must
+     be one tap rather than a select-all-and-delete. */
+  fix.onclick = function(){
+    var to = fix.getAttribute("data-to") || "en-IN";
+    if(listening) stop();
+    t.value = ""; finalNative = ""; baseText = "";
+    confSum = 0; confN = 0; showingOriginal = false;
+    A.Q17 = ""; A.Q17_original = null; A.Q17_script = null;
+    note.classList.add("hide"); note.classList.remove("warn");
+    fix.classList.add("hide"); tog.classList.add("hide");
+    count(); setLang(to); start();
+  };
+  clr.onclick = function(){
+    if(listening) stop();
+    t.value = ""; finalNative = ""; baseText = "";
+    confSum = 0; confN = 0; showingOriginal = false;
+    A.Q17 = ""; A.Q17_original = null; A.Q17_script = null;
+    note.classList.add("hide"); note.classList.remove("warn");
+    fix.classList.add("hide"); tog.classList.add("hide");
+    count(); save(); t.focus();
+  };
+  /* Lets the respondent confirm the conversion matches what they said. */
+  tog.onclick = function(){
+    if(!A.Q17_original) return;
+    if(showingOriginal){
+      t.value = A.Q17 || ""; tog.textContent = "View original";
+      noteTxt.textContent = "Converted to English letters.";
+    } else {
+      t.value = A.Q17_original; tog.textContent = "View converted";
+      noteTxt.textContent = "Original, as spoken.";
+    }
+    showingOriginal = !showingOriginal;
+    count();
+  };
+  if(A.Q17_original){
+    noteTxt.textContent = "Converted to English letters. ";
+    note.classList.remove("hide"); tog.classList.remove("hide");
+  }
+}, validate:function(){
+  var v = document.getElementById("q17").value.trim();
+  /* Someone typing on a native keyboard gets the same treatment as speech. */
+  var script = detectScript(v);
+  if(v && script !== "Latin"){
+    A.Q17_original = v;
+    A.Q17_script = script;
+    A.Q17 = toRoman(v, (A.Q17_lang || "") === "mr-IN");
+  } else if(!A.Q17_original){
+    A.Q17 = v; A.Q17_script = null;
+  } else {
+    A.Q17 = v;   /* already converted from speech */
+  }
+  return true;
+}});
+
+/* ============================================================
+   SHARED WIRING
+   ============================================================ */
+function pad(n){ return n < 10 ? "0"+n : ""+n; }
+function stateLabel(c){ return c <= 28 ? STATES[c-1] : UTS[c-29]; }
+
+/* Strips everything except digits, then peels off any country code or trunk
+   prefix so "+91 98672 78726", "0091-9867278726" and "09867278726" all
+   normalise to the bare 10-digit number 9867278726. */
+function normPhone(v){
+  var d = String(v == null ? "" : v).replace(/\D/g, "");
+  var guard = 0;
+  while(d.length > 10 && guard++ < 5){
+    if(d.indexOf("0091") === 0)      d = d.slice(4);
+    else if(d.indexOf("091") === 0)  d = d.slice(3);
+    else if(d.indexOf("91") === 0)   d = d.slice(2);
+    else if(d.charAt(0) === "0")     d = d.slice(1);
+    else break;
+  }
+  if(d.length === 11 && d.charAt(0) === "0") d = d.slice(1);
+  return d.slice(0, 10);
+}
+function normZip(v){
+  return String(v == null ? "" : v).replace(/\D/g, "").slice(0, 6);
+}
+function yrs(from, to){ return Math.round(((to - from) / 31557600000) * 100) / 100; }
+
+function err(anchor, text){
+  var el = document.getElementById("q_" + anchor.replace(/[^A-Za-z0-9]/g,""));
+  if(el){
+    el.classList.add("err");
+    var m = el.querySelector(".msg");
+    if(m){ m.textContent = text; m.classList.add("on"); }
+    el.scrollIntoView({behavior:"smooth", block:"center"});
+  }
+  return false;
+}
+function clearErr(){
+  var e = document.querySelectorAll(".q.err"); for(var i=0;i<e.length;i++) e[i].classList.remove("err");
+  var m = document.querySelectorAll(".msg.on"); for(var j=0;j<m.length;j++) m[j].classList.remove("on");
+  var r = document.querySelectorAll(".grid-row.err"); for(var k=0;k<r.length;k++) r[k].classList.remove("err");
+}
+function gridCheck(key, n, anchor){
+  var miss = null;
+  for(var c=1;c<=n;c++){
+    if(!A[key] || !A[key]["r"+c]){
+      var row = document.querySelector('[data-grid="'+key+'"] [data-row="'+c+'"]');
+      if(row) row.classList.add("err");
+      if(miss === null) miss = row;
+    }
+  }
+  if(miss){
+    var host = document.getElementById("q_" + anchor.replace(/[^A-Za-z0-9]/g,""));
+    if(host){
+      host.classList.add("err");
+      var m = host.querySelector(".msg");
+      if(m){ m.textContent = "Please rate every row before continuing."; m.classList.add("on"); }
+    }
+    miss.scrollIntoView({behavior:"smooth", block:"center"});
+    return false;
+  }
+  return true;
+}
+function wireCommon(){
+  /* single-choice */
+  var boxes = document.querySelectorAll("[data-single]");
+  for(var i=0;i<boxes.length;i++){
+    (function(box){
+      var key = box.getAttribute("data-single");
+      box.addEventListener("change", function(e){
+        if(e.target.type !== "radio") return;
+        var code = +e.target.value;
+        A[key] = { code:code, label:box.querySelectorAll(".opt")[code-1].querySelector("span").textContent };
+        var opts = box.querySelectorAll(".opt");
+        for(var j=0;j<opts.length;j++) opts[j].classList.toggle("sel", j === code-1);
+        var oc = box.getAttribute("data-other");
+        if(oc){
+          var inp = document.getElementById("oth_" + key);
+          var isOther = (code === +oc);
+          if(inp){
+            inp.style.display = isOther ? "block" : "none";
+            A[key].other_text = isOther ? (inp.value.trim() || null) : null;
+            if(isOther) inp.focus();
+          }
+        }
+        clearErr(); save();
+      });
+      var oc0 = box.getAttribute("data-other");
+      if(oc0){
+        var inp0 = document.getElementById("oth_" + key);
+        if(inp0) inp0.addEventListener("input", function(){
+          if(A[key]) A[key].other_text = inp0.value.trim() || null;
+          clearErr(); save();
+        });
+      }
+    })(boxes[i]);
+  }
+  /* grids */
+  var grids = document.querySelectorAll("[data-grid]");
+  for(var g=0;g<grids.length;g++){
+    (function(gr){
+      var key = gr.getAttribute("data-grid");
+      gr.addEventListener("change", function(e){
+        if(e.target.type !== "radio") return;
+        var row = e.target.closest(".grid-row");
+        A[key] = A[key] || {};
+        A[key]["r" + row.getAttribute("data-row")] = +e.target.value;
+        row.classList.remove("err");
+        clearErr(); save();
+      });
+    })(grids[g]);
+  }
+}
+function wireRank(){
+  var box = document.getElementById("rankBox");
+  var other = document.getElementById("q7other"), otherIn = document.getElementById("q7otherIn");
+  A.Q7 = A.Q7 || [];
+  function paint(){
+    var rows = box.querySelectorAll(".rank-opt");
+    for(var i=0;i<rows.length;i++){
+      var code = +rows[i].getAttribute("data-code");
+      var pos = -1;
+      for(var j=0;j<A.Q7.length;j++) if(A.Q7[j].code === code) pos = j;
+      var badge = rows[i].querySelector(".rank-badge");
+      if(pos > -1){ rows[i].classList.add("sel"); badge.textContent = pos+1; }
+      else { rows[i].classList.remove("sel"); badge.textContent = ""; }
+      rows[i].classList.toggle("full", pos === -1 && A.Q7.length >= 3);
+    }
+    var hasOther = false;
+    for(var k=0;k<A.Q7.length;k++) if(A.Q7[k].code === 17) hasOther = true;
+    other.style.display = hasOther ? "block" : "none";
+  }
+  box.addEventListener("click", function(e){
+    var row = e.target.closest(".rank-opt"); if(!row) return;
+    var code = +row.getAttribute("data-code");
+    var pos = -1;
+    for(var i=0;i<A.Q7.length;i++) if(A.Q7[i].code === code) pos = i;
+    if(pos > -1){ A.Q7.splice(pos,1); }
+    else if(A.Q7.length < 3){ A.Q7.push({ code:code, label:Q7[code-1] }); }
+    for(var r=0;r<A.Q7.length;r++) A.Q7[r].rank = r+1;
+    clearErr(); paint(); save();
+  });
+  if(otherIn){
+    for(var m=0;m<A.Q7.length;m++) if(A.Q7[m].code === 17 && A.Q7[m].other_text) otherIn.value = A.Q7[m].other_text;
+    otherIn.oninput = function(){ clearErr(); };
+  }
+  paint();
+}
+function wireQ8(){
+  var box = document.getElementById("q8box");
+  var otherIn = document.getElementById("q8otherIn");
+  box.addEventListener("change", function(e){
+    if(e.target.type !== "checkbox") return;
+    var code = +e.target.value;
+    var boxes = box.querySelectorAll('input[type=checkbox]');
+    /* exclusive: "I did not actively seek political information" (19) */
+    if(code === 19 && e.target.checked){
+      for(var i=0;i<boxes.length;i++) if(+boxes[i].value !== 19) boxes[i].checked = false;
+    } else if(e.target.checked){
+      for(var j=0;j<boxes.length;j++) if(+boxes[j].value === 19) boxes[j].checked = false;
+    }
+    var codes = [], labels = [];
+    for(var k=0;k<boxes.length;k++) if(boxes[k].checked){ codes.push(+boxes[k].value); labels.push(Q8[+boxes[k].value - 1]); }
+    /* cap at 3 */
+    if(codes.length > 3){ e.target.checked = false; codes = []; labels = [];
+      for(var n=0;n<boxes.length;n++) if(boxes[n].checked){ codes.push(+boxes[n].value); labels.push(Q8[+boxes[n].value - 1]); }
+      err("Q8","You can select a maximum of three sources.");
+    } else { clearErr(); }
+    A.Q8 = { codes:codes, labels:labels, other_text:(A.Q8 && A.Q8.other_text) || null };
+    var opts = box.querySelectorAll(".opt");
+    for(var o=0;o<opts.length;o++) opts[o].classList.toggle("sel", codes.indexOf(+opts[o].getAttribute("data-code")) > -1);
+    if(otherIn) otherIn.style.display = codes.indexOf(18) > -1 ? "block" : "none";
+    /* dim unselectable when full */
+    for(var d=0;d<opts.length;d++){
+      var c = +opts[d].getAttribute("data-code");
+      opts[d].classList.toggle("dim", codes.length >= 3 && codes.indexOf(c) === -1);
+    }
+    save();
+  });
+  if(otherIn && A.Q8 && A.Q8.other_text) otherIn.value = A.Q8.other_text;
+}
+
+/* ============================================================
+   ROUTER
+   ============================================================ */
+var shell = document.getElementById("shell");
+var terminated = null;
+
+function go(n){
+  idx = n;
+  var s = S[idx];
+  var body = s.html();
+  var h = "";
+  if(s.sect) h += '<h2 class="sect">'+esc(s.sect)+'</h2>';
+  h += body;
+  if(!s.bare){
+    h += '<div class="nav">' +
+      (idx > 1 ? '<button class="btn-back" id="btnBack">&larr; Back</button>' : '<span></span>') +
+      '<button class="btn" id="btnNext">'+(s.last ? "Submit response" : "Continue")+'</button></div>';
+  }
+  shell.innerHTML = h;
+  window.scrollTo(0,0);
+  wireCommon();
+  if(s.wire) s.wire();
+  var nx = document.getElementById("btnNext");
+  if(nx) nx.onclick = function(){
+    clearErr();
+    var ok = s.validate ? s.validate() : true;
+    if(ok !== true) return;
+    save();
+    if(s.last) finish(); else go(idx+1);
+  };
+  var bk = document.getElementById("btnBack");
+  if(bk) bk.onclick = function(){ clearErr(); go(idx-1); };
+  progress();
+}
+function progress(){
+  var pct = Math.round((idx / (S.length - 1)) * 100);
+  document.getElementById("railFill").style.width = pct + "%";
+  /* The intro page carries its own title, so the rail stays hidden there. */
+  document.getElementById("rail").style.display = idx === 0 ? "none" : "block";
+}
+
+/* ---------- Terminations ---------- */
+function stop(status){
+  terminated = status;
+  A.status = status;
+  A.terminated_at = new Date().toISOString();
+  document.getElementById("rail").style.display = "block";
+  document.getElementById("railFill").style.width = "100%";
+  shell.innerHTML = '<div class="end">' +
+    '<h1>Thank you for your interest</h1>' +
+    '<p>Based on your responses, you do not qualify for this particular study.</p>' +
+    '<p>We appreciate the time you have taken. You may now close this page.</p>' +
+    '</div>' + debugPanel();
+  wireDebug();
+  submit();
+  return false;
+}
+
+/* ---------- Completion ---------- */
+function finish(){
+  A.status = "COMPLETE";
+  A.terminated_at = null;
+  document.getElementById("rail").style.display = "block";
+  document.getElementById("railFill").style.width = "100%";
+  shell.innerHTML = '<div class="end">' +
+    '<h1>Thank you for participating in this research.</h1>' +
+    '<p>Your response has been recorded. Findings will be reported only in aggregate.</p>' +
+    '</div>' + debugPanel();
+  wireDebug();
+  submit();
+  try{ localStorage.removeItem("ftv_draft"); }catch(e){}
+}
+
+/* ============================================================
+   EXPORT LAYER
+   Builds three shapes from the same answers:
+     buildPayload()  -> the object POSTed to Supabase (respondent never sees it)
+     buildLong()     -> one entry per question: qid, question, answer
+     buildCsvRow()   -> one flat wide row + matching header list
+   ============================================================ */
+
+/* Question wording, keyed by qid. Kept verbatim from the questionnaire so the
+   stored answer always travels with the question that produced it. */
+var QTEXT = {
+  QA:  "Basic Contact Details",
+  QB:  "What is your Date of Birth?",
+  QC:  "What is your Gender?",
+  QD:  "What is your Relationship Status?",
+  Q1:  "Were you eligible to vote for the first time in the 2024 Lok Sabha election?",
+  Q2:  "Did you vote in the 2024 Lok Sabha election?",
+  Q3:  "Which party / candidate of your constituency did you vote for?",
+  Q4:  "Before the election, how sure were you that you would vote for this party or candidate?",
+  Q5:  "When deciding who to vote for, which factors were more important to you?",
+  Q6:  "How much did each of these affect your decision on who to vote for?",
+  Q6a: "Economic factors",
+  Q6b: "Non-economic factors",
+  Q7:  "Select the three factors that had the greatest influence on your voting decision, and rank them in order of importance (1 = most important).",
+  Q8:  "Which sources did you rely on most for information about political parties, candidates, or election-related issues during the 2024 Lok Sabha election?",
+  Q9:  "Did you vote for the same political party or alliance preferred by most members of your family?",
+  Q10: "Compared with two years before the election, how had your household\u2019s financial situation changed by the time of the 2024 election?",
+  Q11: "During the year before the election, how strongly did rising prices affect your household?",
+  Q12: "At the time of the election, how confident were you about obtaining suitable employment or career opportunities?",
+  Q13: "At the time of the voting, how would you have rated the condition of India\u2019s economy?",
+  Q14: "At the time of the election, how effectively did you believe the national government had handled the following?",
+  Q15_1: "State or union territory in which you were registered to vote",
+  Q15_2: "Type of area in which you primarily lived at the time of the election",
+  Q15_3: "Highest level of education at the time of the voting",
+  Q16: "Which range best describes your household\u2019s approximate annual income?",
+  Q17: "In one or two sentences, what most shaped your voting decision in the 2024 Lok Sabha election?"
+};
+var SCALE_Q6  = {1:"Not at all",2:"A little",3:"Somewhat",4:"A lot",5:"A great deal / very critical"};
+var SCALE_Q14 = {1:"Very ineffectively",2:"Somewhat ineffectively",3:"Neither effectively nor ineffectively",4:"Somewhat effectively",5:"Very effectively"};
+
+/* ---- Long format: one entry per question ---- */
+function buildLong(){
+  var out = [];
+  function add(qid, question, o){
+    var e = { qid:qid, question:question };
+    for(var k in o) if(o.hasOwnProperty(k)) e[k] = o[k];
+    out.push(e);
+  }
+  function single(qid){
+    var v = A[qid];
+    add(qid, QTEXT[qid], {
+      type:"single",
+      answer_code: v ? v.code : null,
+      answer: v ? v.label : null,
+      other_text: (v && v.other_text) ? v.other_text : null
+    });
+  }
+  function grid(key, items, scale){
+    var v = A[key] || {};
+    for(var c=1;c<=items.length;c++){
+      add(key + "_" + c, QTEXT[key] + " \u2013 " + items[c-1], {
+        type:"grid",
+        item: items[c-1],
+        item_code: c,
+        answer_code: v["r"+c] || null,
+        answer: v["r"+c] ? scale[v["r"+c]] : null
+      });
+    }
+  }
+
+  ["Q1","Q2","Q3","Q4","Q5"].forEach(single);
+  grid("Q6a", Q6A, SCALE_Q6);
+  grid("Q6b", Q6B, SCALE_Q6);
+
+  var r = A.Q7 || [];
+  for(var i=1;i<=3;i++){
+    var pick = null;
+    for(var j=0;j<r.length;j++) if(r[j].rank === i) pick = r[j];
+    add("Q7_rank" + i, QTEXT.Q7 + " \u2013 rank " + i, {
+      type:"rank", rank:i,
+      answer_code: pick ? pick.code : null,
+      answer: pick ? pick.label : null,
+      other_text: (pick && pick.other_text) ? pick.other_text : null
+    });
+  }
+
+  /* Multi-select is emitted one row per chosen option, so each selection is
+     countable on its own instead of needing a delimited string split. */
+  var m = A.Q8 || { codes:[], labels:[] };
+  var mc = m.codes || [];
+  if(!mc.length){
+    add("Q8", QTEXT.Q8, { type:"multi", answer_code:null, answer:null, selection_order:null, other_text:null });
+  } else {
+    for(var q=0;q<mc.length;q++){
+      add("Q8_" + mc[q], QTEXT.Q8, {
+        type:"multi",
+        option: Q8[mc[q]-1],
+        selection_order: q + 1,
+        answer_code: mc[q],
+        answer: Q8[mc[q]-1],
+        other_text: (mc[q] === 18 && m.other_text) ? m.other_text : null
+      });
+    }
+  }
+
+  ["Q9","Q10","Q11","Q12","Q13"].forEach(single);
+  grid("Q14", Q14, SCALE_Q14);
+  ["Q15_1","Q15_2","Q15_3","Q16"].forEach(single);
+  add("Q17", QTEXT.Q17, {
+    type:"open",
+    answer: A.Q17 || null,                    /* always Roman letters */
+    answer_original: A.Q17_original || null,  /* native script, if spoken/typed that way */
+    script: A.Q17_script || (A.Q17 ? "Latin" : null),
+    spoken_language: A.Q17_lang || null
+  });
+  return out;
+}
+
+/* ---- CSV for internal QA only. Long shape: one row per answer, matching
+   payload->'responses'. Production CSV is exported from Supabase, not here. ---- */
+function csvEscape(v){
+  if(v === null || v === undefined) return "";
+  var t = String(v);
+  return /[",\n\r]/.test(t) ? '"' + t.replace(/"/g,'""') + '"' : t;
+}
+function buildCsvRow(){
+  var head = ["respondent_id","status","qid","question","type","item","rank",
+              "selection_order","answer_code","answer","other_text",
+              "answer_original","script","spoken_language"];
+  var lines = [head.join(",")];
+  var rows = buildLong();
+  for(var i=0;i<rows.length;i++){
+    var e = rows[i];
+    lines.push([
+      respondentId, (A.status || "IN_PROGRESS"), e.qid, e.question, e.type,
+      e.item || e.option || "", e.rank || "", e.selection_order || "",
+      (e.answer_code === undefined ? "" : e.answer_code), e.answer,
+      e.other_text || "", e.answer_original || "", e.script || "", e.spoken_language || ""
+    ].map(csvEscape).join(","));
+  }
+  return { header_line: head.join(","), rows: lines.length - 1, csv: lines.join("\n") };
+}
+
+/* ---- The object sent to Supabase ---- */
+function buildPayload(){
+  var p = A.profile || {};
+  return {
+    survey_version: SURVEY_VERSION,
+    respondent_id: respondentId,
+    status: A.status || "IN_PROGRESS",
+    terminated_at: A.terminated_at || null,
+    started_at: startedAt,
+    completed_at: new Date().toISOString(),
+    duration_seconds: Math.round((new Date() - new Date(startedAt)) / 1000),
+    consent: A.consent || null,
+    terms_accepted: !!A.terms_accepted,
+    randomisation_seed: seed,
+    display_order: order,
+    state_match: (p.state && A.Q15_1) ? (p.state.code === A.Q15_1.code) : null,
+    profile: {
+      name:p.name||null, email:p.email||null, phone:p.phone||null,
+      area:p.area||null, city:p.city||null, state:p.state||null, zip:p.zip||null,
+      dob:p.dob||null, age_today:p.age_today||null,
+      age_at_poll:p.age_at_poll||null, age_at_qualifying_date:p.age_at_qualifying_date||null,
+      gender:A.QC||null, relationship_status:A.QD||null
+    },
+    responses: buildLong()    /* qid + question + answer, one row per answer */
+  };
+}
+
+/* ---- Delivery ---- */
+function submit(){
+  var payload = buildPayload();
+  var body = {
+    respondent_id: payload.respondent_id,
+    survey_version: payload.survey_version,
+    status: payload.status,
+    started_at: payload.started_at,
+    completed_at: payload.completed_at,
+    duration_seconds: payload.duration_seconds,
+    payload: payload
+  };
+  /* Supabase REST insert. Falls back to POST_URL if a plain webhook is used. */
+  var url = SUPABASE_URL ? (SUPABASE_URL.replace(/\/$/,"") + "/rest/v1/" + SUPABASE_TABLE) : POST_URL;
+  if(!url) { queue(body); return; }
+  var headers = { "Content-Type":"application/json" };
+  if(SUPABASE_URL){
+    headers["apikey"] = SUPABASE_ANON_KEY;
+    headers["Authorization"] = "Bearer " + SUPABASE_ANON_KEY;
+    headers["Prefer"] = "return=minimal";
+  }
+  try{
+    fetch(url, { method:"POST", headers:headers, body:JSON.stringify(SUPABASE_URL ? body : payload) })
+      .then(function(r){ if(!r.ok) queue(body); })
+      .catch(function(){ queue(body); });
+  }catch(e){ queue(body); }
+}
+/* A failed insert is held locally and retried on the next load, so a dropped
+   connection at the end of an interview does not lose the response. */
+function queue(body){
+  try{
+    var q = JSON.parse(localStorage.getItem("ftv_queue") || "[]");
+    q.push(body);
+    localStorage.setItem("ftv_queue", JSON.stringify(q));
+  }catch(e){}
+}
+function flushQueue(){
+  if(!SUPABASE_URL) return;
+  var q;
+  try{ q = JSON.parse(localStorage.getItem("ftv_queue") || "[]"); }catch(e){ return; }
+  if(!q.length) return;
+  try{ localStorage.setItem("ftv_queue","[]"); }catch(e){}
+  q.forEach(function(body){
+    fetch(SUPABASE_URL.replace(/\/$/,"") + "/rest/v1/" + SUPABASE_TABLE, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json", "apikey":SUPABASE_ANON_KEY,
+                "Authorization":"Bearer " + SUPABASE_ANON_KEY, "Prefer":"return=minimal" },
+      body: JSON.stringify(body)
+    }).catch(function(){ queue(body); });
+  });
+}
+
+/* ---- Internal QA panel: only ever shown with ?debug=1 in the URL ---- */
+function debugOn(){ return /[?&]debug=1/.test(window.location.search); }
+function debugPanel(){
+  if(!debugOn()) return "";
+  var j = JSON.stringify(buildPayload(), null, 2);
+  var csv = buildCsvRow();
+  return '<div class="json-wrap"><h3>Internal QA \u2014 not shown to respondents</h3>' +
+    '<pre id="jsonOut">'+esc(j)+'</pre>' +
+    '<div class="json-btns">' +
+      '<button class="btn-ghost" id="btnCopy">Copy JSON</button>' +
+      '<button class="btn-ghost" id="btnDl">Download .json</button>' +
+      '<button class="btn-ghost" id="btnCsv">Download .csv</button>' +
+    '</div>' +
+    '<pre style="margin-top:12px;max-height:180px">'+esc(csv.csv)+'</pre>' +
+  '</div>';
+}
+function wireDebug(){
+  if(!debugOn()) return;
+  var data = JSON.stringify(buildPayload(), null, 2);
+  function dl(text, name, mime){
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([text], {type:mime}));
+    a.download = name; a.click();
+  }
+  var c = document.getElementById("btnCopy");
+  if(c) c.onclick = function(){
+    if(navigator.clipboard) navigator.clipboard.writeText(data);
+    c.textContent = "Copied"; setTimeout(function(){ c.textContent = "Copy JSON"; }, 1600);
+  };
+  var d = document.getElementById("btnDl");
+  if(d) d.onclick = function(){ dl(data, respondentId + ".json", "application/json"); };
+  var v = document.getElementById("btnCsv");
+  if(v) v.onclick = function(){
+    dl(buildCsvRow().csv, respondentId + ".csv", "text/csv");
+  };
+}
+
+/* ---------- Autosave / resume ---------- */
+function save(){
+  try{
+    localStorage.setItem("ftv_draft", JSON.stringify({
+      A:A, idx:idx, seed:seed, order:order, id:respondentId, startedAt:startedAt
+    }));
+  }catch(e){}
+}
+function restore(){
+  try{
+    var raw = localStorage.getItem("ftv_draft");
+    if(!raw) return false;
+    var d = JSON.parse(raw);
+    if(!d || !d.A || !d.A.consent) return false;
+    A = d.A; seed = d.seed; order = d.order; respondentId = d.id; startedAt = d.startedAt;
+    go(d.idx || 1);
+    return true;
+  }catch(e){ return false; }
+}
+
+/* ---------- Terms modal ---------- */
+var tcModal = document.getElementById("tcModal");
+var lastFocus = null;
+function openTerms(){
+  lastFocus = document.activeElement;
+  tcModal.hidden = false;
+  document.body.classList.add("locked");
+  tcModal.querySelector(".modal-body").scrollTop = 0;
+  document.getElementById("tcClose").focus();
+}
+function closeTerms(){
+  tcModal.hidden = true;
+  document.body.classList.remove("locked");
+  if(lastFocus && lastFocus.focus) lastFocus.focus();
+}
+document.getElementById("tcClose").onclick = closeTerms;
+document.getElementById("tcOk").onclick = closeTerms;
+tcModal.addEventListener("click", function(e){
+  if(e.target.getAttribute("data-close")) closeTerms();
+});
+document.addEventListener("keydown", function(e){
+  if(e.key === "Escape" && !tcModal.hidden) closeTerms();
+});
+
+/* ---------- Boot ---------- */
+flushQueue();
+if(!restore()) go(0);
+</script>
+</body>
+</html>

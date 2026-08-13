@@ -17,7 +17,7 @@ type NotEligibleDashboardProps = {
 
 export function NotEligibleDashboard({ data }: NotEligibleDashboardProps) {
   const [upiId, setUpiId] = useState(data.upiId);
-  const statusConfig = getDashboardStatusConfig("not_eligible");
+  const statusConfig = getDashboardStatusConfig("terminated");
 
   const stats = data.referralStats ?? {
     referredCount: 0,

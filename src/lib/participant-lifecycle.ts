@@ -1,14 +1,5 @@
-export type EligibilityValue = "eligible" | "not_eligible";
-
-export function isEligibilityValue(value: unknown): value is EligibilityValue {
-  return value === "eligible" || value === "not_eligible";
-}
-
 export const PARTICIPANT_STATUSES = [
-  "lead",
-  "under_review",
-  "eligible",
-  "not_eligible",
+  "terminated",
   "completed",
   "review_pass",
   "review_fail",
@@ -21,10 +12,7 @@ export type ParticipantStatus = (typeof PARTICIPANT_STATUSES)[number];
 
 const VALID_TRANSITIONS: Record<ParticipantStatus, readonly ParticipantStatus[]> =
   {
-    lead: ["eligible", "not_eligible", "under_review"],
-    under_review: ["eligible", "not_eligible"],
-    eligible: ["completed", "not_eligible"],
-    not_eligible: ["eligible"],
+    terminated: [],
     completed: ["review_pass", "review_fail"],
     review_pass: ["successful"],
     review_fail: ["unsuccessful"],
@@ -37,9 +25,15 @@ const LEGACY_STATUS_ALIASES: Record<string, ParticipantStatus> = {
   qc_pass: "review_pass",
   qc_fail: "review_fail",
   survey_completed: "completed",
+  not_eligible: "terminated",
+  eligible: "completed",
+  lead: "completed",
+  under_review: "completed",
 };
 
-export function normalizeParticipantStatus(status: string): ParticipantStatus | null {
+export function normalizeParticipantStatus(
+  status: string,
+): ParticipantStatus | null {
   const normalized = status.toLowerCase();
   if (LEGACY_STATUS_ALIASES[normalized]) {
     return LEGACY_STATUS_ALIASES[normalized];
@@ -48,20 +42,6 @@ export function normalizeParticipantStatus(status: string): ParticipantStatus | 
     return normalized as ParticipantStatus;
   }
   return null;
-}
-
-/** Statuses where admin may set eligible / not_eligible (pre-survey only). */
-export const ADMIN_ELIGIBILITY_STATUSES = [
-  "lead",
-  "under_review",
-  "eligible",
-  "not_eligible",
-] as const;
-
-export function canAdminSetEligibility(status: string): boolean {
-  const normalized = normalizeParticipantStatus(status);
-  if (!normalized) return false;
-  return (ADMIN_ELIGIBILITY_STATUSES as readonly string[]).includes(normalized);
 }
 
 export function canTransition(from: string, to: ParticipantStatus): boolean {
@@ -96,26 +76,21 @@ export function formatParticipantStatusLabel(status: string): string {
   const normalized = normalizeParticipantStatus(status) ?? status.toLowerCase();
 
   switch (normalized) {
-    case "lead":
-    case "under_review":
-      return "Under Review";
-    case "eligible":
-      return "Eligible";
-    case "not_eligible":
-      return "Your application is currently under review or not eligible for this survey.";
+    case "terminated":
+      return "Not eligible for this study";
     case "completed":
-      return "Survey Completed";
+      return "Form completed";
     case "paid":
       return "Paid";
     case "review_pass":
     case "review_fail":
-      return "Under Review";
+      return "Under review";
     case "successful":
       return "Successful";
     case "unsuccessful":
       return "Unsuccessful";
     default:
-      return "Under Review";
+      return "Form completed";
   }
 }
 
@@ -124,12 +99,18 @@ export function isParticipantVisibleStatus(status: string): boolean {
   return normalized !== "review_pass" && normalized !== "review_fail";
 }
 
-/** True while eligibility has not yet been resolved after registration. */
-export function isUnderReviewStatus(status: string): boolean {
-  const normalized = normalizeParticipantStatus(status);
-  return normalized === "under_review" || normalized === "lead";
+export function isTerminatedStatus(status: string): boolean {
+  return normalizeParticipantStatus(status) === "terminated";
 }
 
-export function isAwaitingEligibilityDecision(status: string): boolean {
-  return isUnderReviewStatus(status);
+export function isQualifiedCompletionStatus(status: string): boolean {
+  const normalized = normalizeParticipantStatus(status);
+  return (
+    normalized === "completed" ||
+    normalized === "review_pass" ||
+    normalized === "review_fail" ||
+    normalized === "successful" ||
+    normalized === "unsuccessful" ||
+    normalized === "paid"
+  );
 }

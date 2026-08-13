@@ -24,7 +24,6 @@ export async function GET() {
       authenticated: true,
       fullName: participant.fullName,
       status: participant.status,
-      refillRequired: participant.refillRequired,
     });
   } catch (error) {
     console.error("GET /api/auth/session failed:", error);

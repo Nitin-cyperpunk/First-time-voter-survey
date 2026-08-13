@@ -3,16 +3,9 @@ import {
   closesAt as computeClosesAt,
   DEFAULT_STUDY_CONFIG,
 } from "@/lib/study-config/defaults";
-import {
-  isEligibilityAccepting,
-  isRegistrationAccepting,
-} from "@/lib/study-config/gates";
+import { isRegistrationAccepting } from "@/lib/study-config/gates";
 
-export type FunnelStageKey =
-  | "registration"
-  | "eligible"
-  | "verified"
-  | "completed";
+export type FunnelStageKey = "registration" | "completed" | "paid";
 
 export type DropSeverity = "lo" | "mid" | "hi" | "none";
 
@@ -32,7 +25,6 @@ export type FunnelSnapshotStatus =
   | "near-full"
   | "full"
   | "over"
-  | "eligibility-closed"
   | "project-closed";
 
 export type FunnelSnapshot = {
@@ -40,22 +32,13 @@ export type FunnelSnapshot = {
   buffer: number;
   closesAt: number;
   registered: number;
-  /** Currently eligible (cap / “Eligible now”). */
-  eligible: number;
-  /** Reached eligible including verification-phase rejects. */
-  eligibleReached: number;
-  verified: number;
-  /** Reached eligible but not verified (verify gap). */
-  notVerified: number;
   completed: number;
+  terminated: number;
   fraudFlagged: number;
   paid: number;
-  overrides: number;
   stages: FunnelStage[];
-  eligiblePct: number;
+  completedPct: number;
   targetPct: number;
-  verifyRate: number;
-  verifyGap: number;
   remainingToCap: number;
   status: FunnelSnapshotStatus;
   formAccepting: boolean;
@@ -64,13 +47,10 @@ export type FunnelSnapshot = {
 
 export type FunnelCounts = {
   registered: number;
-  eligible: number;
-  eligibleReached?: number;
-  verified: number;
   completed: number;
+  terminated: number;
   fraudFlagged: number;
   paid: number;
-  overrides: number;
 };
 
 function pct(numerator: number, denominator: number): number {
@@ -87,22 +67,20 @@ function dropSeverity(dropPct: number): DropSeverity {
 
 function resolveStatus(
   config: StudyConfig,
-  eligiblePct: number,
+  completedPct: number,
   registered: number,
   closesAt: number,
 ): FunnelSnapshotStatus {
-  if (!config.project_open) return "project-closed";
-  if (!isEligibilityAccepting(config)) return "eligibility-closed";
-  if (registered > closesAt || eligiblePct > 100) return "over";
-  if (eligiblePct >= 100 || registered >= closesAt) return "full";
-  if (eligiblePct >= 85) return "near-full";
+  if (config.form_status !== "open") return "project-closed";
+  if (registered > closesAt || completedPct > 100) return "over";
+  if (completedPct >= 100 || registered >= closesAt) return "full";
+  if (completedPct >= 85) return "near-full";
   return "open";
 }
 
 /**
- * Funnel math — Registered → Eligible → Verified → Completed.
- * Eligible stage uses “reached eligible” (includes verification rejects) so
- * drop-off after screener is attributed to Eligible → Verified (not verified).
+ * Funnel math — Registered → Completed → Paid.
+ * Completed = qualified form completions (not Q1/Q2 terminations).
  */
 export function buildFunnelSnapshot(
   counts: FunnelCounts,
@@ -111,27 +89,13 @@ export function buildFunnelSnapshot(
   const target = config.target;
   const buffer = config.buffer;
   const closesAt = computeClosesAt(config);
-  const {
-    registered,
-    eligible,
-    verified,
-    completed,
-    fraudFlagged,
-    paid,
-    overrides,
-  } = counts;
-  const eligibleReached = Math.max(
-    counts.eligibleReached ?? eligible,
-    eligible,
-  );
-  const notVerified = Math.max(0, eligibleReached - verified);
+  const { registered, completed, terminated, fraudFlagged, paid } = counts;
 
   const rawStages: Array<{ key: FunnelStageKey; label: string; count: number }> =
     [
       { key: "registration", label: "Registered", count: registered },
-      { key: "eligible", label: "Eligible", count: eligibleReached },
-      { key: "verified", label: "Verified", count: verified },
       { key: "completed", label: "Completed", count: completed },
+      { key: "paid", label: "Paid", count: paid },
     ];
 
   let biggestCliffIndex = -1;
@@ -162,44 +126,26 @@ export function buildFunnelSnapshot(
       ...stages[biggestCliffIndex]!,
       isBiggestCliff: true,
     };
-    const from = rawStages[biggestCliffIndex - 1]!.label;
-    const to = rawStages[biggestCliffIndex]!.label;
-    // Verification drop-offs read as “not verified” in ops language.
-    if (
-      rawStages[biggestCliffIndex - 1]!.key === "eligible" &&
-      rawStages[biggestCliffIndex]!.key === "verified"
-    ) {
-      cliffLabel = "Eligible → Not verified";
-    } else {
-      cliffLabel = `${from} → ${to}`;
-    }
+    cliffLabel = `${rawStages[biggestCliffIndex - 1]!.label} → ${rawStages[biggestCliffIndex]!.label}`;
   }
 
-  const eligiblePct = pct(eligible, closesAt);
-  const targetPct = pct(verified, target);
-  const verifyRate = pct(verified, eligibleReached);
-  const verifyGap = notVerified;
+  const completedPct = pct(completed, closesAt);
+  const targetPct = pct(completed, target);
 
   return {
     target,
     buffer,
     closesAt,
     registered,
-    eligible,
-    eligibleReached,
-    verified,
-    notVerified,
     completed,
+    terminated,
     fraudFlagged,
     paid,
-    overrides,
     stages,
-    eligiblePct,
+    completedPct,
     targetPct,
-    verifyRate,
-    verifyGap,
-    remainingToCap: Math.max(0, closesAt - eligible),
-    status: resolveStatus(config, eligiblePct, registered, closesAt),
+    remainingToCap: Math.max(0, closesAt - completed),
+    status: resolveStatus(config, completedPct, registered, closesAt),
     formAccepting: isRegistrationAccepting(config),
     cliffLabel,
   };

@@ -12,8 +12,6 @@ export type AdminStatus = typeof STATUS_ACTIVE | typeof STATUS_INACTIVE;
 export type AdminCapability =
   | "dashboard"
   | "respondents"
-  | "dm"
-  | "verify"
   | "screener"
   | "referrals"
   | "analytics"
@@ -43,12 +41,6 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     description: "Registered participants and leads",
   },
   {
-    capability: "dm",
-    title: "DM & Verify",
-    href: adminPath("/dm-verify"),
-    description: "Instagram DM verification workflow",
-  },
-  {
     capability: "screener",
     title: "Terminations",
     href: adminPath("/terminations"),
@@ -67,16 +59,16 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     description: "FTV-v1 screener form versions",
   },
   {
-    capability: "dm",
+    capability: "referrals",
     title: "Message Templates",
     href: adminPath("/message-templates"),
-    description: "WhatsApp and Instagram message templates with placeholders",
+    description: "WhatsApp and Instagram referral share templates",
   },
   {
     capability: "export",
     title: "Payouts",
     href: adminPath("/payouts"),
-    description: "Referral earnings with payment status",
+    description: "Referral and survey earnings with payment status",
   },
   {
     capability: "settings",
@@ -96,8 +88,6 @@ const PERMISSION_MATRIX: Record<AdminRole, Record<AdminCapability, boolean>> = {
   [ROLE_SUPER_ADMIN]: {
     dashboard: true,
     respondents: true,
-    dm: true,
-    verify: true,
     screener: true,
     referrals: true,
     analytics: true,
@@ -109,8 +99,6 @@ const PERMISSION_MATRIX: Record<AdminRole, Record<AdminCapability, boolean>> = {
   [ROLE_ADMIN]: {
     dashboard: true,
     respondents: true,
-    dm: true,
-    verify: true,
     screener: true,
     referrals: true,
     analytics: true,

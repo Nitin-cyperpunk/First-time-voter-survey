@@ -3,7 +3,6 @@ export {
   ageOutOfRangeMessage,
   getAgeYears,
   isAgeWithinStudyRule,
-  isEligibilityAccepting,
   isRegistrationAccepting,
 } from "@/lib/study-config/gates";
 export { mergeStudyConfig, parseStudyConfig } from "@/lib/study-config/parse";

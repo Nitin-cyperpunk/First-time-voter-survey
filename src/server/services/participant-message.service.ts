@@ -71,35 +71,26 @@ export async function renderParticipantMessage(
 }
 
 export async function buildRegistrationThankYouMessages(participant: Participant) {
-  const [
-    instagram_verification,
-    instagram_referral,
-    whatsapp_referral,
-    not_eligible_referral,
-  ] = await Promise.all([
-    renderParticipantMessage(
-      participant,
-      MESSAGE_TEMPLATE_KEYS.INSTAGRAM_VERIFICATION,
-    ),
-    renderParticipantMessage(
-      participant,
-      MESSAGE_TEMPLATE_KEYS.INSTAGRAM_REFERRAL,
-      { platform: "instagram" },
-    ),
-    renderParticipantMessage(
-      participant,
-      MESSAGE_TEMPLATE_KEYS.WHATSAPP_REFERRAL,
-      { platform: "whatsapp" },
-    ),
-    renderParticipantMessage(
-      participant,
-      MESSAGE_TEMPLATE_KEYS.NOT_ELIGIBLE_REFERRAL,
-      { platform: "whatsapp" },
-    ),
-  ]);
+  const [instagram_referral, whatsapp_referral, not_eligible_referral] =
+    await Promise.all([
+      renderParticipantMessage(
+        participant,
+        MESSAGE_TEMPLATE_KEYS.INSTAGRAM_REFERRAL,
+        { platform: "instagram" },
+      ),
+      renderParticipantMessage(
+        participant,
+        MESSAGE_TEMPLATE_KEYS.WHATSAPP_REFERRAL,
+        { platform: "whatsapp" },
+      ),
+      renderParticipantMessage(
+        participant,
+        MESSAGE_TEMPLATE_KEYS.NOT_ELIGIBLE_REFERRAL,
+        { platform: "whatsapp" },
+      ),
+    ]);
 
   return {
-    instagram_verification,
     instagram_referral,
     whatsapp_referral,
     not_eligible_referral,

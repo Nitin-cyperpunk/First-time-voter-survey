@@ -5,16 +5,12 @@ import { useRouter } from "next/navigation";
 
 import { InviteFriendsModal } from "@/components/participant/invite-friends-modal";
 import { useInstagramDmGuide } from "@/hooks/use-instagram-dm-guide";
-import { useInstagramVerification } from "@/hooks/use-instagram-verification";
 import {
   RegistrationCompleteCtaButton,
   RegistrationCompleteShell,
 } from "@/features/registration-complete/components/registration-complete-ui";
-import { isNotEligibleStatus } from "@/features/participant-dashboard/lib/referral-share-mode";
-import {
-  INSTAGRAM_DM_URL,
-  buildWhatsAppVerificationUrl,
-} from "@/config/social";
+import { isTerminatedStatus } from "@/lib/participant-lifecycle";
+import { buildWhatsAppVerificationUrl } from "@/config/social";
 import { buildWhatsAppShareUrl } from "@/lib/message-templates/client";
 import {
   clearRegistrationCompletePending,
@@ -61,14 +57,11 @@ export function RegistrationCompleteContent() {
   const router = useRouter();
   const [data, setData] = useState<StoredRegistrationResult | null>(null);
   const [loading, setLoading] = useState(true);
-  const [openingVerification, setOpeningVerification] = useState(false);
   const [referralInviteOpen, setReferralInviteOpen] = useState(false);
   const [sharingInstagram, setSharingInstagram] = useState(false);
   const [sharingWhatsApp, setSharingWhatsApp] = useState(false);
   const { startInstagramDm, modal: referralInstagramModal } =
     useInstagramDmGuide();
-  const { startInstagramVerification, modal: verificationModal } =
-    useInstagramVerification();
 
   useEffect(() => {
     clearRegistrationCompletePending();
@@ -83,34 +76,21 @@ export function RegistrationCompleteContent() {
     setLoading(false);
   }, [router]);
 
-  const notEligible = data ? isNotEligibleStatus(data.status) : false;
+  const terminated = data ? isTerminatedStatus(data.status) : false;
 
-  function handleVerificationClick() {
-    if (!data?.messages) return;
-
-    setOpeningVerification(true);
-    try {
-      const rendered = data.messages.instagram_verification;
-
-      if (notEligible) {
-        window.open(
-          buildWhatsAppVerificationUrl(rendered.message),
-          "_blank",
-          "noopener,noreferrer",
-        );
-        toastWhatsAppShareInitiated();
-        return;
-      }
-
-      startInstagramVerification({
-        message: rendered.message,
-        dmUrl: INSTAGRAM_DM_URL,
-      });
-    } catch {
-      toastUnexpectedError();
-    } finally {
-      setOpeningVerification(false);
-    }
+  function handleWhatsAppContact() {
+    if (!data) return;
+    const message =
+      "Hi!\n\nI completed the First-Time Voters Study.\n\n" +
+      (data.fullName ? `Name: ${data.fullName}\n` : "") +
+      (data.mobile ? `Mobile: ${data.mobile}\n` : "") +
+      (data.leadId ? `Lead ID: ${data.leadId}\n` : "");
+    window.open(
+      buildWhatsAppVerificationUrl(message),
+      "_blank",
+      "noopener,noreferrer",
+    );
+    toastWhatsAppShareInitiated();
   }
 
   function handleReferralInstagram() {
@@ -136,7 +116,7 @@ export function RegistrationCompleteContent() {
 
     setSharingWhatsApp(true);
     try {
-      const rendered = notEligible
+      const rendered = terminated
         ? data.messages.not_eligible_referral
         : data.messages.whatsapp_referral;
 
@@ -169,23 +149,14 @@ export function RegistrationCompleteContent() {
   return (
     <>
       <RegistrationCompleteShell>
-        {notEligible ? <TerminatedThankYouCopy /> : <QualifiedThankYouCopy />}
+        {terminated ? <TerminatedThankYouCopy /> : <QualifiedThankYouCopy />}
 
         <div className="mt-6 flex flex-row gap-3">
           <RegistrationCompleteCtaButton
-            title={notEligible ? "DM us on WhatsApp" : "DM us on Instagram"}
-            subtitle={
-              openingVerification
-                ? notEligible
-                  ? "Opening..."
-                  : "Preparing..."
-                : notEligible
-                  ? "Send verification details"
-                  : "Verify your account"
-            }
-            variant={notEligible ? "whatsapp" : "primary"}
-            disabled={openingVerification}
-            onClick={handleVerificationClick}
+            title="DM us on WhatsApp"
+            subtitle="Message the study team"
+            variant="whatsapp"
+            onClick={handleWhatsAppContact}
           />
           <RegistrationCompleteCtaButton
             title="Share"
@@ -206,7 +177,6 @@ export function RegistrationCompleteContent() {
         sharingWhatsApp={sharingWhatsApp}
       />
       {referralInstagramModal}
-      {verificationModal}
     </>
   );
 }

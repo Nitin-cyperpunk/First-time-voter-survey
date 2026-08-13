@@ -1,5 +1,4 @@
 import { transitionParticipantStatus } from "@/server/services/lifecycle.service";
-import { markReferralEarnedForReferredLeadId } from "@/server/repositories/referrals.repository";
 import { findParticipantByLeadId } from "@/server/repositories/participants.repository";
 
 export type QcOutcome = "pass" | "fail";
@@ -16,9 +15,7 @@ export async function markParticipantQc(leadId: string, outcome: QcOutcome) {
     {
       changedBy: "admin",
       notes:
-        outcome === "pass"
-          ? "QC review passed"
-          : "QC review failed",
+        outcome === "pass" ? "QC review passed" : "QC review failed",
     },
   );
 
@@ -29,19 +26,13 @@ export async function markParticipantQc(leadId: string, outcome: QcOutcome) {
       changedBy: "admin",
       notes:
         outcome === "pass"
-          ? "Participant marked successful — referral reward marked earned"
+          ? "Participant marked successful"
           : "Participant marked unsuccessful",
     },
   );
 
-  const earnedReferral =
-    outcome === "pass"
-      ? await markReferralEarnedForReferredLeadId(leadId)
-      : null;
-
   return {
     participant: finalResult.participant,
-    earnedReferral,
     changed: reviewResult.changed || finalResult.changed,
   };
 }

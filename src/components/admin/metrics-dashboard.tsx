@@ -73,7 +73,6 @@ function statusCopy(
     "near-full": "Near full",
     full: "Full",
     over: "Over",
-    "eligibility-closed": "Eligibility closed",
     "project-closed": "Closed",
   };
   return {
@@ -142,9 +141,9 @@ export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
   const status = statusCopy(funnel.status, funnel.formAccepting);
   const maxStage = Math.max(...funnel.stages.map((s) => s.count), 1);
   const ringOffset = useMemo(() => {
-    const pct = Math.min(100, Math.max(0, funnel.eligiblePct)) / 100;
+    const pct = Math.min(100, Math.max(0, funnel.completedPct)) / 100;
     return RING_C * (1 - pct);
-  }, [funnel.eligiblePct]);
+  }, [funnel.completedPct]);
 
   function setAll(next: boolean) {
     setOpen({
@@ -156,13 +155,6 @@ export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
       timing: next,
     });
   }
-
-  const verifyOfEligible =
-    (kpis.eligibleReached ?? kpis.eligible) > 0
-      ? Math.round(
-          (kpis.verified / (kpis.eligibleReached ?? kpis.eligible)) * 1000,
-        ) / 10
-      : 0;
 
   return (
     <div
@@ -230,31 +222,25 @@ export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
             {
               label: "Registered",
               value: kpis.registered,
-              hint: "screener started",
+              hint: "form submitted",
               accent: "rose" as const,
-            },
-            {
-              label: "Eligible",
-              value: kpis.eligible,
-              hint: `of ${config.closesAt} cap · now`,
-              accent: "teal" as const,
-            },
-            {
-              label: "Not verified",
-              value: kpis.notVerified ?? funnel.notVerified,
-              hint: "reached eligible, not verified",
-              accent: "amber" as const,
-            },
-            {
-              label: "Verified",
-              value: kpis.verified,
-              hint: `${verifyOfEligible}% of reached`,
-              accent: "blue" as const,
             },
             {
               label: "Completed",
               value: kpis.completed,
-              hint: "screener completed",
+              hint: `of ${config.closesAt} cap · qualified`,
+              accent: "teal" as const,
+            },
+            {
+              label: "Terminated",
+              value: kpis.terminated,
+              hint: "Q1/Q2 screen-out",
+              accent: "amber" as const,
+            },
+            {
+              label: "Paid",
+              value: kpis.paid,
+              hint: "payout recorded",
               accent: "plum" as const,
             },
             {
@@ -348,7 +334,7 @@ export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
           summary={
             <span className="inline-flex flex-wrap items-center gap-2">
               <span className="font-mono">
-                {funnel.eligible} / {funnel.closesAt} eligible
+                {funnel.completed} / {funnel.closesAt} completed
               </span>
               <span
                 className={cn(
@@ -372,7 +358,7 @@ export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
                 height="140"
                 viewBox="0 0 140 140"
                 className="-rotate-90"
-                aria-label={`${funnel.eligiblePct}% of cap`}
+                aria-label={`${funnel.completedPct}% of cap`}
               >
                 <circle
                   cx="70"
@@ -398,7 +384,7 @@ export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                 <p className="font-mono text-2xl font-bold text-foreground">
-                  {funnel.eligiblePct}%
+                  {funnel.completedPct}%
                 </p>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-plum-faint">
                   of cap
@@ -415,19 +401,13 @@ export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
                   value={funnel.closesAt}
                   emphasize
                 />
-                <LegendItem label="Eligible now" value={funnel.eligible} />
-                <LegendItem
-                  label="Not verified"
-                  value={funnel.notVerified}
-                />
+                <LegendItem label="Completed" value={funnel.completed} />
+                <LegendItem label="Terminated" value={funnel.terminated} />
                 <LegendItem
                   label="Remaining to cap"
                   value={funnel.remainingToCap}
                 />
-                <LegendItem
-                  label="Verify rate"
-                  value={`${funnel.verifyRate}%`}
-                />
+                <LegendItem label="Paid" value={funnel.paid} />
               </dl>
 
               <div>
@@ -435,26 +415,20 @@ export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
                   Funnel headroom
                 </p>
                 <HeadroomBar
-                  label="Eligible"
-                  value={funnel.eligible}
+                  label="Completed"
+                  value={funnel.completed}
                   max={funnel.closesAt}
                 />
                 <HeadroomBar
-                  label="Verified"
-                  value={funnel.verified}
-                  max={funnel.target}
-                />
-                <HeadroomBar
-                  label="Completed"
-                  value={funnel.completed}
+                  label="Paid"
+                  value={funnel.paid}
                   max={funnel.target}
                 />
               </div>
 
               <p className="rounded-[10px] border border-border bg-accent-soft px-3 py-2 text-sm leading-relaxed text-text-primary">
                 Buffer gap: {funnel.buffer} extra seats beyond target{" "}
-                {funnel.target}. Not verified (reached eligible, not verified):{" "}
-                {funnel.notVerified}.
+                {funnel.target}. Terminated (Q1/Q2): {funnel.terminated}.
               </p>
             </div>
           </div>

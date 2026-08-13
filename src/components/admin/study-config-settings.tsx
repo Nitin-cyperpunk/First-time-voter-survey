@@ -52,21 +52,13 @@ const OPEN_SWITCHES: Array<{
       "The registration form will be live again for new respondents.",
   },
   {
-    key: "eligibility_open",
-    label: "Eligibility open",
-    description: "When off, new participants cannot become Eligible.",
-    offConsequence:
-      "New participants will not be able to become Eligible until you turn this back on.",
-    onConsequence: "New participants will be able to become Eligible again.",
-  },
-  {
     key: "project_open",
     label: "Project open",
-    description: "When off, registration and eligibility both stay closed.",
+    description: "When off, registration stays closed.",
     offConsequence:
-      "Registration and eligibility will both stay closed until you turn this back on.",
+      "Registration will stay closed until you turn this back on.",
     onConsequence:
-      "Registration and eligibility can open again (subject to the other switches).",
+      "Registration can open again (subject to the other switches).",
   },
 ];
 
@@ -267,7 +259,7 @@ export function StudyConfigSettings({ initialConfig }: StudyConfigSettingsProps)
           Funnel target &amp; buffer
         </h3>
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-plum-muted">
-          Display target for the metrics funnel (eligible / verified). This is
+          Display target for the metrics funnel (qualified completions). This is
           separate from the hard qualified-completion cap above.
         </p>
 

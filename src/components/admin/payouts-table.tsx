@@ -95,7 +95,7 @@ type SortBy =
   | "paymentStatus"
   | "paymentDate";
 
-/** Survey-completion / QC outcomes — excludes not_eligible & pre-survey statuses. */
+/** Survey-completion / QC outcomes — excludes terminated & pre-survey statuses. */
 const SURVEY_PAYOUT_STATUSES = new Set([
   "completed",
   "review_pass",
@@ -103,7 +103,6 @@ const SURVEY_PAYOUT_STATUSES = new Set([
   "successful",
   "unsuccessful",
   "paid",
-  "qc_pass",
 ]);
 
 function amountForMode(row: PayoutApiRow, mode: PayoutMode) {
@@ -112,7 +111,7 @@ function amountForMode(row: PayoutApiRow, mode: PayoutMode) {
 
 function matchesPayoutMode(row: PayoutApiRow, mode: PayoutMode) {
   if (mode === "referral") {
-    // Referral view keeps the full roster (incl. not_eligible referrers).
+    // Referral view keeps the full roster (incl. terminated referrers).
     return true;
   }
   return SURVEY_PAYOUT_STATUSES.has(row.qcStatus.toLowerCase());
@@ -128,7 +127,9 @@ function qcVariant(status: string): StatusPillVariant {
   const normalized = status.toLowerCase();
   if (normalized.includes("pass")) return "success";
   if (normalized.includes("fail")) return "fail";
-  if (normalized.includes("eligible")) return "eligible";
+  if (normalized === "terminated") return "notEligible";
+  if (normalized === "completed") return "completed";
+  if (normalized === "successful" || normalized === "paid") return "success";
   return "lead";
 }
 
@@ -377,8 +378,8 @@ export function PayoutsTable() {
         <div>
           <p className="text-sm font-semibold text-foreground">Payout type</p>
           <p className="mt-0.5 text-xs text-plum-muted">
-            Referral lists everyone (incl. not eligible referrers). Survey lists
-            only people who completed the survey / QC path.
+            Referral lists everyone (incl. terminated referrers). Survey lists
+            only people who completed the form / QC path.
           </p>
         </div>
         <div

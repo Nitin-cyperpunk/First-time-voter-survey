@@ -1,7 +1,5 @@
 import { Suspense } from "react";
 
-import { getCurrentAdmin } from "@/lib/auth/admin-session";
-import { canAccess } from "@/lib/roles";
 import { listParticipants } from "@/server/repositories/admin.repository";
 import { ParticipantSearch } from "@/components/admin/participant-search";
 import { ScreenerExportButtons } from "@/components/admin/screener-export-buttons";
@@ -10,7 +8,6 @@ import {
   type RespondentTableRow,
 } from "@/components/admin/respondents-table";
 import { formatAdminDateTime } from "@/lib/format-admin-datetime";
-import { buildRefillUrl } from "@/lib/refill-token.service";
 
 export const dynamic = "force-dynamic";
 
@@ -19,9 +16,6 @@ function formatDate(date: Date) {
 }
 
 export default async function RespondentsOpsPage() {
-  const admin = await getCurrentAdmin();
-  const canVerify = admin ? canAccess(admin.role, "verify") : false;
-
   const participants = await listParticipants();
   const rows: RespondentTableRow[] = participants.map((participant) => ({
     leadId: participant.leadId,
@@ -49,19 +43,6 @@ export default async function RespondentsOpsPage() {
     acquisitionType: participant.acquisitionType,
     referralPlatform: participant.referralPlatform,
     otherSource: participant.otherSource,
-    surveyAccessGranted: false,
-    verifiedAt: participant.verifiedAt?.toISOString() ?? null,
-    verificationMethod: participant.verificationMethod,
-    dmStatus: participant.dmStatus,
-    instagramId: participant.instagramId,
-    instagramVisibility: participant.instagramVisibility ?? "public",
-    eligibilityOverrideReason: participant.eligibilityOverrideReason,
-    refillRequired: participant.refillRequired,
-    refillReason: participant.refillReason,
-    refillUrl: participant.refillToken
-      ? buildRefillUrl(participant.refillToken)
-      : null,
-    surveyUrl: null,
     createdAt: formatDate(participant.createdAt),
   }));
 
@@ -73,10 +54,9 @@ export default async function RespondentsOpsPage() {
         </h2>
         <p className="mt-1 text-sm text-plum-muted">
           {participants.length} registered participant
-          {participants.length === 1 ? "" : "s"}. Manage eligibility
-          verification, messaging, and exports from one place. Click a row to
-          open the detail drawer or search by Lead ID, mobile, name, or referral
-          code.
+          {participants.length === 1 ? "" : "s"}. Manage responses, QC, and
+          exports. Click a row to open details or search by Lead ID, mobile,
+          name, or referral code.
         </p>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
           <div className="min-w-0 w-full sm:max-w-xl sm:flex-1">
@@ -100,7 +80,7 @@ export default async function RespondentsOpsPage() {
           </div>
         }
       >
-        <RespondentsTable participants={rows} canVerify={canVerify} />
+        <RespondentsTable participants={rows} />
       </Suspense>
     </div>
   );

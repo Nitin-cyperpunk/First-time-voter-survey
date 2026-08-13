@@ -45,26 +45,10 @@ export type Database = {
           ip_address: string | null;
           user_agent: string | null;
           is_flagged_duplicate: boolean;
-          refill_required: boolean;
-          refill_reason: string | null;
-          refill_requested_at: string | null;
-          refill_completed_at: string | null;
-          refill_token: string | null;
-          eligibility_manual_override: boolean;
-          eligibility_override_reason: string | null;
-          eligibility_overridden_at: string | null;
           acquisition_source: string | null;
           acquisition_type: string | null;
           referral_platform: string | null;
           other_source: string | null;
-          verified_at: string | null;
-          verification_method: string | null;
-          dm_status: string | null;
-          instagram_id: string | null;
-          instagram_visibility: string;
-          call_disposition: string | null;
-          call_disposition_notes: string | null;
-          call_disposition_at: string | null;
           upi_id: string | null;
           upi_submitted_at: string | null;
           device_fingerprint: string | null;
@@ -91,26 +75,10 @@ export type Database = {
           ip_address?: string | null;
           user_agent?: string | null;
           is_flagged_duplicate?: boolean;
-          refill_required?: boolean;
-          refill_reason?: string | null;
-          refill_requested_at?: string | null;
-          refill_completed_at?: string | null;
-          refill_token?: string | null;
-          eligibility_manual_override?: boolean;
-          eligibility_override_reason?: string | null;
-          eligibility_overridden_at?: string | null;
           acquisition_source?: string | null;
           acquisition_type?: string | null;
           referral_platform?: string | null;
           other_source?: string | null;
-          verified_at?: string | null;
-          verification_method?: string | null;
-          dm_status?: string | null;
-          instagram_id?: string | null;
-          instagram_visibility?: string;
-          call_disposition?: string | null;
-          call_disposition_notes?: string | null;
-          call_disposition_at?: string | null;
           upi_id?: string | null;
           upi_submitted_at?: string | null;
           device_fingerprint?: string | null;
@@ -401,7 +369,6 @@ export type Database = {
           form_type: string;
           active_version: number;
           message_templates: Json;
-          call_dispositions: Json;
           study_config: Json;
         },
         {
@@ -409,7 +376,6 @@ export type Database = {
           form_type: string;
           active_version?: number;
           message_templates?: Json;
-          call_dispositions?: Json;
           study_config?: Json;
         }
       >;

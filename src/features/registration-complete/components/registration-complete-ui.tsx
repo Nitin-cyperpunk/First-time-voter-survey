@@ -50,7 +50,7 @@ export function RegistrationCompleteCtaButton({
         className={cn(
         "flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-3 py-3.5 text-center text-white shadow-[0_8px_20px_-10px_rgba(0,0,0,0.35)] transition-opacity disabled:cursor-not-allowed disabled:opacity-60",
         variant === "primary" && "bg-primary hover:bg-accent-hover",
-        variant === "whatsapp" && "bg-primary hover:bg-accent-hover",
+        variant === "whatsapp" && "bg-[#3FA76F] hover:bg-[#359564]",
         variant === "referral" && "bg-primary hover:bg-accent-hover",
         className,
       )}

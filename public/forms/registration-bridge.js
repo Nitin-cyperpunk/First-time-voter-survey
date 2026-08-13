@@ -2364,12 +2364,16 @@
       .replace(/\s+/g, "_");
   }
 
+  function isTerminatedRegistrationStatus(status) {
+    const normalized = normalizeRegistrationStatus(status);
+    return normalized === "not_eligible" || normalized === "terminated";
+  }
+
   function resolveThankYouChannels(status) {
-    const isNotEligible =
-      normalizeRegistrationStatus(status) === "not_eligible";
+    const terminated = isTerminatedRegistrationStatus(status);
     return {
-      loginChannel: isNotEligible ? "whatsapp" : "instagram",
-      shareChannel: isNotEligible ? "whatsapp" : "instagram",
+      loginChannel: "whatsapp",
+      shareChannel: terminated ? "whatsapp" : "instagram",
     };
   }
 
@@ -2409,11 +2413,10 @@
     await mountThankYouExperience(registration);
 
     if (options && options.openReferralModal) {
-      const isNotEligible =
-        normalizeRegistrationStatus(registration.status) === "not_eligible";
+      const terminated = isTerminatedRegistrationStatus(registration.status);
       showReferralInviteModal({
         instagramTemplateKey: TEMPLATE_KEYS.INSTAGRAM_REFERRAL,
-        whatsappTemplateKey: isNotEligible
+        whatsappTemplateKey: terminated
           ? TEMPLATE_KEYS.NOT_ELIGIBLE_REFERRAL
           : TEMPLATE_KEYS.WHATSAPP_REFERRAL,
       });
@@ -2458,9 +2461,8 @@
 
     ensureResultMountPoints(host);
 
-    const status = registration.status || "under_review";
-    const isNotEligible =
-      normalizeRegistrationStatus(status) === "not_eligible";
+    const status = registration.status || "completed";
+    const terminated = isTerminatedRegistrationStatus(status);
 
     restoreLegacyResultCopy(host);
 
@@ -2476,36 +2478,29 @@
     const container = getCtaContainer(screen);
     if (!container) return;
 
-    const whatsappReferralTemplateKey = isNotEligible
+    const whatsappReferralTemplateKey = terminated
       ? TEMPLATE_KEYS.NOT_ELIGIBLE_REFERRAL
       : TEMPLATE_KEYS.WHATSAPP_REFERRAL;
     const instagramReferralTemplateKey = TEMPLATE_KEYS.INSTAGRAM_REFERRAL;
-    const verificationTemplateKey = TEMPLATE_KEYS.INSTAGRAM_VERIFICATION;
 
     container.innerHTML = "";
     container.classList.remove("hidden");
 
-    const verificationButton = createThankYouButton(
-      isNotEligible ? "DM us on WhatsApp" : "DM us on Instagram",
-      isNotEligible ? "Send verification details" : "Verify your account",
-      isNotEligible ? "cta-wa" : "cta-ig",
+    const whatsappContactButton = createThankYouButton(
+      "DM us on WhatsApp",
+      "Message the study team",
+      "cta-wa",
       function () {
-        void fetchRenderedParticipantMessage(verificationTemplateKey)
-          .then(function (rendered) {
-            if (isNotEligible) {
-              window.open(
-                buildWhatsAppVerificationUrl(rendered.message),
-                "_blank",
-                "noopener,noreferrer",
-              );
-              return;
-            }
-            verifyViaInstagram(rendered.message, DEFAULT_INSTAGRAM_DM_URL);
-          })
-          .catch(function (error) {
-            console.error("Failed to open verification DM:", error);
-            showCopiedToast("Could not prepare your message.");
-          });
+        const message = buildLoginDetailsWhatsAppMessage({
+          fullName: registration.fullName,
+          mobile: registration.mobile,
+          leadId: registration.leadId,
+        });
+        window.open(
+          buildWhatsAppVerificationUrl(message),
+          "_blank",
+          "noopener,noreferrer",
+        );
       },
     );
 
@@ -2521,7 +2516,7 @@
       },
     );
 
-    container.appendChild(verificationButton);
+    container.appendChild(whatsappContactButton);
     container.appendChild(referralButton);
   }
 
