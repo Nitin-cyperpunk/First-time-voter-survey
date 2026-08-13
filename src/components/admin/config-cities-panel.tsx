@@ -40,6 +40,7 @@ export function ConfigCitiesPanel({
     const data = (await response.json()) as CitiesPayload & { error?: string };
     if (!response.ok) throw new Error(data.error ?? "Failed to load cities.");
     setPayload(data);
+    setEditCapacity({});
     onCapacityHintChange?.(data.activeCityCapacitySum);
   }, [onCapacityHintChange]);
 
@@ -243,12 +244,23 @@ export function ConfigCitiesPanel({
                       <Button
                         type="button"
                         size="sm"
-                        variant="outline"
+                        variant={
+                          editCapacity[city.id] !== undefined &&
+                          Number(editCapacity[city.id]) !== city.capacity
+                            ? "default"
+                            : "outline"
+                        }
                         onClick={() => void saveCapacity(city)}
                       >
                         Save
                       </Button>
                     </div>
+                    {editCapacity[city.id] !== undefined &&
+                    Number(editCapacity[city.id]) !== city.capacity ? (
+                      <p className="mt-1 text-[11px] text-destructive">
+                        Unsaved — remaining still uses {city.capacity}
+                      </p>
+                    ) : null}
                   </td>
                   <td className="py-3 pr-3 font-mono tabular-nums">{city.achieved}</td>
                   <td className="py-3 pr-3 font-mono tabular-nums">{city.remaining}</td>
