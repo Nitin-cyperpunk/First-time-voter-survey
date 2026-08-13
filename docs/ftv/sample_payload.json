@@ -1,0 +1,479 @@
+{
+  "survey_version": "FTV-v1",
+  "respondent_id": "CI_FTV_0001",
+  "status": "COMPLETE",
+  "terminated_at": null,
+  "started_at": "2026-08-13T10:04:11.000Z",
+  "completed_at": "2026-08-13T11:16:18.389Z",
+  "duration_seconds": 4327,
+  "consent": "Agree",
+  "terms_accepted": true,
+  "randomisation_seed": 48213,
+  "display_order": {
+    "Q6a": [
+      3,
+      1,
+      7,
+      2,
+      9,
+      5,
+      4,
+      8,
+      6
+    ],
+    "Q6b": [
+      2,
+      1,
+      10,
+      4,
+      3,
+      6,
+      5,
+      9,
+      8,
+      7
+    ],
+    "Q6_blocks": [
+      "Q6b",
+      "Q6a"
+    ],
+    "Q14": [
+      4,
+      1,
+      6,
+      2,
+      5,
+      3
+    ]
+  },
+  "state_match": true,
+  "profile": {
+    "name": "Miloni Panchal",
+    "email": "miloni@concaveinsights.com",
+    "phone": "9833374744",
+    "area": "Andheri",
+    "city": "Mumbai",
+    "state": {
+      "code": 14,
+      "label": "Maharashtra"
+    },
+    "zip": "400093",
+    "dob": "2003-06-15",
+    "age_today": 23.16,
+    "age_at_poll": 20.93,
+    "age_at_qualifying_date": 20.55,
+    "gender": {
+      "code": 1,
+      "label": "Woman"
+    },
+    "relationship_status": {
+      "code": 1,
+      "label": "Single"
+    }
+  },
+  "responses": [
+    {
+      "qid": "Q1",
+      "question": "Were you eligible to vote for the first time in the 2024 Lok Sabha election?",
+      "type": "single",
+      "answer_code": 1,
+      "answer": "Yes",
+      "other_text": null
+    },
+    {
+      "qid": "Q2",
+      "question": "Did you vote in the 2024 Lok Sabha election?",
+      "type": "single",
+      "answer_code": 1,
+      "answer": "Yes",
+      "other_text": null
+    },
+    {
+      "qid": "Q3",
+      "question": "Which party / candidate of your constituency did you vote for?",
+      "type": "single",
+      "answer_code": 2,
+      "answer": "A party or candidate belonging to the main opposition alliance",
+      "other_text": null
+    },
+    {
+      "qid": "Q4",
+      "question": "Before the election, how sure were you that you would vote for this party or candidate?",
+      "type": "single",
+      "answer_code": 1,
+      "answer": "Very sure",
+      "other_text": null
+    },
+    {
+      "qid": "Q5",
+      "question": "When deciding who to vote for, which factors were more important to you?",
+      "type": "single",
+      "answer_code": 2,
+      "answer": "Economic factors were somewhat more important",
+      "other_text": null
+    },
+    {
+      "qid": "Q6a_1",
+      "question": "Economic factors – Jobs and employment opportunities",
+      "type": "grid",
+      "item": "Jobs and employment opportunities",
+      "item_code": 1,
+      "answer_code": 2,
+      "answer": "A little"
+    },
+    {
+      "qid": "Q6a_2",
+      "question": "Economic factors – Rising cost and cost of living",
+      "type": "grid",
+      "item": "Rising cost and cost of living",
+      "item_code": 2,
+      "answer_code": 3,
+      "answer": "Somewhat"
+    },
+    {
+      "qid": "Q6a_3",
+      "question": "Economic factors – Your family's financial situation",
+      "type": "grid",
+      "item": "Your family's financial situation",
+      "item_code": 3,
+      "answer_code": 4,
+      "answer": "A lot"
+    },
+    {
+      "qid": "Q6a_4",
+      "question": "Economic factors – India’s overall economic performance",
+      "type": "grid",
+      "item": "India’s overall economic performance",
+      "item_code": 4,
+      "answer_code": 5,
+      "answer": "A great deal / very critical"
+    },
+    {
+      "qid": "Q6a_5",
+      "question": "Economic factors – Government welfare schemes",
+      "type": "grid",
+      "item": "Government welfare schemes",
+      "item_code": 5,
+      "answer_code": 1,
+      "answer": "Not at all"
+    },
+    {
+      "qid": "Q6a_6",
+      "question": "Economic factors – Financial assistance",
+      "type": "grid",
+      "item": "Financial assistance",
+      "item_code": 6,
+      "answer_code": 2,
+      "answer": "A little"
+    },
+    {
+      "qid": "Q6a_7",
+      "question": "Economic factors – Access to affordable education",
+      "type": "grid",
+      "item": "Access to affordable education",
+      "item_code": 7,
+      "answer_code": 3,
+      "answer": "Somewhat"
+    },
+    {
+      "qid": "Q6a_8",
+      "question": "Economic factors – Skill development",
+      "type": "grid",
+      "item": "Skill development",
+      "item_code": 8,
+      "answer_code": 4,
+      "answer": "A lot"
+    },
+    {
+      "qid": "Q6a_9",
+      "question": "Economic factors – Perception of economic inequality",
+      "type": "grid",
+      "item": "Perception of economic inequality",
+      "item_code": 9,
+      "answer_code": 5,
+      "answer": "A great deal / very critical"
+    },
+    {
+      "qid": "Q6b_1",
+      "question": "Non-economic factors – Integrity of the local candidate",
+      "type": "grid",
+      "item": "Integrity of the local candidate",
+      "item_code": 1,
+      "answer_code": 4,
+      "answer": "A lot"
+    },
+    {
+      "qid": "Q6b_2",
+      "question": "Non-economic factors – Past performance of the local candidate",
+      "type": "grid",
+      "item": "Past performance of the local candidate",
+      "item_code": 2,
+      "answer_code": 5,
+      "answer": "A great deal / very critical"
+    },
+    {
+      "qid": "Q6b_3",
+      "question": "Non-economic factors – Leadership qualities of national political leaders",
+      "type": "grid",
+      "item": "Leadership qualities of national political leaders",
+      "item_code": 3,
+      "answer_code": 1,
+      "answer": "Not at all"
+    },
+    {
+      "qid": "Q6b_4",
+      "question": "Non-economic factors – Corruption and government accountability",
+      "type": "grid",
+      "item": "Corruption and government accountability",
+      "item_code": 4,
+      "answer_code": 2,
+      "answer": "A little"
+    },
+    {
+      "qid": "Q6b_5",
+      "question": "Non-economic factors – National security",
+      "type": "grid",
+      "item": "National security",
+      "item_code": 5,
+      "answer_code": 3,
+      "answer": "Somewhat"
+    },
+    {
+      "qid": "Q6b_6",
+      "question": "Non-economic factors – Religion issues",
+      "type": "grid",
+      "item": "Religion issues",
+      "item_code": 6,
+      "answer_code": 4,
+      "answer": "A lot"
+    },
+    {
+      "qid": "Q6b_7",
+      "question": "Non-economic factors – Communal issues",
+      "type": "grid",
+      "item": "Communal issues",
+      "item_code": 7,
+      "answer_code": 5,
+      "answer": "A great deal / very critical"
+    },
+    {
+      "qid": "Q6b_8",
+      "question": "Non-economic factors – Women’s safety",
+      "type": "grid",
+      "item": "Women’s safety",
+      "item_code": 8,
+      "answer_code": 1,
+      "answer": "Not at all"
+    },
+    {
+      "qid": "Q6b_9",
+      "question": "Non-economic factors – Family or community considerations",
+      "type": "grid",
+      "item": "Family or community considerations",
+      "item_code": 9,
+      "answer_code": 2,
+      "answer": "A little"
+    },
+    {
+      "qid": "Q6b_10",
+      "question": "Non-economic factors – Political information gathered through social media",
+      "type": "grid",
+      "item": "Political information gathered through social media",
+      "item_code": 10,
+      "answer_code": 3,
+      "answer": "Somewhat"
+    },
+    {
+      "qid": "Q7_rank1",
+      "question": "Select the three factors that had the greatest influence on your voting decision, and rank them in order of importance (1 = most important). – rank 1",
+      "type": "rank",
+      "rank": 1,
+      "answer_code": 2,
+      "answer": "Inflation and cost of living",
+      "other_text": null
+    },
+    {
+      "qid": "Q7_rank2",
+      "question": "Select the three factors that had the greatest influence on your voting decision, and rank them in order of importance (1 = most important). – rank 2",
+      "type": "rank",
+      "rank": 2,
+      "answer_code": 11,
+      "answer": "Corruption and accountability",
+      "other_text": null
+    },
+    {
+      "qid": "Q7_rank3",
+      "question": "Select the three factors that had the greatest influence on your voting decision, and rank them in order of importance (1 = most important). – rank 3",
+      "type": "rank",
+      "rank": 3,
+      "answer_code": 17,
+      "answer": "Other (please specify)",
+      "other_text": "Local water supply"
+    },
+    {
+      "qid": "Q8_4",
+      "question": "Which sources did you rely on most for information about political parties, candidates, or election-related issues during the 2024 Lok Sabha election?",
+      "type": "multi",
+      "option": "Instagram",
+      "selection_order": 1,
+      "answer_code": 4,
+      "answer": "Instagram",
+      "other_text": null
+    },
+    {
+      "qid": "Q8_5",
+      "question": "Which sources did you rely on most for information about political parties, candidates, or election-related issues during the 2024 Lok Sabha election?",
+      "type": "multi",
+      "option": "YouTube",
+      "selection_order": 2,
+      "answer_code": 5,
+      "answer": "YouTube",
+      "other_text": null
+    },
+    {
+      "qid": "Q8_18",
+      "question": "Which sources did you rely on most for information about political parties, candidates, or election-related issues during the 2024 Lok Sabha election?",
+      "type": "multi",
+      "option": "Other (please specify)",
+      "selection_order": 3,
+      "answer_code": 18,
+      "answer": "Other (please specify)",
+      "other_text": "College WhatsApp group"
+    },
+    {
+      "qid": "Q9",
+      "question": "Did you vote for the same political party or alliance preferred by most members of your family?",
+      "type": "single",
+      "answer_code": 2,
+      "answer": "No",
+      "other_text": null
+    },
+    {
+      "qid": "Q10",
+      "question": "Compared with two years before the election, how had your household’s financial situation changed by the time of the 2024 election?",
+      "type": "single",
+      "answer_code": 4,
+      "answer": "Worsened somewhat",
+      "other_text": null
+    },
+    {
+      "qid": "Q11",
+      "question": "During the year before the election, how strongly did rising prices affect your household?",
+      "type": "single",
+      "answer_code": 4,
+      "answer": "Significantly",
+      "other_text": null
+    },
+    {
+      "qid": "Q12",
+      "question": "At the time of the election, how confident were you about obtaining suitable employment or career opportunities?",
+      "type": "single",
+      "answer_code": 2,
+      "answer": "Somewhat confident",
+      "other_text": null
+    },
+    {
+      "qid": "Q13",
+      "question": "At the time of the voting, how would you have rated the condition of India’s economy?",
+      "type": "single",
+      "answer_code": 3,
+      "answer": "Neither good nor poor",
+      "other_text": null
+    },
+    {
+      "qid": "Q14_1",
+      "question": "At the time of the election, how effectively did you believe the national government had handled the following? – Job creation",
+      "type": "grid",
+      "item": "Job creation",
+      "item_code": 1,
+      "answer_code": 3,
+      "answer": "Neither effectively nor ineffectively"
+    },
+    {
+      "qid": "Q14_2",
+      "question": "At the time of the election, how effectively did you believe the national government had handled the following? – Inflation and cost of living",
+      "type": "grid",
+      "item": "Inflation and cost of living",
+      "item_code": 2,
+      "answer_code": 4,
+      "answer": "Somewhat effectively"
+    },
+    {
+      "qid": "Q14_3",
+      "question": "At the time of the election, how effectively did you believe the national government had handled the following? – Economic growth",
+      "type": "grid",
+      "item": "Economic growth",
+      "item_code": 3,
+      "answer_code": 5,
+      "answer": "Very effectively"
+    },
+    {
+      "qid": "Q14_4",
+      "question": "At the time of the election, how effectively did you believe the national government had handled the following? – Poverty reduction",
+      "type": "grid",
+      "item": "Poverty reduction",
+      "item_code": 4,
+      "answer_code": 1,
+      "answer": "Very ineffectively"
+    },
+    {
+      "qid": "Q14_5",
+      "question": "At the time of the election, how effectively did you believe the national government had handled the following? – Education and skill development",
+      "type": "grid",
+      "item": "Education and skill development",
+      "item_code": 5,
+      "answer_code": 2,
+      "answer": "Somewhat ineffectively"
+    },
+    {
+      "qid": "Q14_6",
+      "question": "At the time of the election, how effectively did you believe the national government had handled the following? – Welfare provision",
+      "type": "grid",
+      "item": "Welfare provision",
+      "item_code": 6,
+      "answer_code": 3,
+      "answer": "Neither effectively nor ineffectively"
+    },
+    {
+      "qid": "Q15_1",
+      "question": "State or union territory in which you were registered to vote",
+      "type": "single",
+      "answer_code": 14,
+      "answer": "Maharashtra",
+      "other_text": null
+    },
+    {
+      "qid": "Q15_2",
+      "question": "Type of area in which you primarily lived at the time of the election",
+      "type": "single",
+      "answer_code": 4,
+      "answer": "City",
+      "other_text": null
+    },
+    {
+      "qid": "Q15_3",
+      "question": "Highest level of education at the time of the voting",
+      "type": "single",
+      "answer_code": 7,
+      "answer": "Other",
+      "other_text": "Diploma in Journalism"
+    },
+    {
+      "qid": "Q16",
+      "question": "Which range best describes your household’s approximate annual income?",
+      "type": "single",
+      "answer_code": 4,
+      "answer": "₹10 lakh–₹20 lakh",
+      "other_text": null
+    },
+    {
+      "qid": "Q17",
+      "question": "In one or two sentences, what most shaped your voting decision in the 2024 Lok Sabha election?",
+      "type": "open",
+      "answer": "Prices kept going up at home and I could not find a job after college, that decided it for me.",
+      "answer_original": null,
+      "script": "Latin",
+      "spoken_language": "en-IN"
+    }
+  ]
+}

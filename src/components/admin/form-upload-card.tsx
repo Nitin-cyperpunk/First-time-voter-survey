@@ -45,7 +45,13 @@ export function FormUploadCard({ formType }: { formType: FormType }) {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(data.error || "Upload failed.");
+        const hint =
+          typeof data.diagnostics?.hint === "string"
+            ? data.diagnostics.hint
+            : "";
+        throw new Error(
+          [data.error || "Upload failed.", hint].filter(Boolean).join(" "),
+        );
       }
 
       dismissToast(loadingId);
@@ -75,7 +81,16 @@ export function FormUploadCard({ formType }: { formType: FormType }) {
           </h3>
           <p className="mt-1 text-sm text-plum-muted">
             Creates an unpublished draft version. Preview it, publish it, then
-            set it active.
+            set it active. Use a file from{" "}
+            <span className="font-mono text-xs">public/form/</span> (
+            <span className="font-mono text-xs">
+              first_time_voters_survey.html
+            </span>{" "}
+            or{" "}
+            <span className="font-mono text-xs">
+              first_time_voters_surveyc.html
+            </span>
+            ), not an older Downloads copy.
           </p>
         </div>
 

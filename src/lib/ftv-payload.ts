@@ -58,3 +58,11 @@ export function readFtvPayloadDuration(
   if (typeof value !== "number" || !Number.isFinite(value)) return null;
   return Math.max(0, Math.round(value));
 }
+
+/** Canonical respondent_id is participants.lead_id (CI_FTV_####). */
+export function stampFtvRespondentId(
+  payload: Record<string, unknown>,
+  leadId: string,
+): Record<string, unknown> {
+  return { ...payload, respondent_id: leadId };
+}

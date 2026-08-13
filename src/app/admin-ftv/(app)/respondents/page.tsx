@@ -2,7 +2,7 @@ import { Suspense } from "react";
 
 import { listParticipants } from "@/server/repositories/admin.repository";
 import { ParticipantSearch } from "@/components/admin/participant-search";
-import { ScreenerExportButtons } from "@/components/admin/screener-export-buttons";
+import { FtvExportButtons } from "@/components/admin/ftv-export-buttons";
 import {
   RespondentsTable,
   type RespondentTableRow,
@@ -65,9 +65,9 @@ export default async function RespondentsOpsPage() {
           <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
             <div>
               <p className="mb-1 text-xs font-medium text-plum-muted">
-                Screener export
+                Response export
               </p>
-              <ScreenerExportButtons />
+              <FtvExportButtons />
             </div>
           </div>
         </div>

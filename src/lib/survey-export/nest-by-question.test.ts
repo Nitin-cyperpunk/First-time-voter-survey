@@ -179,8 +179,8 @@ test("nestAnswersByQuestion consolidates matrix row keys under parent", () => {
   );
 
   assert.deepEqual(nested.Q22, {
-    Inflation: "Very Important",
-    Jobs: "Important",
+    Q22: "Very Important",
+    Q23: "Important",
   });
   assert.equal(nested.Q23, undefined);
 });

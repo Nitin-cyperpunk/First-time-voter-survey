@@ -3,6 +3,7 @@ import {
   readFtvPayloadString,
   readFtvPayloadTimestamp,
   resolveFtvStatus,
+  stampFtvRespondentId,
   type FtvStatus,
 } from "@/lib/ftv-payload";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -23,6 +24,7 @@ export async function insertFtvResponse(input: {
   durationSeconds?: number | null;
   leadId?: string | null;
   cityId?: string | null;
+  referralCode?: string | null;
 }): Promise<FtvInsertResult> {
   const { data, error } = await getSupabaseAdmin().rpc("insert_ftv_response", {
     p_respondent_id: input.respondentId,
@@ -35,6 +37,7 @@ export async function insertFtvResponse(input: {
     p_duration_seconds: input.durationSeconds ?? null,
     p_lead_id: input.leadId ?? null,
     p_city_id: input.cityId ?? null,
+    p_referral_code: input.referralCode ?? null,
   });
 
   if (error) {
@@ -67,6 +70,7 @@ export async function persistFtvAnalysisResponse(input: {
   submittedAt?: Date | null;
   totalDurationSec?: number | null;
   screenerInserted: boolean;
+  referralCode?: string | null;
 }): Promise<void> {
   const answerJson = input.answerJson;
   if (!answerJson || Object.keys(answerJson).length === 0) return;
@@ -81,10 +85,6 @@ export async function persistFtvAnalysisResponse(input: {
 
   const surveyVersion =
     readFtvPayloadString(answerJson, "survey_version") ?? "FTV-v1";
-  const payloadRespondentId = readFtvPayloadString(
-    answerJson,
-    "respondent_id",
-  );
   const startedAt =
     readFtvPayloadTimestamp(answerJson, "started_at") ??
     input.startedAt?.toISOString() ??
@@ -102,33 +102,21 @@ export async function persistFtvAnalysisResponse(input: {
   const durationSeconds =
     readFtvPayloadDuration(answerJson) ?? input.totalDurationSec ?? null;
 
-  const attempts = [
-    payloadRespondentId || input.leadId,
-    input.leadId,
-  ].filter((id, index, all) => id && all.indexOf(id) === index);
-
-  for (const respondentId of attempts) {
-    const result = await insertFtvResponse({
-      respondentId,
-      surveyVersion,
-      status,
-      payload: answerJson as Json,
-      startedAt,
-      completedAt,
-      terminatedAt,
-      durationSeconds,
-      leadId: input.leadId,
-      cityId: input.cityId,
-    });
-    if (result.ok) return;
-    if (result.code !== "duplicate_respondent_id") {
-      console.error("[persistFtvAnalysisResponse] insert failed:", result);
-      return;
-    }
-  }
-
-  console.error(
-    "[persistFtvAnalysisResponse] duplicate respondent_id after retry",
-    { leadId: input.leadId, payloadRespondentId },
-  );
+  const stamped = stampFtvRespondentId(answerJson, input.leadId);
+  const result = await insertFtvResponse({
+    respondentId: input.leadId,
+    surveyVersion,
+    status,
+    payload: stamped as Json,
+    startedAt,
+    completedAt,
+    terminatedAt,
+    durationSeconds,
+    leadId: input.leadId,
+    cityId: input.cityId,
+    referralCode: input.referralCode ?? null,
+  });
+  if (result.ok) return;
+  if (result.code === "duplicate_respondent_id") return;
+  console.error("[persistFtvAnalysisResponse] insert failed:", result);
 }

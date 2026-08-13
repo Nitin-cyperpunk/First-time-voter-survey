@@ -99,8 +99,16 @@ function triggerDownload(filename: string, data: Uint8Array, mime: string) {
   URL.revokeObjectURL(url);
 }
 
-export function downloadCsv(filename: string, rows: ExportRow[]) {
-  const worksheet = buildWorksheet(rows);
+export function downloadCsv(
+  filename: string,
+  rows: ExportRow[],
+  headers?: string[],
+) {
+  const cols = headers ?? resolveHeaders(rows);
+  const worksheet =
+    rows.length > 0
+      ? buildWorksheet(rows, { headers: cols })
+      : XLSX.utils.aoa_to_sheet([cols]);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
   XLSX.writeFile(workbook, filename, { bookType: "csv" });
@@ -110,10 +118,35 @@ export function downloadExcel(
   filename: string,
   sheetName: string,
   rows: ExportRow[],
+  headers?: string[],
 ) {
-  const worksheet = buildWorksheet(rows);
+  const cols = headers ?? resolveHeaders(rows);
+  const worksheet =
+    rows.length > 0
+      ? buildWorksheet(rows, { headers: cols })
+      : XLSX.utils.aoa_to_sheet([cols]);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+  XLSX.writeFile(workbook, filename);
+}
+
+export function downloadExcelWorkbook(
+  filename: string,
+  sheets: Array<{ name: string; rows: ExportRow[]; headers?: string[] }>,
+) {
+  const workbook = XLSX.utils.book_new();
+  for (const sheet of sheets) {
+    const cols = sheet.headers ?? resolveHeaders(sheet.rows);
+    const worksheet =
+      sheet.rows.length > 0
+        ? buildWorksheet(sheet.rows, { headers: cols })
+        : XLSX.utils.aoa_to_sheet([cols.length ? cols : [""]]);
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      sheet.name.slice(0, 31),
+    );
+  }
   XLSX.writeFile(workbook, filename);
 }
 

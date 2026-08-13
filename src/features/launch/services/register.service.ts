@@ -453,6 +453,7 @@ export async function registerParticipant(
       submittedAt,
       totalDurationSec,
       screenerInserted,
+      referralCode: referrerReferralCode,
     });
   } catch (error) {
     console.error("[registerParticipant] ftv_responses dual-write failed:", error);

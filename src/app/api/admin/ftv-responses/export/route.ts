@@ -15,7 +15,6 @@ function parseLeadIdsParam(searchParams: URLSearchParams): string[] | undefined 
   return ids.length > 0 ? ids : undefined;
 }
 
-/** Alias of /api/admin/ftv-responses/export — FTV wide export, not screener. */
 export async function GET(request: NextRequest) {
   if (!(await isAdminAuthenticated())) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
@@ -26,7 +25,7 @@ export async function GET(request: NextRequest) {
     const bundle = await listFtvExportBundle(leadIds);
     return NextResponse.json(bundle);
   } catch (error) {
-    console.error("GET /api/admin/screener-responses/export failed:", error);
+    console.error("GET /api/admin/ftv-responses/export failed:", error);
     return NextResponse.json(
       { error: "Failed to export FTV responses." },
       { status: 500 },

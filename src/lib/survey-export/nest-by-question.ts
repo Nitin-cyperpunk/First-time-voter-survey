@@ -234,7 +234,8 @@ function nestMatrix(
       readAnswerValue(nested, rowKey, row.fieldName),
     );
     if (text) {
-      consolidated[row.label] = text;
+      const itemCode = row.qKey || row.fieldName || row.label;
+      consolidated[itemCode] = text;
     }
   }
 
