@@ -95,7 +95,7 @@ export const launchRegistrationSchema = z.object({
   lastScreen: z.string().trim().max(120).optional(),
   terminated: z.boolean().optional(),
   terminations: z.array(terminationEventSchema).optional(),
-  answerJson: z.record(z.string(), z.unknown()).optional(),
+  answerJson: z.record(z.string(), z.any()).optional(),
   csvRow: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
 });
 

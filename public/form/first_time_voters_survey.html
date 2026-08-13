@@ -1865,14 +1865,23 @@ function buildCsvRow(){
 /* ---- The object sent to Supabase ---- */
 function buildPayload(){
   var p = A.profile || {};
+  var status = A.status || "IN_PROGRESS";
+  var terminatedAt = A.terminated_at || null;
+  var now = new Date();
+  var started = new Date(startedAt);
+  var isTerm = String(status).indexOf("TERMINATE_") === 0;
+  var completedAt = isTerm ? null : now.toISOString();
+  var durationMs = isTerm && terminatedAt
+    ? (new Date(terminatedAt) - started)
+    : (now - started);
   return {
     survey_version: SURVEY_VERSION,
     respondent_id: respondentId,
-    status: A.status || "IN_PROGRESS",
-    terminated_at: A.terminated_at || null,
+    status: status,
+    terminated_at: terminatedAt,
     started_at: startedAt,
-    completed_at: new Date().toISOString(),
-    duration_seconds: Math.round((new Date() - new Date(startedAt)) / 1000),
+    completed_at: completedAt,
+    duration_seconds: Math.max(0, Math.round(durationMs / 1000)),
     consent: A.consent || null,
     terms_accepted: !!A.terms_accepted,
     randomisation_seed: seed,

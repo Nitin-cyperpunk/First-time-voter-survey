@@ -7,7 +7,9 @@ import {
 import { normalizePhone } from "@/features/referrals/lib/registration";
 import type { LaunchRegistrationInput } from "@/features/launch/schemas/registration";
 import {
+  buildScreenerCsvExportRow,
   computeTotalDurationSec,
+  formatStoredAnswerValue,
   hasStoredAnswerValue,
   isQKey,
   mapFieldAnswersToQKeys,
@@ -39,6 +41,7 @@ import {
   findByReferralCode,
   recordParticipantStatusHistory,
 } from "@/server/repositories/participants.repository";
+import { persistFtvAnalysisResponse } from "@/server/repositories/ftv-responses.repository";
 import {
   createResponse,
   getActiveFormVersion,
@@ -136,6 +139,46 @@ function withTimingMetadata(
   return payload;
 }
 
+function csvFromStoredAnswers(input: {
+  storedAnswers: Record<string, StoredAnswerValue>;
+  responseTimes?: Record<string, number> | null;
+  leadId: string;
+  participant: { fullName: string; mobile: string; city: string | null };
+  totalDurationSec: number | null;
+}): Json {
+  const questionAnswers = Object.fromEntries(
+    Object.entries(
+      stripInternalAnswerKeys(input.storedAnswers as Record<string, unknown>),
+    )
+      .filter(([key]) => isQKey(key))
+      .map(([key, value]) => [key, formatStoredAnswerValue(value)]),
+  );
+
+  return buildScreenerCsvExportRow({
+    leadId: input.leadId,
+    fullName: input.participant.fullName,
+    mobile: input.participant.mobile,
+    city: input.participant.city,
+    answers: questionAnswers,
+    responseTimes: input.responseTimes,
+    totalDurationSec: input.totalDurationSec,
+  }) as Json;
+}
+
+function csvRowHasQuestionValues(row: Record<string, string | number>): boolean {
+  const skip = new Set([
+    "Lead_ID",
+    "full_name",
+    "mobile",
+    "city",
+    "Total_Duration",
+    "Respondent ID",
+  ]);
+  return Object.entries(row).some(
+    ([key, value]) => !skip.has(key) && String(value).trim().length > 0,
+  );
+}
+
 function resolveScreenerCsvRow(input: {
   input: LaunchRegistrationInput;
   form: {
@@ -144,6 +187,7 @@ function resolveScreenerCsvRow(input: {
     htmlContent: string | null;
   };
   storedAnswers: Record<string, StoredAnswerValue>;
+  responseTimes?: Record<string, number> | null;
   leadId: string;
   participant: { fullName: string; mobile: string; city: string | null };
   totalDurationSec: number | null;
@@ -152,9 +196,11 @@ function resolveScreenerCsvRow(input: {
     return input.input.csvRow as Json;
   }
 
+  const fallback = () => csvFromStoredAnswers(input);
+
   const schema = input.form.schema;
   if (!schema.fields.length) {
-    return null;
+    return fallback();
   }
 
   const qKeyAnswers = answersUseLabeledKeys(input.input.answers)
@@ -175,24 +221,29 @@ function resolveScreenerCsvRow(input: {
         : "",
   };
 
-  if (input.form.htmlContent) {
-    const artifacts = buildResponseExportArtifacts({
-      schema,
-      html: input.form.htmlContent,
-      answers: nestedAnswers,
-      leadId: input.leadId,
-      metadata,
-      excludeCoreFields: true,
-      respondentIdHeader: "Respondent ID",
-    });
-    return artifacts.csvRow as Json;
+  const schemaRow = (
+    input.form.htmlContent
+      ? buildResponseExportArtifacts({
+          schema,
+          html: input.form.htmlContent,
+          answers: nestedAnswers,
+          leadId: input.leadId,
+          metadata,
+          excludeCoreFields: true,
+          respondentIdHeader: "Respondent ID",
+        }).csvRow
+      : buildLabeledAnswerCsvRow({
+          nestedAnswers,
+          schema,
+          metadata,
+        })
+  ) as Record<string, string | number>;
+
+  if (!csvRowHasQuestionValues(schemaRow)) {
+    return fallback();
   }
 
-  return buildLabeledAnswerCsvRow({
-    nestedAnswers,
-    schema,
-    metadata,
-  }) as Json;
+  return schemaRow as Json;
 }
 
 export async function registerParticipant(
@@ -334,17 +385,18 @@ export async function registerParticipant(
     console.error("[registerParticipant] syncIpDuplicateFlag failed open:", error);
   }
 
+  const startedAt = input.startedAt ? new Date(input.startedAt) : null;
+  const submittedAt = input.submittedAt
+    ? new Date(input.submittedAt)
+    : new Date();
+  const totalDurationSec =
+    startedAt !== null
+      ? computeTotalDurationSec(startedAt, submittedAt)
+      : null;
+
+  let screenerInserted = false;
   if (Object.keys(storedAnswers).length > 0) {
     assertScreenerNotSubmitted(await hasScreenerResponse(participant.leadId));
-
-    const startedAt = input.startedAt ? new Date(input.startedAt) : null;
-    const submittedAt = input.submittedAt
-      ? new Date(input.submittedAt)
-      : new Date();
-    const totalDurationSec =
-      startedAt !== null
-        ? computeTotalDurationSec(startedAt, submittedAt)
-        : null;
 
     try {
       await createResponse({
@@ -363,6 +415,7 @@ export async function registerParticipant(
           input,
           form,
           storedAnswers,
+          responseTimes: alignedResponseTimes,
           leadId: participant.leadId,
           participant,
           totalDurationSec,
@@ -373,6 +426,7 @@ export async function registerParticipant(
         ipAddress: options.ipAddress ?? null,
         cityId: city.id,
       });
+      screenerInserted = true;
     } catch (error) {
       if (error instanceof CapacityError) {
         try {
@@ -386,6 +440,22 @@ export async function registerParticipant(
       }
       throw error;
     }
+  }
+
+  try {
+    await persistFtvAnalysisResponse({
+      answerJson: input.answerJson ?? null,
+      terminated: registrationTerminated,
+      terminations: input.terminations,
+      leadId: participant.leadId,
+      cityId: city.id,
+      startedAt,
+      submittedAt,
+      totalDurationSec,
+      screenerInserted,
+    });
+  } catch (error) {
+    console.error("[registerParticipant] ftv_responses dual-write failed:", error);
   }
 
   if (input.terminations?.length) {
