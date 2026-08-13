@@ -14,7 +14,8 @@
     "lint": "eslint src",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "seed:admin": "node --env-file=.env scripts/seed-super-admin.mjs"
+    "seed:admin": "node --env-file=.env scripts/seed-super-admin.mjs",
+    "test:capacity": "node --env-file=.env scripts/test-capacity-concurrency.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

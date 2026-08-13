@@ -3,9 +3,12 @@
 import { useMemo, useState, type ReactNode } from "react";
 
 import { BulkConfirmDialog } from "@/components/admin/bulk-selection";
+import { ConfigAuditLog } from "@/components/admin/config-audit-log";
+import { ConfigCitiesPanel } from "@/components/admin/config-cities-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { closesAt } from "@/lib/study-config/defaults";
+import { isRegistrationAccepting } from "@/lib/study-config/gates";
 import type { StudyConfig } from "@/lib/study-config/types";
 import {
   dismissToast,
@@ -88,7 +91,9 @@ export function StudyConfigSettings({ initialConfig }: StudyConfigSettingsProps)
   const [pendingToggle, setPendingToggle] = useState<PendingOpenToggle | null>(
     null,
   );
+  const [activeCitySum, setActiveCitySum] = useState(0);
   const cap = useMemo(() => closesAt(config), [config]);
+  const unallocated = config.total_capacity - activeCitySum;
 
   function patch(partial: Partial<StudyConfig>) {
     setConfig((current) => ({ ...current, ...partial }));
@@ -146,11 +151,11 @@ export function StudyConfigSettings({ initialConfig }: StudyConfigSettingsProps)
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold text-foreground">
-              Study configuration
+              Config
             </h2>
             <p className="mt-1 max-w-2xl text-sm text-plum-muted">
-              Targets, incentives, open/close gates, and screener termination
-              rules. Saved on the registration{" "}
+              Form open/close, global capacity, city quotas, and study gates.
+              Superadmin only. Saved on the registration{" "}
               <span className="font-mono text-xs">form_settings</span> row.
             </p>
           </div>
@@ -164,13 +169,108 @@ export function StudyConfigSettings({ initialConfig }: StudyConfigSettingsProps)
             className="size-2 shrink-0 rounded-full bg-primary"
             aria-hidden
           />
-          Overall target &amp; buffer
+          Form open / close
         </h3>
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-plum-muted">
-          One overall respondent target for the whole project. No city or NCCS
-          quotas — cities are soft (pan-India). The buffer is extra headroom you
-          recruit on top of target because some eligibles won&apos;t verify or
-          complete.
+          Closed: the respondent route shows the closed screen (questions are
+          not mounted) and submit APIs reject with{" "}
+          <span className="font-mono">form_closed</span>. In-progress tabs are
+          blocked at submit. Referral links still resolve to the same closed
+          screen.
+        </p>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-border px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold text-foreground">Accept responses</p>
+            <p className="text-xs text-plum-muted">
+              form_status = {config.form_status}
+            </p>
+          </div>
+          <Toggle
+            checked={config.form_status === "open"}
+            onChange={(next) =>
+              patch({ form_status: next ? "open" : "closed" })
+            }
+            label="Form status"
+          />
+        </div>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-border px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold text-foreground">
+              Auto-close when full
+            </p>
+            <p className="text-xs text-plum-muted">
+              Sets form_status to closed when qualified completions reach total
+              capacity.
+            </p>
+          </div>
+          <Toggle
+            checked={config.auto_close_on_full}
+            onChange={(next) => patch({ auto_close_on_full: next })}
+            label="Auto-close on full"
+          />
+        </div>
+      </section>
+
+      <section className="rounded-[14px] border border-border bg-card p-6 shadow-sm">
+        <h3 className="flex items-center gap-2 text-base font-semibold text-foreground">
+          <span
+            className="size-2 shrink-0 rounded-full bg-primary"
+            aria-hidden
+          />
+          Global capacity
+        </h3>
+        <p className="mt-2 max-w-3xl text-sm leading-relaxed text-plum-muted">
+          Hard cap on <strong>qualified completions</strong> only (passed
+          terminate gates and submitted). Terminated and abandoned responses do
+          not count. Sum of active city capacities cannot exceed this number.
+        </p>
+        <label className="mt-4 block max-w-xs space-y-1.5">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-plum-faint">
+            Total capacity
+          </span>
+          <Input
+            type="number"
+            min={1}
+            inputMode="numeric"
+            className="h-11 text-base font-semibold tabular-nums"
+            value={config.total_capacity}
+            onChange={(event) =>
+              patch({
+                total_capacity: Math.max(1, Number(event.target.value) || 1),
+              })
+            }
+          />
+        </label>
+        <p
+          className={`mt-3 text-sm font-medium ${
+            unallocated < 0 ? "text-error" : "text-text-primary"
+          }`}
+        >
+          Unallocated: {unallocated}
+          {unallocated < 0
+            ? " — save is blocked until city capacities fit."
+            : null}
+        </p>
+      </section>
+
+      <ConfigCitiesPanel
+        totalCapacity={config.total_capacity}
+        onCapacityHintChange={setActiveCitySum}
+      />
+
+      <ConfigAuditLog />
+
+      <section className="rounded-[14px] border border-border bg-card p-6 shadow-sm">
+        <h3 className="flex items-center gap-2 text-base font-semibold text-foreground">
+          <span
+            className="size-2 shrink-0 rounded-full bg-primary"
+            aria-hidden
+          />
+          Funnel target &amp; buffer
+        </h3>
+        <p className="mt-2 max-w-3xl text-sm leading-relaxed text-plum-muted">
+          Display target for the metrics funnel (eligible / verified). This is
+          separate from the hard qualified-completion cap above.
         </p>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -250,10 +350,8 @@ export function StudyConfigSettings({ initialConfig }: StudyConfigSettingsProps)
         </div>
 
         <div className="mt-4 rounded-[12px] border border-border bg-accent-soft px-4 py-3 text-sm leading-relaxed text-text-primary">
-          This single cap is tracked at both funnel points on the dashboard —
-          Eligible (primary target) and Verified (further down the funnel).
-          You&apos;ll see how many fill the form and where they drop off, without
-          any hard cell targets.
+          Funnel metrics still use target + buffer. Enforcement of new
+          completions uses total capacity and city quotas.
         </div>
       </section>
 
@@ -461,8 +559,7 @@ function Field({
 }
 
 function StatusBadge({ config }: { config: StudyConfig }) {
-  const open =
-    config.survey_active && config.screener_open && config.project_open;
+  const open = isRegistrationAccepting(config);
   return (
     <span
       className={cn(

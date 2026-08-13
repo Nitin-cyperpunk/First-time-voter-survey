@@ -26,9 +26,18 @@ export function parseStudyConfig(raw: unknown): StudyConfig {
     [ageMin, ageMax] = [ageMax, ageMin];
   }
 
+  const formStatusRaw = record.form_status;
+  const form_status =
+    formStatusRaw === "closed" || formStatusRaw === "open"
+      ? formStatusRaw
+      : base.form_status;
+
   return {
     target,
     buffer,
+    total_capacity: asInt(record.total_capacity, base.total_capacity, 1, 10_000),
+    form_status,
+    auto_close_on_full: asBool(record.auto_close_on_full, base.auto_close_on_full),
     survey_active: asBool(record.survey_active, base.survey_active),
     eligibility_open: asBool(record.eligibility_open, base.eligibility_open),
     screener_open: asBool(record.screener_open, base.screener_open),

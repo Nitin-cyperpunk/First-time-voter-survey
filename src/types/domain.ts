@@ -5,6 +5,7 @@ export type Participant = {
   mobile: string;
   dob: string;
   city: string | null;
+  cityId: string | null;
   email: string | null;
   area: string | null;
   pincode: string | null;

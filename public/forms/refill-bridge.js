@@ -9,6 +9,7 @@
     "name",
     "phone",
     "city",
+    "city_id",
     "email",
     "area",
     "zip",
@@ -88,7 +89,11 @@
   function applyBasicInfoPrefill(data) {
     setFieldValue("name", data.fullName);
     setFieldValue("phone", data.mobile);
-    setFieldValue("city", data.city);
+    if (data.city_id) {
+      setFieldValue("city_id", data.city_id);
+    } else {
+      setFieldValue("city", data.city);
+    }
     setFieldValue("email", data.email);
     setFieldValue("area", data.area);
     setFieldValue("zip", data.pincode || data.zip);
@@ -224,12 +229,17 @@
     const fullName = document.querySelector("[name=name]")?.value?.trim() || "";
     // Always send the locked phone field value; server ignores changes anyway.
     const mobile = document.querySelector("[name=phone]")?.value?.trim() || "";
-    const city = document.querySelector("[name=city]")?.value?.trim() || "";
+    const citySelect = document.querySelector("[name=city_id]");
+    const cityId = citySelect?.value?.trim() || "";
+    const cityName =
+      citySelect?.options?.[citySelect.selectedIndex]?.text?.trim() ||
+      document.querySelector("[name=city]")?.value?.trim() ||
+      "";
     const email = document.querySelector("[name=email]")?.value?.trim() || "";
     const area = document.querySelector("[name=area]")?.value?.trim() || "";
     const pincode = document.querySelector("[name=zip]")?.value?.trim() || "";
     const dob = buildDobIso();
-    if (!fullName || !mobile || !city || !dob) return false;
+    if (!fullName || !mobile || !(cityId || cityName) || !dob) return false;
 
     const tracking = collectSubmissionAnalytics();
     var deviceFingerprint = null;
@@ -254,7 +264,8 @@
         fullName,
         mobile,
         dob,
-        city,
+        city_id: cityId || undefined,
+        city: cityName || undefined,
         email: email || undefined,
         area: area || undefined,
         pincode: pincode || undefined,

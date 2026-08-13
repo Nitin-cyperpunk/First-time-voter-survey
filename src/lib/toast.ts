@@ -89,6 +89,19 @@ export function toastRegistrationError(data: ApiErrorPayload) {
     return;
   }
 
+  if (
+    data.code === "form_closed" ||
+    data.code === "region_full" ||
+    data.code === "global_full" ||
+    data.code === "city_inactive" ||
+    data.code === "city_required"
+  ) {
+    toastError("❌ Registration not available", {
+      description: data.error ?? "Please try again.",
+    });
+    return;
+  }
+
   toastError("❌ Registration Failed", {
     description: data.error ?? "Please try again.",
   });

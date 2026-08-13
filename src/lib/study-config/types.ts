@@ -2,9 +2,17 @@
  * Stable study config contract (Part 1 Settings + Part 2 metrics).
  * Stored as form_settings.study_config jsonb on form_type=registration.
  */
+export type FormStatus = "open" | "closed";
+
 export type StudyConfig = {
   target: number;
   buffer: number;
+  /** Hard cap on qualified screener completions. Default 200. */
+  total_capacity: number;
+  /** Respondent-facing form open/close. Independent of target/buffer funnel. */
+  form_status: FormStatus;
+  /** When qualified count reaches total_capacity, set form_status to closed. */
+  auto_close_on_full: boolean;
   survey_active: boolean;
   eligibility_open: boolean;
   screener_open: boolean;

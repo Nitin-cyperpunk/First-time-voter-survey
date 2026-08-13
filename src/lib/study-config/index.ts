@@ -8,4 +8,4 @@ export {
 } from "@/lib/study-config/gates";
 export { mergeStudyConfig, parseStudyConfig } from "@/lib/study-config/parse";
 export { getRewardAmounts } from "@/lib/study-config/rewards";
-export type { StudyConfig, StudyConfigPatch } from "@/lib/study-config/types";
+export type { FormStatus, StudyConfig, StudyConfigPatch } from "@/lib/study-config/types";

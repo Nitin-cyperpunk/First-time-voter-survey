@@ -1,3 +1,8 @@
+import {
+  CapacityError,
+  extractSelfReportedAreaType,
+  isCapacityRejectCode,
+} from "@/lib/capacity";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { Json } from "@/lib/supabase/types";
 import { getActivePublishedForm } from "@/server/repositories/forms.repository";
@@ -32,34 +37,58 @@ export async function createResponse(input: {
   submittedAt?: Date | null;
   totalDurationSec?: number | null;
   ipAddress?: string | null;
+  cityId: string;
+  selfReportedAreaType?: string | null;
 }) {
-  const { data, error } = await getSupabaseAdmin()
-    .from("screener_responses")
-    .insert({
-      lead_id: input.leadId,
-      mobile: input.mobile,
-      form_version: input.formVersion,
-      answers: input.answers,
-      completion_status: input.completionStatus,
-      termination_reason: input.terminationReason ?? null,
-      response_times: input.responseTimes ?? null,
-      analytics: input.analytics ?? null,
-      csv_row: input.csvRow ?? null,
-      normalized_export: input.normalizedExport ?? null,
-      started_at: input.startedAt?.toISOString() ?? null,
-      submitted_at: input.submittedAt?.toISOString() ?? new Date().toISOString(),
-      total_duration_sec: input.totalDurationSec ?? null,
-      ip_address: input.ipAddress ?? null,
-    })
-    .select("*")
-    .single();
+  /**
+   * Capacity check + INSERT run inside insert_screener_response_with_capacity.
+   * Postgres holds pg_advisory_xact_lock('concave_screener_capacity') until
+   * commit, so concurrent submits at count 199 cannot both pass the cap.
+   * Do not replace this RPC with a JS select-count-then-insert.
+   */
+  const answersRecord =
+    input.answers && typeof input.answers === "object" && !Array.isArray(input.answers)
+      ? (input.answers as Record<string, unknown>)
+      : {};
+  const selfReported =
+    input.selfReportedAreaType ?? extractSelfReportedAreaType(answersRecord);
+
+  const { data, error } = await getSupabaseAdmin().rpc(
+    "insert_screener_response_with_capacity",
+    {
+      p_lead_id: input.leadId,
+      p_mobile: input.mobile,
+      p_form_version: input.formVersion,
+      p_answers: input.answers,
+      p_completion_status: input.completionStatus,
+      p_termination_reason: input.terminationReason ?? null,
+      p_response_times: input.responseTimes ?? null,
+      p_analytics: input.analytics ?? null,
+      p_csv_row: input.csvRow ?? null,
+      p_normalized_export: input.normalizedExport ?? null,
+      p_started_at: input.startedAt?.toISOString() ?? null,
+      p_submitted_at: input.submittedAt?.toISOString() ?? new Date().toISOString(),
+      p_total_duration_sec: input.totalDurationSec ?? null,
+      p_ip_address: input.ipAddress ?? null,
+      p_city_id: input.cityId,
+      p_self_reported_area_type: selfReported,
+    },
+  );
 
   if (error) {
     const mapped = mapUniqueViolationToSubmissionError(error, "DUPLICATE_SCREENER");
     if (mapped) throw mapped;
     throw error;
   }
-  return data;
+
+  const payload = data as { ok?: boolean; code?: string; row?: unknown } | null;
+  if (!payload?.ok) {
+    const code = payload?.code;
+    if (isCapacityRejectCode(code)) throw new CapacityError(code);
+    throw new Error(code ? `CAPACITY_REJECT:${code}` : "CAPACITY_REJECT");
+  }
+
+  return payload.row;
 }
 
 export function assertScreenerNotSubmitted(alreadySubmitted: boolean) {
@@ -107,8 +136,16 @@ export async function updateResponse(
     submittedAt?: Date | null;
     totalDurationSec?: number | null;
     ipAddress?: string | null;
+    cityId?: string | null;
+    configAreaType?: "urban" | "local" | null;
   },
 ) {
+  const answersRecord =
+    input.answers && typeof input.answers === "object" && !Array.isArray(input.answers)
+      ? (input.answers as Record<string, unknown>)
+      : {};
+  const selfReported = extractSelfReportedAreaType(answersRecord);
+
   const { data, error } = await getSupabaseAdmin()
     .from("screener_responses")
     .update({
@@ -125,6 +162,11 @@ export async function updateResponse(
       submitted_at: input.submittedAt?.toISOString() ?? new Date().toISOString(),
       total_duration_sec: input.totalDurationSec ?? null,
       ip_address: input.ipAddress ?? null,
+      ...(input.cityId !== undefined ? { city_id: input.cityId } : {}),
+      ...(input.configAreaType !== undefined
+        ? { config_area_type: input.configAreaType }
+        : {}),
+      self_reported_area_type: selfReported,
     })
     .eq("lead_id", leadId)
     .select("*")

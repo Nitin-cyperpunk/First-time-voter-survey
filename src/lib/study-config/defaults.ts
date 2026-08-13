@@ -8,6 +8,9 @@ import type { StudyConfig } from "@/lib/study-config/types";
 export const DEFAULT_STUDY_CONFIG: StudyConfig = {
   target: 150,
   buffer: 30,
+  total_capacity: 200,
+  form_status: "open",
+  auto_close_on_full: true,
   survey_active: true,
   eligibility_open: true,
   screener_open: true,

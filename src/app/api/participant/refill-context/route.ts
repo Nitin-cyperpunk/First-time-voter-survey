@@ -23,6 +23,7 @@ export async function GET() {
       mobile: participant.mobile,
       dob: participant.dob,
       city: participant.city,
+      city_id: participant.cityId,
       email: participant.email,
       area: participant.area,
       pincode: participant.pincode,

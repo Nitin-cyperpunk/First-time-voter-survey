@@ -5,6 +5,7 @@
     "name",
     "phone",
     "city",
+    "city_id",
     "email",
     "area",
     "zip",
@@ -1248,9 +1249,11 @@
   function demoContactFieldsValid() {
     const fullName = document.querySelector("[name=name]")?.value?.trim() || "";
     const mobile = document.querySelector("[name=phone]")?.value?.trim() || "";
+    const cityId =
+      document.querySelector("[name=city_id]")?.value?.trim() || "";
     const city = document.querySelector("[name=city]")?.value?.trim() || "";
     const dob = buildDobIso();
-    return Boolean(fullName && mobile && city && dob);
+    return Boolean(fullName && mobile && (cityId || city) && dob);
   }
 
   function showScreenById(screenId) {
@@ -2748,13 +2751,18 @@
 
     const fullName = document.querySelector("[name=name]")?.value?.trim() || "";
     const mobile = document.querySelector("[name=phone]")?.value?.trim() || "";
-    const city = document.querySelector("[name=city]")?.value?.trim() || "";
+    const citySelect = document.querySelector("[name=city_id]");
+    const cityId = citySelect?.value?.trim() || "";
+    const cityName =
+      citySelect?.options?.[citySelect.selectedIndex]?.text?.trim() ||
+      document.querySelector("[name=city]")?.value?.trim() ||
+      "";
     const email = document.querySelector("[name=email]")?.value?.trim() || "";
     const area = document.querySelector("[name=area]")?.value?.trim() || "";
     const pincode = document.querySelector("[name=zip]")?.value?.trim() || "";
     const dob = buildDobIso();
 
-    if (!fullName || !mobile || !city || !dob) {
+    if (!fullName || !mobile || !cityId || !dob) {
       showRegistrationError(
         "Please complete your name, phone, city, and date of birth before submitting.",
       );
@@ -2785,7 +2793,8 @@
           fullName,
           mobile,
           dob,
-          city,
+          city_id: cityId,
+          city: cityName || undefined,
           email: email || undefined,
           area: area || undefined,
           pincode: pincode || undefined,
