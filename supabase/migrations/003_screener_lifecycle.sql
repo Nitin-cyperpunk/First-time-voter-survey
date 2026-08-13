@@ -41,14 +41,13 @@ alter table participants
   add constraint participants_status_check
   check (
     status in (
-      'lead',
-      'eligible',
-      'not_eligible',
+      'terminated',
       'completed',
       'review_pass',
       'review_fail',
       'successful',
-      'unsuccessful'
+      'unsuccessful',
+      'paid'
     )
   );
 

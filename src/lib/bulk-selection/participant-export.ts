@@ -6,7 +6,6 @@ export function rowsToParticipantExport(
     fullName: string;
     mobile: string;
     city?: string | null;
-    instagramId?: string | null;
     status: string;
     createdAt: string;
   }>,
@@ -16,7 +15,6 @@ export function rowsToParticipantExport(
     Name: row.fullName,
     Mobile: row.mobile,
     City: row.city ?? "",
-    Instagram_ID: row.instagramId ?? "",
     Status: row.status,
     Registered: row.createdAt,
   }));

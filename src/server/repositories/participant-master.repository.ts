@@ -1,6 +1,10 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { Json } from "@/lib/supabase/types";
 import { getRewardAmounts } from "@/lib/study-config/rewards";
+import {
+  isQualifiedCompletionStatus,
+  isTerminatedStatus,
+} from "@/lib/participant-lifecycle";
 import type { ScreenerSchema } from "@/types/domain";
 import { mapParticipant } from "@/server/repositories/participants.repository";
 import { listRegistrationTerminationsByLeadId } from "@/server/repositories/form-terminations.repository";
@@ -26,7 +30,6 @@ export type ParticipantMasterRecord = {
     status: string;
     referredBy: string | null;
     upiId: string | null;
-    instagramId: string | null;
     deviceFingerprint: string | null;
     duplicateFlag: boolean;
     duplicateReason: string | null;
@@ -142,7 +145,6 @@ export async function getParticipantMasterRecord(
       status: participant.status,
       referredBy: participant.referredBy,
       upiId: participantRow.upi_id ?? null,
-      instagramId: participant.instagramId,
       deviceFingerprint: participant.deviceFingerprint,
       duplicateFlag: participant.duplicateFlag,
       duplicateReason: participant.duplicateReason,
@@ -199,19 +201,24 @@ function deriveEligibilityDecision(
   currentStatus: string,
   history: StatusHistoryEntry[],
 ): string {
-  const normalized = currentStatus.toLowerCase();
-  if (normalized === "eligible") return "Eligible";
-  if (normalized === "not_eligible") return "Not eligible";
+  if (isTerminatedStatus(currentStatus)) return "Terminated";
+  if (isQualifiedCompletionStatus(currentStatus)) return "Qualified";
 
-  const eligibilityEvent = history.find((entry) => {
+  const outcomeEvent = history.find((entry) => {
     const status = entry.newStatus.toLowerCase();
-    return status === "eligible" || status === "not_eligible";
+    return (
+      status === "terminated" ||
+      status === "not_eligible" ||
+      status === "completed" ||
+      status === "eligible"
+    );
   });
 
-  if (eligibilityEvent) {
-    return eligibilityEvent.newStatus.toLowerCase() === "eligible"
-      ? "Eligible"
-      : "Not eligible";
+  if (outcomeEvent) {
+    const status = outcomeEvent.newStatus.toLowerCase();
+    return status === "terminated" || status === "not_eligible"
+      ? "Terminated"
+      : "Qualified";
   }
 
   return "Pending review";

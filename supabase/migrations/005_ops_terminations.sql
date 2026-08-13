@@ -1,35 +1,5 @@
--- Consolidated ops + terminations (024–027, 029–030). survey_tokens omitted.
-
--- DM & Verify operational workflow status for eligible participants.
-
-alter table participants
-  add column if not exists dm_status text;
-
-comment on column participants.dm_status is
-  'Instagram DM verification workflow: waiting_for_dm, message_received, call_pending, verified, survey_link_sent, completed';
-
--- Editable call disposition options (form_settings) and per-participant outcomes.
-
-alter table form_settings
-  add column if not exists call_dispositions jsonb not null default '[]'::jsonb;
-
-alter table participants
-  add column if not exists call_disposition text;
-
-alter table participants
-  add column if not exists call_disposition_notes text;
-
-alter table participants
-  add column if not exists call_disposition_at timestamptz;
-
-comment on column form_settings.call_dispositions is
-  'Array of { key, label, enabled } call outcome options for DM & Verify agents.';
-
-comment on column participants.call_disposition is
-  'Agent-selected call disposition key from form_settings.call_dispositions.';
-
-comment on column participants.call_disposition_notes is
-  'Optional free-text notes recorded with the call disposition.';
+-- Consolidated ops + terminations. DM/verify, call dispositions, and survey
+-- tokens omitted (single-form study).
 
 -- Sarla-format normalized export map (flat question columns for CSV/Excel).
 
@@ -119,8 +89,8 @@ alter table screener_responses
   );
 
 comment on column screener_responses.completion_status is
-  'Completed when the screener finished successfully; Terminated when screening ended early. NULL for legacy rows.';
+  'Completed when the form finished successfully; Terminated when Q1/Q2 (or other rules) ended early. NULL for legacy rows.';
 comment on column screener_responses.termination_reason is
-  'Business reason when completion_status is Terminated (e.g. Age not eligible, City not eligible).';
+  'Business reason when completion_status is Terminated (e.g. Q1 not first-time voter).';
 
 notify pgrst, 'reload schema';

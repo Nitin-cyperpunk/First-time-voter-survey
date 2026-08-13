@@ -46,10 +46,6 @@ export type ParticipantTemplateSource = {
   lead_id?: string;
   referralCode?: string;
   referralLink?: string;
-  surveyUrl?: string | null;
-  refillLink?: string | null;
-  screenerRefillLink?: string | null;
-  surveyRefillLink?: string | null;
   qualifiedCount?: number;
   totalReferrals?: number;
   rewardAmount?: string;
@@ -74,20 +70,12 @@ export function buildParticipantTemplateContext(
     lead_id: leadId,
     leadId,
     referral_link: source.referralLink ?? "",
-    survey_link: source.surveyUrl ?? "",
-    refill_link: source.refillLink ?? "",
-    // screener_refill_link falls back to refill_link (same token, same URL)
-    screener_refill_link:
-      source.screenerRefillLink ?? source.refillLink ?? "",
-    // survey_refill_link falls back to survey_link (same token, same URL)
-    survey_refill_link: source.surveyRefillLink ?? source.surveyUrl ?? "",
     qualified_count: source.qualifiedCount ?? 0,
     total_referrals: source.totalReferrals ?? 0,
     qualified_referrals: source.qualifiedCount ?? 0,
     reward_amount: source.rewardAmount ?? "",
     upi_amount: source.rewardAmount ?? "",
     upi: source.upiId ?? "",
-    survey_status: "",
     instagram_url: INSTAGRAM_DM_URL,
     current_date: today,
     todays_date: today,

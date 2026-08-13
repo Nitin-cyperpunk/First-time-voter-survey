@@ -18,7 +18,6 @@ const DEVICE_FINGERPRINT_SCRIPT =
 const FORM_DRAFT_SCRIPT = '<script src="/forms/form-draft.js"></script>';
 const REFERRAL_ATTRIBUTION_SCRIPT =
   '<script src="/forms/referral-attribution.js"></script>';
-const REFILL_BRIDGE_SCRIPT = '<script src="/forms/refill-bridge.js"></script>';
 
 function injectHeadScript(html: string, scriptTag: string) {
   if (html.includes(scriptTag) || html.includes(scriptTag.replace(/"/g, "'"))) {
@@ -147,34 +146,6 @@ export async function serveActiveFormHtml(formType: FormType = "registration") {
   const withFieldMap = injectFieldQKeyMap(html, {
     excludeCoreFields: true,
   });
-
-  return htmlResponse(withFieldMap);
-}
-
-export async function serveRefillFormHtml() {
-  const form = await getActivePublishedForm("registration");
-
-  if (!form?.htmlContent) {
-    return htmlResponse(
-      `<!doctype html><html><body><p>The registration form is not available. Please try again later.</p></body></html>`,
-    );
-  }
-
-  let html = ensureAnalyticsScript(form.htmlContent);
-  html = ensureDeviceFingerprintScript(html);
-  if (!html.includes("/forms/refill-bridge.js") && /<\/head>/i.test(html)) {
-    html = html.replace(/<\/head>/i, `  ${REFILL_BRIDGE_SCRIPT}\n</head>`);
-  }
-  html = ensureCityIdSelect(html);
-  try {
-    const cities = await listSelectableCities();
-    html = injectSelectableCitiesScript(html, cities);
-  } catch (error) {
-    console.error("[serveRefillFormHtml] failed to inject cities:", error);
-    html = injectSelectableCitiesScript(html, []);
-  }
-
-  const withFieldMap = injectFieldQKeyMap(html, { excludeCoreFields: true });
 
   return htmlResponse(withFieldMap);
 }

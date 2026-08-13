@@ -3,13 +3,11 @@ import {
   InvalidStatusTransitionError,
   type ParticipantStatus,
 } from "@/lib/participant-lifecycle";
-import { isEligibilityAccepting } from "@/lib/study-config/gates";
 import {
   findParticipantByLeadId,
   recordParticipantStatusHistory,
   updateParticipantStatus,
 } from "@/server/repositories/participants.repository";
-import { getStudyConfig } from "@/server/repositories/form-settings.repository";
 
 export type TransitionContext = {
   changedBy: string;
@@ -38,13 +36,6 @@ export async function transitionParticipantStatus(
 
   if (!canTransition(fromStatus, toStatus)) {
     throw new InvalidStatusTransitionError(fromStatus, toStatus);
-  }
-
-  if (toStatus === "eligible") {
-    const studyConfig = await getStudyConfig();
-    if (!isEligibilityAccepting(studyConfig)) {
-      throw new Error("ELIGIBILITY_CLOSED");
-    }
   }
 
   const updatedParticipant = await updateParticipantStatus(leadId, toStatus);

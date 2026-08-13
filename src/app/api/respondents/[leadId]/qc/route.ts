@@ -35,7 +35,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     return NextResponse.json({
       success: true,
       status: result.participant.status,
-      referralEarned: result.earnedReferral !== null,
     });
   } catch (error) {
     if (error instanceof Error && error.message === "PARTICIPANT_NOT_FOUND") {

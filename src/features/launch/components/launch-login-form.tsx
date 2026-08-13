@@ -19,14 +19,11 @@ import {
 } from "@/lib/auth/remember-me-credentials";
 import {
   dismissToast,
-  toastEligibleForSurvey,
   toastError,
   toastLoading,
   toastLoggedInSuccessfully,
   toastNetworkError,
-  toastNotEligibleSurveyUnavailable,
   toastRegistrationSuccessful,
-  toastRegistrationUpdateRequested,
   toastInfo,
 } from "@/lib/toast";
 
@@ -105,7 +102,7 @@ export function LaunchLoginForm() {
         body: JSON.stringify(values),
       });
 
-      const data = await response.json();
+      await response.json().catch(() => ({}));
       dismissToast(loadingId);
 
       if (!response.ok) {
@@ -123,14 +120,6 @@ export function LaunchLoginForm() {
       }
 
       toastLoggedInSuccessfully();
-
-      if (data.refillRequired) {
-        toastRegistrationUpdateRequested();
-      } else if (data.status === "eligible") {
-        toastEligibleForSurvey();
-      } else if (data.status === "not_eligible") {
-        toastNotEligibleSurveyUnavailable();
-      }
 
       router.push("/dashboard");
       router.refresh();

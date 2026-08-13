@@ -37,7 +37,6 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({
       fullName: participant.fullName,
       status: participant.status,
-      refillRequired: participant.refillRequired,
     });
 
     return await establishParticipantSession(

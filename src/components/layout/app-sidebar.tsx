@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import {
   FileText,
   LayoutDashboard,
-  MessageCircle,
   MessageSquareText,
   PanelTop,
   Settings,
@@ -31,7 +30,6 @@ import {
 const NAV_ICON_BY_HREF: Record<string, LucideIcon> = {
   "/admin-ftv/metrics": LayoutDashboard,
   "/admin-ftv/respondents": Users,
-  "/admin-ftv/dm-verify": MessageCircle,
   "/admin-ftv/terminations": ShieldAlert,
   "/admin-ftv/referrals": Share2,
   "/admin-ftv/forms": FileText,

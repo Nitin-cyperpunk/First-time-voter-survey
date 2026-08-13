@@ -146,14 +146,16 @@ function formatStatusEvent(status: string | null): string | null {
   if (!status) return null;
 
   const normalized = status.toLowerCase();
-  if (normalized === "eligible") return "Eligible";
-  if (normalized === "not_eligible") return "Not eligible";
-  if (normalized === "completed") return "Survey completed";
+  if (normalized === "terminated" || normalized === "not_eligible") {
+    return "Terminated";
+  }
+  if (normalized === "completed" || normalized === "eligible" || normalized === "lead") {
+    return "Form completed";
+  }
   if (normalized === "review_pass" || normalized === "qc_pass") return "Review pass";
   if (normalized === "review_fail" || normalized === "qc_fail") return "Review fail";
   if (normalized === "successful") return "Successful";
   if (normalized === "unsuccessful") return "Unsuccessful";
   if (normalized === "paid") return "Paid";
-  if (normalized === "lead") return null;
   return status.replaceAll("_", " ");
 }

@@ -1,8 +1,3 @@
-import {
-  mergeCallDispositions,
-  parseCallDispositionsConfig,
-} from "@/lib/call-dispositions/parse";
-import type { CallDispositionsConfig } from "@/lib/call-dispositions/types";
 import { DEFAULT_MESSAGE_TEMPLATES } from "@/lib/message-templates/defaults";
 import type {
   MessageTemplate,
@@ -78,10 +73,6 @@ function isMissingColumn(error: unknown) {
 }
 
 function isMissingMessageTemplatesColumn(error: unknown) {
-  return isMissingColumn(error);
-}
-
-function isMissingCallDispositionsColumn(error: unknown) {
   return isMissingColumn(error);
 }
 
@@ -186,75 +177,6 @@ export function getEnabledMessageTemplates(
   return Object.fromEntries(
     Object.entries(templates).filter(([, template]) => template.enabled),
   );
-}
-
-export async function getCallDispositions(): Promise<CallDispositionsConfig> {
-  const { data, error } = await getSupabaseAdmin()
-    .from("form_settings")
-    .select("call_dispositions")
-    .eq("form_type", STUDY_SETTINGS_FORM_TYPE)
-    .maybeSingle();
-
-  if (error) {
-    if (isMissingCallDispositionsColumn(error)) {
-      return mergeCallDispositions([]);
-    }
-    throw error;
-  }
-
-  const stored = parseCallDispositionsConfig(data?.call_dispositions);
-  return mergeCallDispositions(stored.options);
-}
-
-export async function updateCallDispositions(
-  config: CallDispositionsConfig,
-): Promise<CallDispositionsConfig> {
-  const { data: settings, error: settingsError } = await getSupabaseAdmin()
-    .from("form_settings")
-    .select("id")
-    .eq("form_type", STUDY_SETTINGS_FORM_TYPE)
-    .maybeSingle();
-
-  if (settingsError) throw settingsError;
-
-  const payload = {
-    call_dispositions: {
-      options: config.options,
-      allowNotes: config.allowNotes,
-    } as unknown as Json,
-  };
-
-  if (settings?.id) {
-    const { error } = await getSupabaseAdmin()
-      .from("form_settings")
-      .update(payload)
-      .eq("id", settings.id);
-
-    if (error) {
-      if (isMissingCallDispositionsColumn(error)) {
-        throw new Error("CALL_DISPOSITIONS_MIGRATION_PENDING");
-      }
-      throw error;
-    }
-    return config;
-  }
-
-  const { error } = await getSupabaseAdmin()
-    .from("form_settings")
-    .insert({
-      form_type: STUDY_SETTINGS_FORM_TYPE,
-      active_version: 1,
-      ...payload,
-    });
-
-  if (error) {
-    if (isMissingCallDispositionsColumn(error)) {
-      throw new Error("CALL_DISPOSITIONS_MIGRATION_PENDING");
-    }
-    throw error;
-  }
-
-  return config;
 }
 
 export async function getStudyConfig(): Promise<StudyConfig> {

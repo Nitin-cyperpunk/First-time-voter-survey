@@ -13,7 +13,7 @@ create table if not exists participants (
   dob date not null,
 
   city text,
-  status text default 'lead',
+  status text default 'completed',
 
   referred_by uuid references participants(id),
 
@@ -31,7 +31,7 @@ create index if not exists idx_participants_status on participants(status);
 -- Keep existing launch databases in sync when this script is re-run.
 -- `create table if not exists` does not add columns to an existing table.
 alter table participants add column if not exists participant_code text;
-alter table participants add column if not exists status text default 'lead';
+alter table participants add column if not exists status text default 'completed';
 alter table participants add column if not exists referred_by uuid references participants(id);
 alter table participants add column if not exists ip_address text;
 alter table participants add column if not exists user_agent text;
@@ -153,7 +153,7 @@ create policy "service_role_form_settings_all"
 -- Patch existing Phase 0 databases that were created before the final launch schema.
 
 alter table participants add column if not exists participant_code text;
-alter table participants add column if not exists status text default 'lead';
+alter table participants add column if not exists status text default 'completed';
 alter table participants add column if not exists referred_by uuid references participants(id);
 alter table participants add column if not exists ip_address text;
 alter table participants add column if not exists user_agent text;

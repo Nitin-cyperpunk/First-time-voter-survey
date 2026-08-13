@@ -26,7 +26,6 @@ export type RunInstagramSendInput = {
   message: string;
   instagramId?: string | null;
   onCopied?: () => void;
-  updateDmStatus?: () => void | Promise<void>;
 };
 
 /** Trim, strip @, reject URLs/spaces/invalid chars. Usernames only — no URL parsing. */
@@ -285,33 +284,5 @@ export async function runInstagramSend(
     toastSuccess("Message copied successfully.");
   }
 
-  if (input.updateDmStatus) {
-    await input.updateDmStatus();
-  }
-
   return { status: "sent", username: normalized.username, dmUrl };
-}
-
-/** Reuses PATCH /api/admin/dm-verify `mark_message_received` — no duplicate status logic. */
-export function createMarkMessageReceivedHandler(
-  leadId: string,
-): () => Promise<void> {
-  return async () => {
-    const response = await fetch("/api/admin/dm-verify", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        leadId,
-        action: "mark_message_received",
-      }),
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(
-        typeof payload.error === "string"
-          ? payload.error
-          : "Failed to update DM status.",
-      );
-    }
-  };
 }

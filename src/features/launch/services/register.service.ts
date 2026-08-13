@@ -18,7 +18,10 @@ import {
   validateScreenerSubmission,
 } from "@/lib/response-storage";
 import type { Json } from "@/lib/supabase/types";
-import { createReferral } from "@/server/repositories/referrals.repository";
+import {
+  createReferral,
+  markReferralEarnedForReferredLeadId,
+} from "@/server/repositories/referrals.repository";
 import { createFormTerminations } from "@/server/repositories/form-terminations.repository";
 import { checkDuplicateFingerprint } from "@/server/services/duplicate-fingerprint.service";
 import {
@@ -26,7 +29,6 @@ import {
   isRegistrationTerminated,
   resolveScreenerCompletionTracking,
 } from "@/lib/registration-terminations";
-import { transitionParticipantStatus } from "@/server/services/lifecycle.service";
 import { CapacityError } from "@/lib/capacity";
 import { getCityById } from "@/server/repositories/cities.repository";
 import {
@@ -34,6 +36,7 @@ import {
   deleteParticipantByLeadId,
   findByMobile,
   findByReferralCode,
+  recordParticipantStatusHistory,
 } from "@/server/repositories/participants.repository";
 import {
   createResponse,
@@ -282,6 +285,8 @@ export async function registerParticipant(
   const screenerTracking = resolveScreenerCompletionTracking(input);
   const deviceFingerprint = normalizeDeviceFingerprint(input.deviceFingerprint);
 
+  const finalStatus = registrationTerminated ? "terminated" : "completed";
+
   const participant = await createParticipant({
     referralCode,
     fullName: input.fullName,
@@ -292,6 +297,7 @@ export async function registerParticipant(
     email: input.email?.trim() || null,
     area: input.area?.trim() || null,
     pincode: input.pincode?.trim() || null,
+    status: finalStatus,
     referredBy: referrerLeadId,
     ipAddress: options.ipAddress ?? null,
     userAgent: options.userAgent ?? null,
@@ -301,6 +307,13 @@ export async function registerParticipant(
     referralPlatform,
     otherSource,
     deviceFingerprint,
+  });
+
+  await recordParticipantStatusHistory(participant.leadId, finalStatus, {
+    changedBy: "system",
+    notes: registrationTerminated
+      ? buildRegistrationTerminationNotes(input.terminations)
+      : "Qualified form completion",
   });
 
   await checkDuplicateFingerprint({
@@ -370,13 +383,6 @@ export async function registerParticipant(
     }
   }
 
-  if (registrationTerminated) {
-    await transitionParticipantStatus(participant.leadId, "not_eligible", {
-      changedBy: "system",
-      notes: buildRegistrationTerminationNotes(input.terminations),
-    });
-  }
-
   if (input.terminations?.length) {
     await createFormTerminations(
       input.terminations.map((item) => ({
@@ -389,7 +395,7 @@ export async function registerParticipant(
         questionLabel: item.questionLabel ?? null,
         answerValue: item.answerValue ?? null,
         reasonText: item.reasonText ?? null,
-        participantStatus: registrationTerminated ? "not_eligible" : participant.status,
+        participantStatus: finalStatus,
         submittedAt: input.submittedAt ? new Date(input.submittedAt) : new Date(),
       })),
     );
@@ -401,9 +407,11 @@ export async function registerParticipant(
       referredLeadId: participant.leadId,
       referralCode: referrerReferralCode,
     });
+    if (!registrationTerminated) {
+      await markReferralEarnedForReferredLeadId(participant.leadId);
+    }
   }
 
-  const finalStatus = registrationTerminated ? "not_eligible" : participant.status;
   const messages = await buildRegistrationThankYouMessages(participant);
 
   return {
@@ -412,7 +420,7 @@ export async function registerParticipant(
     fullName: participant.fullName,
     mobile: participant.mobile,
     status: finalStatus,
-    eligible: false,
+    eligible: !registrationTerminated,
     referralLink: buildReferralLink(participant.referralCode),
     messages,
   };

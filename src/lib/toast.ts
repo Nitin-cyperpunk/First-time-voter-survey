@@ -126,17 +126,6 @@ export function toastUpiInvalid() {
   toastError("❌ Invalid UPI ID");
 }
 
-export function toastEligibilityUpdated(
-  eligibility: "eligible" | "not_eligible",
-) {
-  if (eligibility === "eligible") {
-    toastSuccess("✅ Participant marked Eligible");
-    return;
-  }
-
-  toastWarning("⚠️ Participant marked Not Eligible");
-}
-
 export function toastReferralLinkCopied() {
   toastSuccess("Referral link copied.");
 }
@@ -168,36 +157,12 @@ export function toastWelcomeBack() {
   });
 }
 
-export function toastEligibleForSurvey() {
-  toastSuccess("You are eligible for the study.");
-}
-
-export function toastNotEligibleSurveyUnavailable() {
-  toastInfo("You can still earn through referrals.");
-}
-
-export function toastRegistrationUpdateRequested() {
-  toastInfo("Registration update requested.");
-}
-
-export function toastRefillSubmitted() {
-  toastSuccess("Registration updated successfully.");
-}
-
 export function toastSurveySubmittedSuccessfully() {
   toastSuccess("Survey submitted successfully.");
 }
 
 export function toastPaymentProcessed() {
   toastSuccess("Payment processed successfully.");
-}
-
-export function toastRefillRequestSent(copiedMessage = false) {
-  toastSuccess(
-    copiedMessage
-      ? "Refill request sent. Message copied to clipboard."
-      : "Refill request sent successfully.",
-  );
 }
 
 export function toastOpeningInstagram() {
@@ -212,24 +177,10 @@ export function toastCopiedSuccessfully() {
   toastSuccess("Copied successfully");
 }
 
-export function toastInstagramVerificationCopied() {
-  toastSuccess("Message copied.", {
-    description: "Paste it into Instagram DM.",
-  });
-}
-
-export function toastSurveyLinkCopied() {
-  toastSuccess("Survey link copied successfully.");
-}
-
 export function toastWhatsAppShareInitiated() {
   toastSuccess("WhatsApp share opened.");
 }
 
 export function toastInstagramShareInitiated() {
   toastSuccess("Instagram share initiated.");
-}
-
-export function toastEligibilityFailed() {
-  toastError("❌ Unable to update eligibility");
 }

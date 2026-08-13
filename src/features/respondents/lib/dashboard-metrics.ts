@@ -5,11 +5,7 @@ import type {
 } from "@/features/respondents/types";
 import { aggregateNormalizedCities } from "@/features/respondents/lib/city-normalization";
 import { buildFunnelSnapshot } from "@/features/respondents/lib/funnel-snapshot";
-import {
-  ACTIVE_LEAD_STATUSES,
-  ELIGIBLE_REACHED_STATUSES,
-  eligibleReachedOrFilter,
-} from "@/features/respondents/lib/metric-status-sets";
+import { QUALIFIED_COMPLETION_STATUSES } from "@/features/respondents/lib/metric-status-sets";
 import { closesAt } from "@/lib/study-config/defaults";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getStudyConfig } from "@/server/repositories/form-settings.repository";
@@ -59,15 +55,11 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
 
   const [
     registeredRes,
-    eligibleRes,
-    eligibleReachedRes,
-    verifiedRes,
     completedRes,
+    terminatedRes,
     paidRes,
-    overridesRes,
     fraudRes,
     fraudLegacyRes,
-    activeLeadsRes,
     referralsRes,
     pendingReferralsRes,
     completedReferralsRes,
@@ -80,27 +72,15 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     db
       .from("participants")
       .select("*", { count: "exact", head: true })
-      .in("status", [...ELIGIBLE_REACHED_STATUSES]),
+      .in("status", [...QUALIFIED_COMPLETION_STATUSES]),
     db
       .from("participants")
       .select("*", { count: "exact", head: true })
-      .or(eligibleReachedOrFilter()),
-    db
-      .from("participants")
-      .select("*", { count: "exact", head: true })
-      .not("verified_at", "is", null),
-    db
-      .from("participants")
-      .select("*", { count: "exact", head: true })
-      .in("status", ["completed", "review_pass", "successful", "paid"]),
+      .eq("status", "terminated"),
     db
       .from("participants")
       .select("*", { count: "exact", head: true })
       .eq("status", "paid"),
-    db
-      .from("participants")
-      .select("*", { count: "exact", head: true })
-      .eq("eligibility_manual_override", true),
     db
       .from("participants")
       .select("*", { count: "exact", head: true })
@@ -109,10 +89,6 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
       .from("participants")
       .select("*", { count: "exact", head: true })
       .eq("is_flagged_duplicate", true),
-    db
-      .from("participants")
-      .select("*", { count: "exact", head: true })
-      .in("status", [...ACTIVE_LEAD_STATUSES]),
     db.from("referrals").select("*", { count: "exact", head: true }),
     db
       .from("referrals")
@@ -135,13 +111,9 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
 
   for (const result of [
     registeredRes,
-    eligibleRes,
-    eligibleReachedRes,
-    verifiedRes,
     completedRes,
+    terminatedRes,
     paidRes,
-    overridesRes,
-    activeLeadsRes,
     referralsRes,
     pendingReferralsRes,
     completedReferralsRes,
@@ -204,24 +176,16 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
   }
 
   const registered = registeredRes.count ?? 0;
-  const eligible = eligibleRes.count ?? 0;
-  const eligibleReached = Math.max(
-    eligibleReachedRes.count ?? 0,
-    eligible,
-  );
-  const verified = verifiedRes.count ?? 0;
   const completed = completedRes.count ?? 0;
+  const terminated = terminatedRes.count ?? 0;
   const paid = paidRes.count ?? 0;
-  const overrides = overridesRes.count ?? 0;
   const fraudFlagged = Math.max(
     fraudRes.count ?? 0,
     fraudLegacyRes.count ?? 0,
   );
-  const activeLeads = activeLeadsRes.count ?? 0;
   const referrals = referralsRes.count ?? 0;
   const pendingReferrals = pendingReferralsRes.count ?? 0;
   const completedReferrals = completedReferralsRes.count ?? 0;
-  const notVerified = Math.max(0, eligibleReached - verified);
 
   const rows = acquisitionRes.data ?? [];
   const acquisitionBySource = buildBreakdown(
@@ -245,14 +209,10 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
 
   const kpis = {
     registered,
-    eligible,
-    eligibleReached,
-    notVerified,
-    verified,
     completed,
+    terminated,
     fraudFlagged,
     paid,
-    overrides,
   };
 
   const funnel = buildFunnelSnapshot(kpis, studyConfig);
@@ -260,7 +220,6 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
   return {
     totalRespondents: registered,
     totalReferrals: referrals,
-    activeLeads,
     completedReferrals,
     pendingReferrals,
     acquisitionBySource,
@@ -276,10 +235,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
       target: studyConfig.target,
       buffer: studyConfig.buffer,
       closesAt: closesAt(studyConfig),
-      survey_active: studyConfig.survey_active,
-      eligibility_open: studyConfig.eligibility_open,
-      screener_open: studyConfig.screener_open,
-      project_open: studyConfig.project_open,
+      form_status: studyConfig.form_status,
     },
     syncedAt: new Date().toISOString(),
   };

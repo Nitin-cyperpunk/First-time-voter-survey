@@ -21,7 +21,6 @@ export type SurveyTimingMetrics = {
 export type DashboardMetrics = {
   totalRespondents: number;
   totalReferrals: number;
-  activeLeads: number;
   completedReferrals: number;
   pendingReferrals: number;
   acquisitionBySource: MetricBreakdown[];
@@ -33,24 +32,17 @@ export type DashboardMetrics = {
   surveyTiming: SurveyTimingMetrics;
   kpis: {
     registered: number;
-    eligible: number;
-    eligibleReached: number;
-    notVerified: number;
-    verified: number;
     completed: number;
+    terminated: number;
     fraudFlagged: number;
     paid: number;
-    overrides: number;
   };
   funnel: import("@/features/respondents/lib/funnel-snapshot").FunnelSnapshot;
   config: {
     target: number;
     buffer: number;
     closesAt: number;
-    survey_active: boolean;
-    eligibility_open: boolean;
-    screener_open: boolean;
-    project_open: boolean;
+    form_status: "open" | "closed";
   };
   syncedAt: string;
 };

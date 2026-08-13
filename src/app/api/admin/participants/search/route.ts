@@ -19,7 +19,6 @@ export async function GET(request: NextRequest) {
         mobile: participant.mobile,
         referralCode: participant.referralCode,
         status: participant.status,
-        instagramId: participant.instagramId,
       })),
     });
   } catch (error) {

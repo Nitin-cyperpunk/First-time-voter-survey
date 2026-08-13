@@ -7,7 +7,6 @@ export type RegistrationRenderedMessage = {
 };
 
 export type RegistrationThankYouMessages = {
-  instagram_verification: RegistrationRenderedMessage;
   instagram_referral: RegistrationRenderedMessage;
   whatsapp_referral: RegistrationRenderedMessage;
   not_eligible_referral: RegistrationRenderedMessage;

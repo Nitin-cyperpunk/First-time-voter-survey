@@ -12,7 +12,6 @@ type SearchResult = {
   mobile: string;
   referralCode: string;
   status: string;
-  instagramId?: string | null;
 };
 
 export function ParticipantSearch() {
@@ -50,7 +49,7 @@ export function ParticipantSearch() {
       <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
       <Input
         className="pl-9"
-        placeholder="Search by Lead ID, mobile, name, referral code, or Instagram ID…"
+        placeholder="Search by Lead ID, mobile, name, or referral code…"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
       />
@@ -76,7 +75,6 @@ export function ParticipantSearch() {
                     </span>
                     <span className="mt-0.5 block text-xs text-muted-foreground">
                       {result.mobile} · {result.referralCode} · {result.status}
-                      {result.instagramId ? ` · @${result.instagramId}` : ""}
                     </span>
                   </Link>
                 </li>

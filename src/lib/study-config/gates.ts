@@ -1,18 +1,8 @@
 import type { StudyConfig } from "@/lib/study-config/types";
 
-/** Registration / screener form may accept new responses. */
+/** Public form may accept new responses. Only form_status gates the route. */
 export function isRegistrationAccepting(config: StudyConfig): boolean {
-  return (
-    config.form_status === "open" &&
-    config.survey_active &&
-    config.screener_open &&
-    config.project_open
-  );
-}
-
-/** New participants may transition to eligible. */
-export function isEligibilityAccepting(config: StudyConfig): boolean {
-  return config.eligibility_open && config.project_open;
+  return config.form_status === "open";
 }
 
 export function getAgeYears(

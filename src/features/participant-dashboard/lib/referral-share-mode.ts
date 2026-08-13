@@ -1,7 +1,4 @@
-import {
-  normalizeParticipantStatus,
-  type ParticipantStatus,
-} from "@/lib/participant-lifecycle";
+import { isTerminatedStatus } from "@/lib/participant-lifecycle";
 
 export type ReferralShareMode =
   | "instagram_only"
@@ -9,25 +6,12 @@ export type ReferralShareMode =
   | "both"
   | "none";
 
+/** Both qualified completions and terminations can refer friends. */
 export function resolveReferralShareMode(status: string): ReferralShareMode {
-  const normalized = normalizeParticipantStatus(status);
-
-  if (normalized === "eligible") return "both";
-  if (normalized === "not_eligible") return "both";
-  return "none";
+  if (!status) return "none";
+  return "both";
 }
 
-export function isEligibleStatus(status: string): boolean {
-  return normalizeParticipantStatus(status) === "eligible";
-}
-
-export function isNotEligibleStatus(status: string): boolean {
-  return normalizeParticipantStatus(status) === "not_eligible";
-}
-
-export function isUnderReviewParticipantStatus(
-  status: string,
-): status is ParticipantStatus {
-  const normalized = normalizeParticipantStatus(status);
-  return normalized === "under_review" || normalized === "lead";
+export function isTerminatedShareStatus(status: string): boolean {
+  return isTerminatedStatus(status);
 }
