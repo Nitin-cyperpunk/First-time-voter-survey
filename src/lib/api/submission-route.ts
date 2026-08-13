@@ -1,12 +1,26 @@
 import { NextResponse } from "next/server";
 
 import {
+  CapacityError,
+  CAPACITY_REJECT_MESSAGES,
+} from "@/lib/capacity";
+import {
   SubmissionError,
   submissionErrorResponse,
   SUBMISSION_ERROR_SUPPORT,
 } from "@/lib/db-errors";
 
 export function handleSubmissionRouteError(error: unknown, logLabel: string) {
+  if (error instanceof CapacityError) {
+    return NextResponse.json(
+      {
+        error: error.message || CAPACITY_REJECT_MESSAGES[error.code],
+        code: error.code,
+      },
+      { status: 403 },
+    );
+  }
+
   if (error instanceof SubmissionError) {
     return NextResponse.json(
       {
@@ -83,9 +97,8 @@ export function handleSubmissionRouteError(error: unknown, logLabel: string) {
     if (error.message === "SURVEY_CLOSED") {
       return NextResponse.json(
         {
-          error:
-            "This survey is no longer accepting responses — please contact the admin.",
-          code: "SURVEY_CLOSED",
+          error: CAPACITY_REJECT_MESSAGES.form_closed,
+          code: "form_closed",
         },
         { status: 403 },
       );

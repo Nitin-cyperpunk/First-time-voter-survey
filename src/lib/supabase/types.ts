@@ -36,6 +36,7 @@ export type Database = {
           mobile: string;
           dob: string;
           city: string | null;
+          city_id: string | null;
           email: string | null;
           area: string | null;
           pincode: string | null;
@@ -81,6 +82,7 @@ export type Database = {
           mobile: string;
           dob: string;
           city?: string | null;
+          city_id?: string | null;
           email?: string | null;
           area?: string | null;
           pincode?: string | null;
@@ -248,6 +250,9 @@ export type Database = {
           ip_address: string | null;
           completion_status: string | null;
           termination_reason: string | null;
+          city_id: string | null;
+          config_area_type: string | null;
+          self_reported_area_type: string | null;
         },
         {
           id?: string;
@@ -265,6 +270,59 @@ export type Database = {
           ip_address?: string | null;
           completion_status?: string | null;
           termination_reason?: string | null;
+          city_id?: string | null;
+          config_area_type?: string | null;
+          self_reported_area_type?: string | null;
+        }
+      >;
+      cities: TableDefinition<
+        {
+          id: string;
+          name: string;
+          state: string;
+          area_type: string;
+          capacity: number;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+          created_by: string | null;
+          updated_by: string | null;
+        },
+        {
+          id?: string;
+          name: string;
+          state: string;
+          area_type: string;
+          capacity: number;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+          created_by?: string | null;
+          updated_by?: string | null;
+        }
+      >;
+      config_audit_log: TableDefinition<
+        {
+          id: string;
+          actor_id: string | null;
+          actor_email: string | null;
+          entity_type: string;
+          entity_id: string | null;
+          field: string;
+          old_value: string | null;
+          new_value: string | null;
+          created_at: string;
+        },
+        {
+          id?: string;
+          actor_id?: string | null;
+          actor_email?: string | null;
+          entity_type: string;
+          entity_id?: string | null;
+          field: string;
+          old_value?: string | null;
+          new_value?: string | null;
+          created_at?: string;
         }
       >;
       participant_sessions: TableDefinition<
@@ -431,7 +489,33 @@ export type Database = {
       >;
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      count_qualified_completions: {
+        Args: { p_city_id?: string | null };
+        Returns: number;
+      };
+      insert_screener_response_with_capacity: {
+        Args: {
+          p_lead_id: string;
+          p_mobile: string | null;
+          p_form_version: number;
+          p_answers: Json;
+          p_completion_status: string | null;
+          p_termination_reason: string | null;
+          p_response_times: Json | null;
+          p_analytics: Json | null;
+          p_csv_row: Json | null;
+          p_normalized_export: Json | null;
+          p_started_at: string | null;
+          p_submitted_at: string | null;
+          p_total_duration_sec: number | null;
+          p_ip_address: string | null;
+          p_city_id: string;
+          p_self_reported_area_type: string | null;
+        };
+        Returns: Json;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

@@ -1,4 +1,5 @@
 import type { LaunchRegistrationInput } from "@/features/launch/schemas/registration";
+import { CapacityError } from "@/lib/capacity";
 import { determineEligibility } from "@/lib/eligibility";
 import { normalizeDeviceFingerprint } from "@/lib/device-fingerprint";
 import { resolveScreenerCompletionTracking } from "@/lib/registration-terminations";
@@ -13,6 +14,7 @@ import {
   validateScreenerSubmission,
 } from "@/lib/response-storage";
 import type { Json } from "@/lib/supabase/types";
+import { getCityById } from "@/server/repositories/cities.repository";
 import {
   clearRefillRequest,
   findParticipantByLeadId,
@@ -158,9 +160,29 @@ export async function submitParticipantRefill(
 
   const deviceFingerprint = normalizeDeviceFingerprint(input.deviceFingerprint);
 
+  let cityName = input.city?.trim() || participant.city || "";
+  let cityId = input.city_id ?? participant.cityId ?? null;
+  let configAreaType: "urban" | "local" | null = null;
+  if (input.city_id) {
+    const city = await getCityById(input.city_id);
+    if (!city || !city.isActive) {
+      throw new CapacityError("city_inactive");
+    }
+    cityName = city.name;
+    cityId = city.id;
+    configAreaType = city.areaType;
+  } else if (cityId) {
+    const city = await getCityById(cityId);
+    configAreaType = city?.areaType ?? null;
+  }
+  if (!cityName) {
+    throw new CapacityError("city_required");
+  }
+
   const updatedParticipant = await updateParticipantProfile(leadId, {
     fullName: input.fullName,
-    city: input.city,
+    city: cityName,
+    cityId,
     dob: input.dob,
     email: input.email?.trim() || null,
     area: input.area?.trim() || null,
@@ -204,9 +226,16 @@ export async function submitParticipantRefill(
   };
 
   if (existingResponse) {
-    await updateResponse(leadId, responsePayload);
+    await updateResponse(leadId, {
+      ...responsePayload,
+      cityId,
+      configAreaType,
+    });
   } else {
-    await createResponse({ leadId, ...responsePayload });
+    if (!cityId) {
+      throw new CapacityError("city_required");
+    }
+    await createResponse({ leadId, ...responsePayload, cityId });
   }
 
   await clearRefillRequest(leadId);

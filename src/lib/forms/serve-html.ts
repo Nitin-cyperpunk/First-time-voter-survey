@@ -3,7 +3,12 @@ import { NextResponse } from "next/server";
 import type { FormType } from "@/lib/forms/types";
 import { injectRegistrationBridge } from "@/lib/forms/html-upload";
 import { injectFieldQKeyMap } from "@/lib/forms/inject-field-q-key-map";
+import {
+  ensureCityIdSelect,
+  injectSelectableCitiesScript,
+} from "@/lib/forms/inject-city-select";
 import { isRegistrationAccepting } from "@/lib/study-config/gates";
+import { listSelectableCities } from "@/server/repositories/cities.repository";
 import { getActivePublishedForm } from "@/server/repositories/forms.repository";
 import { getStudyConfig } from "@/server/repositories/form-settings.repository";
 
@@ -130,6 +135,14 @@ export async function serveActiveFormHtml(formType: FormType = "registration") {
 
   let html = ensureRegistrationScripts(form.htmlContent);
   html = injectStudyConfigScript(html, studyConfig);
+  html = ensureCityIdSelect(html);
+  try {
+    const cities = await listSelectableCities();
+    html = injectSelectableCitiesScript(html, cities);
+  } catch (error) {
+    console.error("[serveActiveFormHtml] failed to inject cities:", error);
+    html = injectSelectableCitiesScript(html, []);
+  }
 
   const withFieldMap = injectFieldQKeyMap(html, {
     excludeCoreFields: true,
@@ -151,6 +164,14 @@ export async function serveRefillFormHtml() {
   html = ensureDeviceFingerprintScript(html);
   if (!html.includes("/forms/refill-bridge.js") && /<\/head>/i.test(html)) {
     html = html.replace(/<\/head>/i, `  ${REFILL_BRIDGE_SCRIPT}\n</head>`);
+  }
+  html = ensureCityIdSelect(html);
+  try {
+    const cities = await listSelectableCities();
+    html = injectSelectableCitiesScript(html, cities);
+  } catch (error) {
+    console.error("[serveRefillFormHtml] failed to inject cities:", error);
+    html = injectSelectableCitiesScript(html, []);
   }
 
   const withFieldMap = injectFieldQKeyMap(html, { excludeCoreFields: true });

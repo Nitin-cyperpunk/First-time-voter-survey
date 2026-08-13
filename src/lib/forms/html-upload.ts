@@ -116,12 +116,16 @@ function hasFieldName(html: string, name: string) {
 
 function validateRegistrationHtml(html: string) {
   const errors: string[] = [];
-  const requiredNames = ["name", "phone", "city"];
+  const requiredNames = ["name", "phone"];
 
   for (const name of requiredNames) {
     if (!hasFieldName(html, name)) {
       errors.push(`Missing required field: ${name}.`);
     }
+  }
+
+  if (!hasFieldName(html, "city") && !hasFieldName(html, "city_id")) {
+    errors.push("Missing required field: city or city_id.");
   }
 
   const hasSingleDob = hasFieldName(html, "dob_date");

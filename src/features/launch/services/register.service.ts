@@ -27,8 +27,11 @@ import {
   resolveScreenerCompletionTracking,
 } from "@/lib/registration-terminations";
 import { transitionParticipantStatus } from "@/server/services/lifecycle.service";
+import { CapacityError } from "@/lib/capacity";
+import { getCityById } from "@/server/repositories/cities.repository";
 import {
   createParticipant,
+  deleteParticipantByLeadId,
   findByMobile,
   findByReferralCode,
 } from "@/server/repositories/participants.repository";
@@ -193,7 +196,7 @@ export async function registerParticipant(
 ) {
   const studyConfig = await getStudyConfig();
   if (!isRegistrationAccepting(studyConfig)) {
-    throw new Error("SURVEY_CLOSED");
+    throw new CapacityError("form_closed");
   }
 
   if (!isAgeWithinStudyRule(input.dob, studyConfig)) {
@@ -266,6 +269,14 @@ export async function registerParticipant(
   const otherSource =
     rawSource === ACQUISITION_OTHER ? input.otherSource?.trim() || null : null;
 
+  if (!input.city_id) {
+    throw new CapacityError("city_required");
+  }
+  const city = await getCityById(input.city_id);
+  if (!city || !city.isActive) {
+    throw new CapacityError("city_inactive");
+  }
+
   const referralCode = await generateUniqueReferralCode();
   const registrationTerminated = isRegistrationTerminated(input);
   const screenerTracking = resolveScreenerCompletionTracking(input);
@@ -276,7 +287,8 @@ export async function registerParticipant(
     fullName: input.fullName,
     mobile,
     dob: input.dob,
-    city: input.city,
+    city: city.name,
+    cityId: city.id,
     email: input.email?.trim() || null,
     area: input.area?.trim() || null,
     pincode: input.pincode?.trim() || null,
@@ -316,31 +328,46 @@ export async function registerParticipant(
         ? computeTotalDurationSec(startedAt, submittedAt)
         : null;
 
-    await createResponse({
-      leadId: participant.leadId,
-      mobile: participant.mobile,
-      formVersion: form.version,
-      answers: withTimingMetadata(storedAnswers, alignedResponseTimes, {
-        currentScreen: input.currentScreen,
-        lastScreen: input.lastScreen,
-      }) as Json,
-      completionStatus: screenerTracking.completionStatus,
-      terminationReason: screenerTracking.terminationReason,
-      responseTimes: alignedResponseTimes,
-      analytics: (input.analytics ?? null) as Json | null,
-      csvRow: resolveScreenerCsvRow({
-        input,
-        form,
-        storedAnswers,
+    try {
+      await createResponse({
         leadId: participant.leadId,
-        participant,
+        mobile: participant.mobile,
+        formVersion: form.version,
+        answers: withTimingMetadata(storedAnswers, alignedResponseTimes, {
+          currentScreen: input.currentScreen,
+          lastScreen: input.lastScreen,
+        }) as Json,
+        completionStatus: screenerTracking.completionStatus,
+        terminationReason: screenerTracking.terminationReason,
+        responseTimes: alignedResponseTimes,
+        analytics: (input.analytics ?? null) as Json | null,
+        csvRow: resolveScreenerCsvRow({
+          input,
+          form,
+          storedAnswers,
+          leadId: participant.leadId,
+          participant,
+          totalDurationSec,
+        }),
+        startedAt,
+        submittedAt,
         totalDurationSec,
-      }),
-      startedAt,
-      submittedAt,
-      totalDurationSec,
-      ipAddress: options.ipAddress ?? null,
-    });
+        ipAddress: options.ipAddress ?? null,
+        cityId: city.id,
+      });
+    } catch (error) {
+      if (error instanceof CapacityError) {
+        try {
+          await deleteParticipantByLeadId(participant.leadId);
+        } catch (cleanupError) {
+          console.error(
+            "[registerParticipant] failed to roll back participant after capacity reject:",
+            cleanupError,
+          );
+        }
+      }
+      throw error;
+    }
   }
 
   if (registrationTerminated) {

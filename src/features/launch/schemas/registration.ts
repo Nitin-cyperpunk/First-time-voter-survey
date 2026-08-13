@@ -37,11 +37,8 @@ export const launchRegistrationSchema = z.object({
     .max(120, "Name is too long"),
   mobile: phoneSchema,
   dob: dobSchema,
-  city: z
-    .string()
-    .trim()
-    .min(2, "City is required")
-    .max(80, "City name is too long"),
+  city_id: z.string().uuid("Please select a city from the list.").optional(),
+  city: z.string().trim().max(80).optional(),
   email: z
     .union([
       z.literal(""),

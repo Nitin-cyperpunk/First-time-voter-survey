@@ -3,7 +3,10 @@ import type { StudyConfig } from "@/lib/study-config/types";
 /** Registration / screener form may accept new responses. */
 export function isRegistrationAccepting(config: StudyConfig): boolean {
   return (
-    config.survey_active && config.screener_open && config.project_open
+    config.form_status === "open" &&
+    config.survey_active &&
+    config.screener_open &&
+    config.project_open
   );
 }
 

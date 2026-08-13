@@ -11,6 +11,7 @@ export type ParticipantCreateInput = {
   mobile: string;
   dob: string;
   city: string;
+  cityId?: string | null;
   email?: string | null;
   area?: string | null;
   pincode?: string | null;
@@ -33,6 +34,7 @@ export function mapParticipant(row: ParticipantRow): Participant {
     mobile: row.mobile,
     dob: row.dob,
     city: row.city,
+    cityId: row.city_id ?? null,
     email: row.email ?? null,
     area: row.area ?? null,
     pincode: row.pincode ?? null,
@@ -92,6 +94,7 @@ function toInsert(input: ParticipantCreateInput): ParticipantInsert {
     mobile: input.mobile.trim(),
     dob: input.dob,
     city: input.city.trim(),
+    ...(input.cityId !== undefined ? { city_id: input.cityId } : {}),
     ...(input.email !== undefined ? { email: input.email?.trim() || null } : {}),
     ...(input.area !== undefined ? { area: input.area?.trim() || null } : {}),
     ...(input.pincode !== undefined
@@ -158,6 +161,24 @@ export async function refillTokenExists(refillToken: string) {
     throw error;
   }
   return Boolean(data);
+}
+
+export async function deleteParticipantByLeadId(leadId: string) {
+  try {
+    await getSupabaseAdmin()
+      .from("fingerprint_events")
+      .delete()
+      .eq("participant_lead_id", leadId);
+  } catch {
+    // Fingerprint rows may not exist yet; continue with participant delete.
+  }
+
+  const { error } = await getSupabaseAdmin()
+    .from("participants")
+    .delete()
+    .eq("lead_id", leadId);
+
+  if (error) throw error;
 }
 
 export async function findByMobile(mobile: string) {
@@ -368,6 +389,7 @@ export async function updateParticipantProfile(
   input: {
     fullName: string;
     city: string;
+    cityId?: string | null;
     dob?: string;
     email?: string | null;
     area?: string | null;
@@ -382,6 +404,7 @@ export async function updateParticipantProfile(
     .update({
       full_name: input.fullName.trim(),
       city: input.city.trim(),
+      ...(input.cityId !== undefined ? { city_id: input.cityId } : {}),
       ...(input.dob ? { dob: input.dob } : {}),
       ...(input.email !== undefined
         ? { email: input.email?.trim() || null }

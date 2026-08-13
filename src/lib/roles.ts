@@ -78,9 +78,9 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   },
   {
     capability: "settings",
-    title: "Settings",
+    title: "Config",
     href: "/settings",
-    description: "Study configuration and operational settings",
+    description: "Form open/close, city capacity, and study configuration",
   },
   {
     capability: "admin_management",
