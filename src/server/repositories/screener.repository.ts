@@ -11,6 +11,7 @@ import {
   mapUniqueViolationToSubmissionError,
   SubmissionError,
 } from "@/lib/db-errors";
+import { isQKey } from "@/lib/response-storage";
 
 export async function hasScreenerResponse(leadId: string) {
   const { count, error } = await getSupabaseAdmin()
@@ -193,7 +194,7 @@ export function buildCsvRow(
 
   if (schema.fields.length > 0) {
     schema.fields.forEach((field, index) => {
-      const qKey = /^Q\d+$/.test(field.id) ? field.id : `Q${index + 1}`;
+      const qKey = isQKey(field.id) ? field.id : `Q${index + 1}`;
       row[qKey] = answers[qKey] ?? answers[field.id] ?? "";
       const time = options?.responseTimes?.[qKey] ?? options?.responseTimes?.[field.id];
       if (time !== undefined) {

@@ -36,7 +36,9 @@ export function coerceFormExportSchema(value: unknown): FormExportSchema {
       version: 1,
       fields: legacy.fields.map((field, index) => ({
         id: field.id,
-        qKey: /^Q\d+$/i.test(field.id) ? field.id : `Q${index + 1}`,
+        qKey: /^Q[A-Za-z0-9]+(?:_[A-Za-z0-9]+)*$/.test(field.id)
+          ? field.id
+          : `Q${index + 1}`,
         label: field.label,
         type:
           field.type === "select"

@@ -455,12 +455,145 @@ export type Database = {
           submitted_at?: string;
         }
       >;
+      ftv_responses: TableDefinition<
+        {
+          id: number;
+          respondent_id: string;
+          lead_id: string | null;
+          city_id: string | null;
+          survey_version: string;
+          status: string;
+          started_at: string | null;
+          completed_at: string | null;
+          terminated_at: string | null;
+          duration_seconds: number | null;
+          payload: Json;
+          created_at: string;
+        },
+        {
+          id?: number;
+          respondent_id: string;
+          lead_id?: string | null;
+          city_id?: string | null;
+          survey_version: string;
+          status: string;
+          started_at?: string | null;
+          completed_at?: string | null;
+          terminated_at?: string | null;
+          duration_seconds?: number | null;
+          payload: Json;
+          created_at?: string;
+        },
+        [
+          {
+            foreignKeyName: "ftv_responses_lead_id_fkey";
+            columns: ["lead_id"];
+            isOneToOne: false;
+            referencedRelation: "participants";
+            referencedColumns: ["lead_id"];
+          },
+          {
+            foreignKeyName: "ftv_responses_city_id_fkey";
+            columns: ["city_id"];
+            isOneToOne: false;
+            referencedRelation: "cities";
+            referencedColumns: ["id"];
+          },
+        ]
+      >;
     };
-    Views: Record<string, never>;
+    Views: {
+      ftv_answers: {
+        Row: {
+          respondent_id: string | null;
+          lead_id: string | null;
+          status: string | null;
+          created_at: string | null;
+          answer_order: number | null;
+          qid: string | null;
+          question: string | null;
+          question_type: string | null;
+          item: string | null;
+          item_code: number | null;
+          rank_position: number | null;
+          selection_order: number | null;
+          answer_code: number | null;
+          answer: string | null;
+          other_text: string | null;
+          answer_original: string | null;
+          answer_script: string | null;
+          spoken_language: string | null;
+        };
+      };
+      ftv_respondents: {
+        Row: {
+          respondent_id: string | null;
+          lead_id: string | null;
+          city_id: string | null;
+          survey_version: string | null;
+          status: string | null;
+          started_at: string | null;
+          completed_at: string | null;
+          terminated_at: string | null;
+          duration_seconds: number | null;
+          created_at: string | null;
+          name: string | null;
+          email: string | null;
+          phone: string | null;
+          area: string | null;
+          city: string | null;
+          age_band: string | null;
+          state_code: number | null;
+          state: string | null;
+          zip: string | null;
+          dob: string | null;
+          age_today: number | null;
+          age_at_poll: number | null;
+          age_at_qualifying_date: number | null;
+          gender_code: number | null;
+          gender: string | null;
+          relationship_code: number | null;
+          relationship_status: string | null;
+          state_match: boolean | null;
+          consent: string | null;
+          terms_accepted: boolean | null;
+          randomisation_seed: number | null;
+          order_q6_blocks: Json | null;
+          order_q6a: Json | null;
+          order_q6b: Json | null;
+          order_q14: Json | null;
+        };
+      };
+      ftv_field_summary: {
+        Row: {
+          status: string | null;
+          n: number | null;
+          pct: number | null;
+          avg_minutes: number | null;
+          first_response: string | null;
+          latest_response: string | null;
+        };
+      };
+    };
     Functions: {
       count_qualified_completions: {
         Args: { p_city_id?: string | null };
         Returns: number;
+      };
+      insert_ftv_response: {
+        Args: {
+          p_respondent_id: string;
+          p_survey_version: string;
+          p_status: string;
+          p_payload: Json;
+          p_started_at?: string | null;
+          p_completed_at?: string | null;
+          p_terminated_at?: string | null;
+          p_duration_seconds?: number | null;
+          p_lead_id?: string | null;
+          p_city_id?: string | null;
+        };
+        Returns: Json;
       };
       insert_screener_response_with_capacity: {
         Args: {

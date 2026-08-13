@@ -9,6 +9,7 @@ import type { LaunchRegistrationInput } from "@/features/launch/schemas/registra
 import {
   computeTotalDurationSec,
   hasStoredAnswerValue,
+  isQKey,
   mapFieldAnswersToQKeys,
   mapFieldTimesToQKeys,
   normalizeStoredAnswers,
@@ -108,6 +109,7 @@ function alignResponseTimes(
   ) as Record<string, StoredAnswerValue>;
   const aligned: Record<string, number> = {};
   for (const key of Object.keys(questionAnswers)) {
+    if (!isQKey(key)) continue;
     aligned[key] = responseTimes[key] ?? 0;
   }
   return aligned;
@@ -242,7 +244,7 @@ export async function registerParticipant(
   }
 
   for (const [qIndex, field] of form.schema.fields.entries()) {
-    const qKey = /^Q\d+$/.test(field.id) ? field.id : `Q${qIndex + 1}`;
+    const qKey = isQKey(field.id) ? field.id : `Q${qIndex + 1}`;
     const answerValue = storedAnswers[qKey] ?? normalizedAnswers[field.id];
     if ("required" in field && field.required && !hasStoredAnswerValue(answerValue)) {
       throw new Error(`MISSING_ANSWER:${field.id}`);
