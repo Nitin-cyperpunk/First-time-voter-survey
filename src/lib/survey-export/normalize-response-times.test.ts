@@ -56,3 +56,13 @@ test("drops unmappable keys instead of failing", () => {
 
   assert.deepEqual(times, { Q4: 1 });
 });
+
+test("keeps FTV screener codes such as QC and Q15_1", () => {
+  const times = normalizeSurveyResponseTimes(
+    { QC: 4, Q15_1: 2.4, consent: 9 },
+    ["QC", "Q15_1"],
+    undefined,
+  );
+
+  assert.deepEqual(times, { QC: 4, Q15_1: 2 });
+});

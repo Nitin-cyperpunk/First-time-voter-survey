@@ -7,7 +7,8 @@ import {
   coerceFormExportSchema,
 } from "@/lib/form-export";
 
-const Q_KEY_PATTERN = /^Q\d+$/;
+/** FTV + numbered keys: Q1, QC, QD, Q15_1, Q6a_1, Q7_rank1. Leading Q is required. */
+const Q_KEY_PATTERN = /^Q[A-Za-z0-9]+(?:_[A-Za-z0-9]+)*$/;
 const INTERNAL_ANSWER_KEYS = new Set([
   "_st",
   "_screen_times",
@@ -71,10 +72,16 @@ export function usesQKeyFormat(answers: Record<string, unknown>): boolean {
 
 export function sortQKeys(keys: string[]): string[] {
   return [...keys].sort((a, b) => {
-    const aNum = Number.parseInt(a.slice(1), 10);
-    const bNum = Number.parseInt(b.slice(1), 10);
-    if (Number.isNaN(aNum) || Number.isNaN(bNum)) return a.localeCompare(b);
-    return aNum - bNum;
+    const aLetterOnly = /^Q[A-Z]+$/.test(a);
+    const bLetterOnly = /^Q[A-Z]+$/.test(b);
+    if (aLetterOnly !== bLetterOnly) return aLetterOnly ? -1 : 1;
+
+    const aNum = Number.parseInt(a.replace(/^Q(?=\d)/, ""), 10);
+    const bNum = Number.parseInt(b.replace(/^Q(?=\d)/, ""), 10);
+    if (!Number.isNaN(aNum) && !Number.isNaN(bNum) && aNum !== bNum) {
+      return aNum - bNum;
+    }
+    return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
   });
 }
 
@@ -104,10 +111,14 @@ export function validateAnswerTimeKeyMatch(
   responseTimes: Record<string, number>,
 ): ResponseValidationResult {
   const answerKeys = new Set(
-    Object.keys(answers).filter((key) => !isInternalAnswerKey(key)),
+    Object.keys(answers).filter(
+      (key) => isQKey(key) && !isInternalAnswerKey(key),
+    ),
   );
   const timeKeys = new Set(
-    Object.keys(responseTimes).filter((key) => !isInternalAnswerKey(key)),
+    Object.keys(responseTimes).filter(
+      (key) => isQKey(key) && !isInternalAnswerKey(key),
+    ),
   );
 
   if (answerKeys.size !== timeKeys.size) {
@@ -144,10 +155,17 @@ export function validateScreenerSubmission(
     };
   }
 
-  const timeValidation = validateResponseTimes(responseTimes);
+  const qTimes = Object.fromEntries(
+    Object.entries(responseTimes).filter(([key]) => isQKey(key)),
+  );
+  if (Object.keys(qTimes).length === 0) {
+    return validateResponseTimes(responseTimes);
+  }
+
+  const timeValidation = validateResponseTimes(qTimes);
   if (!timeValidation.ok) return timeValidation;
 
-  return validateAnswerTimeKeyMatch(answers, responseTimes);
+  return validateAnswerTimeKeyMatch(answers, qTimes);
 }
 
 export function computeTotalDurationSec(
