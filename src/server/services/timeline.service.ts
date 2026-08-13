@@ -88,7 +88,7 @@ export async function getParticipantTimeline(
   if (screener?.submitted_at) {
     events.push({
       timestamp: new Date(screener.submitted_at),
-      event: "Screener submitted",
+      event: "Survey submitted",
       actor: "participant",
       notes: null,
     });
@@ -97,7 +97,7 @@ export async function getParticipantTimeline(
   if (screener?.started_at) {
     events.push({
       timestamp: new Date(screener.started_at),
-      event: "Screener started",
+      event: "Survey started",
       actor: "participant",
       notes: null,
     });

@@ -529,7 +529,7 @@ export function RespondentsTable({ participants }: RespondentsTableProps) {
               <TableHead>Source</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Ref. platform</TableHead>
-              <TableHead>Screener</TableHead>
+              <TableHead>Survey</TableHead>
               <TableHead>Duplicate</TableHead>
               <TableHead>Registered</TableHead>
             </TableRow>
@@ -733,7 +733,7 @@ export function RespondentsTable({ participants }: RespondentsTableProps) {
                     </StatusPill>
                   </div>
                   <div className="flex items-center justify-between gap-4 border-b border-dashed border-border pb-3 text-sm">
-                    <span className="text-plum-muted">Screener</span>
+                    <span className="text-plum-muted">Survey</span>
                     <StatusPill
                       variant={selected.hasScreener ? "completed" : "lead"}
                     >

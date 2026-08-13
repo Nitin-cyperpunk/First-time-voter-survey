@@ -289,11 +289,11 @@ export function ParticipantDetail({ leadId }: ParticipantDetailProps) {
         </Section>
       </div>
 
-      <Section title="Screener">
+      <Section title="Survey">
         {screener ? (
           <>
             <DetailRow
-              label="Screener version"
+              label="Survey version"
               value={`v${screener.formVersion}`}
             />
             <DetailRow
@@ -380,7 +380,7 @@ export function ParticipantDetail({ leadId }: ParticipantDetailProps) {
             </div>
           </>
         ) : (
-          <p className="text-sm text-muted-foreground">No screener submitted.</p>
+          <p className="text-sm text-muted-foreground">No survey submitted.</p>
         )}
       </Section>
 

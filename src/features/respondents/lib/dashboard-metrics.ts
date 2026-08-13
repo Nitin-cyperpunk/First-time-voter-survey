@@ -170,7 +170,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
       medianDurationSec: median(durations),
       abandonmentNote:
         durations.length > 0
-          ? "Median duration from screener_responses.total_duration_sec. Stage-level abandonment pending richer analytics events."
+          ? "Median duration from survey responses. Stage-level abandonment pending richer analytics events."
           : "No survey duration samples yet.",
     };
   }

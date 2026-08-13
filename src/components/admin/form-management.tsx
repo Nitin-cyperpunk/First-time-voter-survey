@@ -20,12 +20,12 @@ export function FormManagement({ forms, activeForm }: FormManagementProps) {
           Form Management
         </h2>
         <p className="mt-2 max-w-2xl text-sm text-plum-muted">
-          Upload, preview, publish, and activate the registration / screener HTML
+          Upload, preview, publish, and activate the registration / survey HTML
           form. Only one form type is used in this study.
         </p>
 
         <p className="mt-4 text-sm text-plum-muted">
-          Live screener served at{" "}
+          Live survey served at{" "}
           <span className="font-mono text-xs">{FORM_TYPE_PATHS.registration}</span>
           .
         </p>

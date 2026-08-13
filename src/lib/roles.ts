@@ -56,7 +56,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     capability: "screener",
     title: "Forms",
     href: adminPath("/forms"),
-    description: "FTV-v1 screener form versions",
+    description: "FTV-v1 survey form versions",
   },
   {
     capability: "referrals",
