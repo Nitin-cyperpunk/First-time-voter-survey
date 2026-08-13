@@ -27,13 +27,13 @@ export function isDmStatus(value: unknown): value is DmStatus {
   );
 }
 
-export function resolveDmStatus(participant: Participant): DmStatus {
-  const stored = (participant as Participant & { dmStatus?: string | null })
-    .dmStatus;
+type DmStatusSource = Pick<Participant, "status" | "verifiedAt" | "dmStatus">;
+
+export function resolveDmStatus(participant: DmStatusSource): DmStatus {
+  const stored = participant.dmStatus;
   if (isDmStatus(stored)) return stored;
 
   if (participant.status === "completed") return "completed";
-  if (participant.surveyAccessGranted) return "survey_link_sent";
   if (participant.verifiedAt) return "verified";
   return "waiting_for_dm";
 }
@@ -68,7 +68,7 @@ export function isVerifiedDmStatus(status: DmStatus): boolean {
 }
 
 /** Operational label for admin tables (maps message_received → call_pending until verified). */
-export function displayDmStatus(participant: Participant): DmStatus {
+export function displayDmStatus(participant: DmStatusSource): DmStatus {
   const status = resolveDmStatus(participant);
   if (status === "message_received" && !participant.verifiedAt) {
     return "call_pending";

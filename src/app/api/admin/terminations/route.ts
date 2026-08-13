@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         termination,
         screener: master?.screener ?? null,
-        survey: master?.survey ?? null,
+        survey: null,
         participant: master?.participant ?? null,
       });
     }

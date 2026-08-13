@@ -214,11 +214,9 @@ export function DmVerifyTable({
   ) {
     setBusyLeadId(row.leadId);
     const loadingId = toastLoading(
-      action === "generate_survey_token"
-        ? "Granting survey access..."
-        : action === "set_call_disposition"
-          ? "Recording call outcome..."
-          : "Updating...",
+      action === "set_call_disposition"
+        ? "Recording call outcome..."
+        : "Updating...",
     );
 
     try {
@@ -238,24 +236,7 @@ export function DmVerifyTable({
         throw new Error(payload.error ?? "Action failed.");
       }
 
-      const surveyUrl = (payload.surveyUrl as string | null) ?? row.surveyUrl;
-
-      if (action === "generate_survey_token" && surveyUrl) {
-        const prefs = loadParticipantMessagePrefs(row.leadId);
-        const templateKey =
-          prefs.last_template_used ?? MESSAGE_TEMPLATE_KEYS.SURVEY_INVITATION;
-        const invitationMessage = await getRenderedMessage(templateKey, {
-          participant_name: row.fullName,
-          survey_link: surveyUrl,
-          mobile: row.mobile,
-          lead_id: row.leadId,
-        });
-        await navigator.clipboard.writeText(invitationMessage || surveyUrl);
-      }
-
-      // Status-only Not Eligible: keep the row on DM & Verify (main-survey
-      // terminal decision). Do not drop them from this queue / “send back”
-      // to the Respondents screener workflow.
+      // Status-only Not Eligible: keep the row on DM & Verify.
       setRows((current) =>
         current.map((item) =>
           item.leadId === row.leadId
@@ -263,11 +244,6 @@ export function DmVerifyTable({
                 ...item,
                 dmStatus: (payload.dmStatus as DmStatus) ?? item.dmStatus,
                 status: (payload.status as string) ?? item.status,
-                surveyUrl,
-                surveyAccessGranted:
-                  action === "generate_survey_token"
-                    ? true
-                    : item.surveyAccessGranted,
                 verifiedAt:
                   (payload.verifiedAt as string | null) ?? item.verifiedAt,
                 callDisposition:
@@ -288,9 +264,7 @@ export function DmVerifyTable({
       );
 
       dismissToast(loadingId);
-      if (action === "generate_survey_token") {
-        toastSurveyLinkCopied();
-      } else if (action === "set_call_disposition") {
+      if (action === "set_call_disposition") {
         toastSuccess(
           payload.status === "not_eligible"
             ? "Outcome recorded. Participant marked not eligible."
@@ -669,7 +643,7 @@ export function DmVerifyTable({
                     </TableCell>
                     <TableCell className="align-middle">
                       {verified ? (
-                        <span className="inline-flex items-center gap-1 text-sm text-emerald-700">
+                        <span className="inline-flex items-center gap-1 text-sm text-primary">
                           <CheckCircle2Icon className="size-4" />
                           Yes
                         </span>
@@ -683,59 +657,6 @@ export function DmVerifyTable({
                     >
                       <div className="flex w-[200px] flex-col gap-1.5">
                         <EligibilityBadge status={row.status} />
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="h-8 w-full justify-center px-2 text-xs font-medium"
-                          disabled={busy}
-                          onClick={() =>
-                            void runAction(row, "generate_survey_token")
-                          }
-                        >
-                          Grant Survey
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className={
-                            row.surveyAccessGranted
-                              ? "h-8 w-full justify-center px-2 text-xs font-medium"
-                              : "h-8 w-full justify-center px-2 text-xs font-medium opacity-40 text-plum-faint border-rose-tint"
-                          }
-                          disabled={busy}
-                          aria-disabled={!row.surveyAccessGranted}
-                          onClick={() => void copySurveyLink(row)}
-                        >
-                          Copy Survey Link
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className={
-                            row.surveyAccessGranted &&
-                            canRequestRefill(row.status)
-                              ? "h-8 w-full justify-center px-2 text-xs font-medium"
-                              : "h-8 w-full justify-center px-2 text-xs font-medium opacity-40 text-plum-faint border-rose-tint"
-                          }
-                          disabled={
-                            busy || refillUpdatingLeadId === row.leadId
-                          }
-                          aria-disabled={
-                            !row.surveyAccessGranted ||
-                            !canRequestRefill(row.status)
-                          }
-                          onClick={() => {
-                            if (!canRequestRefill(row.status)) return;
-                            openRefillDialog(row);
-                          }}
-                        >
-                          {refillUpdatingLeadId === row.leadId
-                            ? "Sending…"
-                            : "Request Refill"}
-                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>

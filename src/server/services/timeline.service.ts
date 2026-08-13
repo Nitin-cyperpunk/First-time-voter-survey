@@ -25,7 +25,6 @@ export async function getParticipantTimeline(
     { data: participant },
     { data: incomingReferral },
     { data: screener },
-    { data: survey },
     { data: payout },
     { data: statusHistory },
   ] = await Promise.all([
@@ -42,11 +41,6 @@ export async function getParticipantTimeline(
     supabase
       .from("screener_responses")
       .select("submitted_at, started_at")
-      .eq("lead_id", leadId)
-      .maybeSingle(),
-    supabase
-      .from("survey_responses")
-      .select("submitted_at")
       .eq("lead_id", leadId)
       .maybeSingle(),
     supabase
@@ -103,7 +97,7 @@ export async function getParticipantTimeline(
   if (screener?.started_at) {
     events.push({
       timestamp: new Date(screener.started_at),
-      event: "Survey started",
+      event: "Screener started",
       actor: "participant",
       notes: null,
     });
@@ -118,15 +112,6 @@ export async function getParticipantTimeline(
       event: label,
       actor: entry.changed_by ?? "system",
       notes: entry.notes,
-    });
-  }
-
-  if (survey?.submitted_at) {
-    events.push({
-      timestamp: new Date(survey.submitted_at),
-      event: "Survey submitted",
-      actor: "participant",
-      notes: null,
     });
   }
 

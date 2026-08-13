@@ -1,36 +1,18 @@
 "use client";
 
-import { useState } from "react";
-
 import { FormUploadCard } from "@/components/admin/form-upload-card";
 import {
   FormVersionsTable,
   type FormVersionRow,
 } from "@/components/admin/form-versions-table";
-import { Button } from "@/components/ui/button";
-import {
-  FORM_TYPE_LABELS,
-  FORM_TYPE_PATHS,
-  type FormType,
-} from "@/lib/forms/types";
+import { FORM_TYPE_PATHS } from "@/lib/forms/types";
 
 type FormManagementProps = {
-  panels: Record<
-    FormType,
-    {
-      forms: FormVersionRow[];
-      activeForm: FormVersionRow | null;
-    }
-  >;
+  forms: FormVersionRow[];
+  activeForm: FormVersionRow | null;
 };
 
-const TABS: FormType[] = ["registration", "survey"];
-
-export function FormManagement({ panels }: FormManagementProps) {
-  const [activeTab, setActiveTab] = useState<FormType>("registration");
-  const panel = panels[activeTab];
-  const activeForm = panel.activeForm;
-
+export function FormManagement({ forms, activeForm }: FormManagementProps) {
   return (
     <div className="space-y-6">
       <div className="rounded-[14px] border border-border bg-card p-6 shadow-sm">
@@ -38,27 +20,13 @@ export function FormManagement({ panels }: FormManagementProps) {
           Form Management
         </h2>
         <p className="mt-2 max-w-2xl text-sm text-plum-muted">
-          Upload, preview, publish, and activate HTML forms for registration and
-          the main survey. Each form type maintains its own version history.
+          Upload, preview, publish, and activate the registration / screener HTML
+          form. Only one form type is used in this study.
         </p>
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          {TABS.map((tab) => (
-            <Button
-              key={tab}
-              type="button"
-              size="sm"
-              variant={activeTab === tab ? "default" : "outline"}
-              onClick={() => setActiveTab(tab)}
-            >
-              {FORM_TYPE_LABELS[tab]}
-            </Button>
-          ))}
-        </div>
-
         <p className="mt-4 text-sm text-plum-muted">
-          Live {FORM_TYPE_LABELS[activeTab].toLowerCase()} form served at{" "}
-          <span className="font-mono text-xs">{FORM_TYPE_PATHS[activeTab]}</span>
+          Live screener served at{" "}
+          <span className="font-mono text-xs">{FORM_TYPE_PATHS.registration}</span>
           .
         </p>
 
@@ -73,15 +41,15 @@ export function FormManagement({ panels }: FormManagementProps) {
             </span>
           </p>
         ) : (
-          <p className="mt-3 text-sm text-amber-700">
+          <p className="mt-3 text-sm text-text-primary">
             No active published form is configured. Publish a version and set it
             active.
           </p>
         )}
       </div>
 
-      <FormUploadCard formType={activeTab} />
-      <FormVersionsTable formType={activeTab} forms={panel.forms} />
+      <FormUploadCard formType="registration" />
+      <FormVersionsTable formType="registration" forms={forms} />
     </div>
   );
 }

@@ -110,13 +110,13 @@ export function NotEligibleKeepEarningCard({
 
   return (
     <>
-    <div className="rounded-[14px] border border-[#F0D9E0] bg-white p-5 shadow-sm">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#C2476B]">
+    <div className="rounded-[14px] border border-border bg-surface p-5 shadow-sm">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
         SHARE WITH FRIENDS
       </p>
 
-      <div className="mt-3 flex items-center gap-2 rounded-lg border border-dashed border-[#D4A8BC] bg-white px-3 py-2.5">
-        <span className="min-w-0 flex-1 truncate text-[13px] text-[#5C4F58]">
+      <div className="mt-3 flex items-center gap-2 rounded-lg border border-dashed border-border bg-surface px-3 py-2.5">
+        <span className="min-w-0 flex-1 truncate text-[13px] text-text-body">
           {displayReferralLink(referralLink)}
         </span>
         <button
@@ -124,7 +124,7 @@ export function NotEligibleKeepEarningCard({
           onClick={() => void copyLink()}
           disabled={!referralLink}
           className={cn(
-            "shrink-0 rounded-md bg-[#FCE8EF] px-2.5 py-1 text-[12px] font-semibold text-[#C2476B]",
+            "shrink-0 rounded-md bg-accent-soft px-2.5 py-1 text-[12px] font-semibold text-primary",
             "transition-opacity disabled:cursor-not-allowed disabled:opacity-50",
           )}
         >
@@ -139,8 +139,8 @@ export function NotEligibleKeepEarningCard({
           onClick={() => void shareOnInstagram()}
           className={cn(
             "flex flex-1 items-center justify-center rounded-xl px-2 py-3 text-[13px] font-bold text-white",
-            "bg-gradient-to-r from-[#C13584] via-[#E1306C] to-[#F77737]",
-            "shadow-[0_6px_16px_-8px_rgba(0,0,0,0.35)] transition-opacity",
+            "bg-primary hover:bg-accent-hover",
+            "transition-opacity",
             "disabled:cursor-not-allowed disabled:opacity-50",
           )}
         >
@@ -152,7 +152,7 @@ export function NotEligibleKeepEarningCard({
           onClick={() => void shareOnWhatsApp()}
           className={cn(
             "flex flex-1 items-center justify-center rounded-xl px-2 py-3 text-[13px] font-bold text-white",
-            "bg-[#3FA76F] shadow-[0_6px_16px_-8px_rgba(0,0,0,0.35)] transition-opacity",
+            "bg-primary hover:bg-accent-hover transition-opacity",
             "disabled:cursor-not-allowed disabled:opacity-50",
           )}
         >

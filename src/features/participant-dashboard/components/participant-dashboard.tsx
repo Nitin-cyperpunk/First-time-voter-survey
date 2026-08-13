@@ -3,12 +3,10 @@
 import { DashboardHeader } from "@/features/participant-dashboard/components/dashboard-header";
 import { DashboardLayout } from "@/features/participant-dashboard/components/dashboard-layout";
 import { EligibleDashboard } from "@/features/participant-dashboard/components/eligible-dashboard";
-import { EligibleSurveyCard } from "@/features/participant-dashboard/components/eligible-survey-card";
 import { NotEligibleDashboard } from "@/features/participant-dashboard/components/not-eligible-dashboard";
 import { ReferralCard } from "@/features/participant-dashboard/components/referral-card";
 import { RefillRequiredCard } from "@/features/participant-dashboard/components/refill-required-card";
 import { StatusCard } from "@/features/participant-dashboard/components/status-card";
-import { SurveyLockedCard } from "@/features/participant-dashboard/components/survey-locked-card";
 import { UnderReviewDashboard } from "@/features/participant-dashboard/components/under-review-dashboard";
 import { getDashboardStatusConfig } from "@/features/participant-dashboard/lib/dashboard-states";
 import { resolveReferralShareMode } from "@/features/participant-dashboard/lib/referral-share-mode";
@@ -48,8 +46,6 @@ export function ParticipantDashboard({ data }: ParticipantDashboardProps) {
           fullName={data.fullName}
           mobile={data.mobile}
           leadId={data.leadId}
-          surveyAccessGranted={data.surveyAccessGranted}
-          surveyUrl={data.surveyUrl}
         />
       );
 
@@ -70,12 +66,6 @@ export function ParticipantDashboard({ data }: ParticipantDashboardProps) {
             message={statusConfig.message}
             tone={statusConfig.tone}
           />
-
-          {data.canSubmitSurvey && statusConfig.showSurveyCta && data.surveyUrl ? (
-            <EligibleSurveyCard surveyUrl={data.surveyUrl} />
-          ) : null}
-
-          {statusConfig.showSurveyLocked ? <SurveyLockedCard /> : null}
 
           {data.showReferral && shareMode !== "none" ? (
             <ReferralCard

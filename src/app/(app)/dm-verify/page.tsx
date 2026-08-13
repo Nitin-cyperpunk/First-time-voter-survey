@@ -1,7 +1,6 @@
 import { DmVerifyTable } from "@/components/admin/dm-verify-table";
 import { findDispositionLabel } from "@/lib/call-dispositions/parse";
 import { displayDmStatus } from "@/lib/dm-verify";
-import { buildSurveyUrl } from "@/lib/survey-token.service";
 import { buildRefillUrl } from "@/lib/refill-token.service";
 import { getCallDispositions } from "@/server/repositories/form-settings.repository";
 import { listDmVerifyParticipants } from "@/server/repositories/dm-verify.repository";
@@ -22,12 +21,8 @@ export default async function DmVerifyPage() {
     createdAt: participant.createdAt.toISOString(),
     dmStatus: displayDmStatus(participant),
     verifiedAt: participant.verifiedAt?.toISOString() ?? null,
-    surveyAccessGranted: participant.surveyAccessGranted,
-    surveyUrl:
-      participant.surveyUrl ??
-      (participant.surveyToken
-        ? buildSurveyUrl(participant.surveyToken)
-        : null),
+    surveyAccessGranted: false,
+    surveyUrl: null,
     refillUrl: participant.refillToken
       ? buildRefillUrl(participant.refillToken)
       : null,

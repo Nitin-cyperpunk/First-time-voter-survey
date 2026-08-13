@@ -26,7 +26,7 @@ export function NotEligibleDashboard({ data }: NotEligibleDashboardProps) {
   };
 
   return (
-    <DashboardLayout className="bg-[#FCF7F9]">
+    <DashboardLayout>
       <DashboardHeader fullName={data.fullName} />
 
       <StatusCard

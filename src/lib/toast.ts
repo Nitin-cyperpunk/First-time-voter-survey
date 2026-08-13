@@ -13,12 +13,12 @@ type ToastOptions = ExternalToast & {
 
 const variantClassNames = {
   success:
-    "!border-green-200 !bg-green-50 !text-green-900 [&_[data-description]]:!text-green-700",
+    "!border-primary/20 !bg-accent-soft !text-text-primary [&_[data-description]]:!text-text-body",
   error:
-    "!border-red-200 !bg-red-50 !text-red-900 [&_[data-description]]:!text-red-700",
+    "!border-error/30 !bg-error/10 !text-error [&_[data-description]]:!text-error",
   warning:
-    "!border-yellow-200 !bg-yellow-50 !text-yellow-900 [&_[data-description]]:!text-yellow-700",
-  info: "!border-blue-200 !bg-blue-50 !text-blue-900 [&_[data-description]]:!text-blue-700",
+    "!border-border !bg-accent-soft !text-text-primary [&_[data-description]]:!text-text-body",
+  info: "!border-border !bg-surface !text-text-primary [&_[data-description]]:!text-text-muted",
 } as const;
 
 function withVariant(

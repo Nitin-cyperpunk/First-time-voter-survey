@@ -89,8 +89,10 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
       .from("participants")
       .select("*", { count: "exact", head: true })
       .not("verified_at", "is", null),
-    // Completed = submitted main survey (one survey_responses row per lead).
-    db.from("survey_responses").select("*", { count: "exact", head: true }),
+    db
+      .from("participants")
+      .select("*", { count: "exact", head: true })
+      .in("status", ["completed", "review_pass", "successful", "paid"]),
     db
       .from("participants")
       .select("*", { count: "exact", head: true })
@@ -128,7 +130,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
       .from("form_terminations")
       .select("rule_key, rule_label, reason_text")
       .eq("form_type", "registration"),
-    db.from("survey_responses").select("total_duration_sec").limit(2000),
+    db.from("screener_responses").select("total_duration_sec").limit(2000),
   ]);
 
   for (const result of [
@@ -196,7 +198,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
       medianDurationSec: median(durations),
       abandonmentNote:
         durations.length > 0
-          ? "Median duration from survey_responses.total_duration_sec. Stage-level abandonment pending richer analytics events."
+          ? "Median duration from screener_responses.total_duration_sec. Stage-level abandonment pending richer analytics events."
           : "No survey duration samples yet.",
     };
   }

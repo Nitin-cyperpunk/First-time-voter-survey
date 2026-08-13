@@ -58,14 +58,6 @@ export function mapParticipant(row: ParticipantRow): Participant {
     upiSubmittedAt: row.upi_submitted_at
       ? new Date(row.upi_submitted_at)
       : null,
-    surveyToken: row.survey_token ?? null,
-    surveyAccessGranted: row.survey_access_granted ?? false,
-    surveyTokenCreatedAt: row.survey_token_created_at
-      ? new Date(row.survey_token_created_at)
-      : null,
-    surveyTokenExpiresAt: row.survey_token_expires_at
-      ? new Date(row.survey_token_expires_at)
-      : null,
     verifiedAt: row.verified_at ? new Date(row.verified_at) : null,
     verificationMethod: row.verification_method ?? null,
     acquisitionSource: row.acquisition_source ?? null,
@@ -124,18 +116,6 @@ export async function findByReferralCode(referralCode: string) {
     .from("participants")
     .select("*")
     .eq("referral_code", normalized)
-    .maybeSingle();
-
-  if (error) throw error;
-  return data ? mapParticipant(data) : null;
-}
-
-export async function findBySurveyToken(surveyToken: string) {
-  const normalized = surveyToken.trim();
-  const { data, error } = await getSupabaseAdmin()
-    .from("participants")
-    .select("*")
-    .eq("survey_token", normalized)
     .maybeSingle();
 
   if (error) throw error;
@@ -526,51 +506,6 @@ export async function updateParticipantBasicContact(
   if (error) {
     if (error.code === "42703" || error.code === "PGRST204") {
       return findParticipantByLeadId(leadId);
-    }
-    throw error;
-  }
-
-  return data ? mapParticipant(data) : null;
-}
-
-export async function grantSurveyAccess(
-  leadId: string,
-  input: {
-    surveyToken: string;
-    tokenCreatedAt: Date;
-    tokenExpiresAt: Date;
-    verifiedAt: Date;
-    verificationMethod: string;
-  },
-) {
-  const payload = {
-    survey_token: input.surveyToken,
-    survey_access_granted: true,
-    survey_token_created_at: input.tokenCreatedAt.toISOString(),
-    survey_token_expires_at: input.tokenExpiresAt.toISOString(),
-    verified_at: input.verifiedAt.toISOString(),
-    verification_method: input.verificationMethod,
-    dm_status: "survey_link_sent",
-  };
-
-  const { data, error } = await getSupabaseAdmin()
-    .from("participants")
-    .update(payload)
-    .eq("lead_id", leadId)
-    .select("*")
-    .maybeSingle();
-
-  if (error) {
-    if (error.code === "42703" || error.code === "PGRST204") {
-      const { dm_status: _dm, ...withoutDm } = payload;
-      const fallback = await getSupabaseAdmin()
-        .from("participants")
-        .update(withoutDm)
-        .eq("lead_id", leadId)
-        .select("*")
-        .maybeSingle();
-      if (fallback.error) throw fallback.error;
-      return fallback.data ? mapParticipant(fallback.data) : null;
     }
     throw error;
   }

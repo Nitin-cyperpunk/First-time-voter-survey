@@ -59,9 +59,9 @@ const EMPTY_NEW_TEMPLATE: NewTemplateForm = {
 
 function ChannelIcon({ channel }: { channel: MessageTemplateChannel }) {
   if (channel === "whatsapp") {
-    return <MessageCircleIcon className="size-4 shrink-0 text-emerald-600" />;
+    return <MessageCircleIcon className="size-4 shrink-0 text-primary" />;
   }
-  return <Share2Icon className="size-4 shrink-0 text-fuchsia-600" />;
+  return <Share2Icon className="size-4 shrink-0 text-text-primary" />;
 }
 
 function channelLabel(channel: MessageTemplateChannel) {
@@ -277,7 +277,7 @@ export function MessageTemplatesManager() {
   return (
     <div className="flex min-h-[calc(100dvh-8rem)] flex-col gap-3">
       {disabledRequiredKeys.length > 0 ? (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <div className="rounded-lg border border-border bg-accent-soft px-3 py-2 text-sm text-text-primary">
           <span className="font-medium">Required templates disabled:</span>{" "}
           <span className="font-mono text-xs">{disabledRequiredKeys.join(", ")}</span>
         </div>
@@ -347,7 +347,7 @@ export function MessageTemplatesManager() {
                           <span
                             className={cn(
                               "size-2 shrink-0 rounded-full",
-                              template.enabled ? "bg-emerald-500" : "bg-muted-foreground/40",
+                              template.enabled ? "bg-primary" : "bg-muted-foreground/40",
                             )}
                             aria-hidden
                           />

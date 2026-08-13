@@ -10,17 +10,11 @@ import {
 import type { Participant } from "@/types/domain";
 
 type DmStatusBadgeProps = {
-  participant: Pick<
-    Participant,
-    | "status"
-    | "verifiedAt"
-    | "surveyAccessGranted"
-    | "dmStatus"
-  >;
+  participant: Pick<Participant, "status" | "verifiedAt" | "dmStatus">;
 };
 
 export function DmStatusBadge({ participant }: DmStatusBadgeProps) {
-  const status = displayDmStatus(participant as Participant);
+  const status = displayDmStatus(participant);
   return (
     <Badge variant={dmStatusVariant(status)}>
       {DM_STATUS_LABELS[status as DmStatus]}

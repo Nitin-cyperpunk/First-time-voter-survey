@@ -10,9 +10,9 @@ type StatTileProps = {
 };
 
 const accentClasses = {
-  default: "before:bg-rose before:opacity-50",
-  accent: "before:bg-rose before:opacity-100",
-  warn: "before:bg-[#C99449] before:opacity-100",
+  default: "before:bg-primary before:opacity-50",
+  accent: "before:bg-primary before:opacity-100",
+  warn: "before:bg-accent-hover before:opacity-100",
 };
 
 export function StatTile({

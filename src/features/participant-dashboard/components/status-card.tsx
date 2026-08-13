@@ -10,11 +10,11 @@ type StatusCardProps = {
 };
 
 const toneClasses: Record<DashboardTone, string> = {
-  review: "border-[#EAD9B8] bg-[#F7EEDB] text-amber-950",
-  positive: "border-[#C9E5DE] bg-[#E2F0EC] text-[#3E8E7E]",
-  neutral: "border-border bg-card text-plum-muted",
-  negative: "border-[#F0C7C7] bg-[#F6E3E3] text-[#8D3D3D]",
-  softNegative: "border-[#EDE5E8] bg-[#F8F4F6] text-[#6B5D65]",
+  review: "border-border bg-accent-soft text-text-body",
+  positive: "border-primary/20 bg-accent-soft text-primary",
+  neutral: "border-border bg-card text-text-muted",
+  negative: "border-error/30 bg-error/10 text-error",
+  softNegative: "border-border bg-accent-soft text-text-muted",
 };
 
 const badgeVariants: Record<DashboardTone, StatusPillVariant> = {
@@ -40,7 +40,7 @@ export function StatusCard({
         <StatusPill variant={badgeVariants[tone]}>{badgeLabel}</StatusPill>
       ) : null}
       <h2
-        className={`text-[17px] font-bold text-[#3D2F38] sm:text-[18px] ${showBadge ? "mt-4" : ""}`}
+        className={`text-[17px] font-bold text-text-primary sm:text-[18px] ${showBadge ? "mt-4" : ""}`}
       >
         {title}
       </h2>

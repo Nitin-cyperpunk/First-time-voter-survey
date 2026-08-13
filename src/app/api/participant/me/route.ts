@@ -1,11 +1,6 @@
 import { NextResponse } from "next/server";
 
 import {
-  buildSurveyUrl,
-  canAccessSurvey,
-  toSurveyAccessFields,
-} from "@/lib/survey-token.service";
-import {
   formatParticipantStatusLabel,
   isUnderReviewStatus,
   normalizeParticipantStatus,
@@ -16,7 +11,6 @@ import { getRewardAmounts } from "@/lib/study-config/rewards";
 import { processPendingEligibilityIfReady } from "@/server/services/pending-eligibility.service";
 import { getParticipantReferralStats } from "@/server/repositories/referral-stats.repository";
 import { hasScreenerResponse } from "@/server/repositories/screener.repository";
-import { hasSurveyResponse } from "@/server/repositories/survey.repository";
 
 function shouldShowReferral(participant: {
   refillRequired: boolean;
@@ -40,24 +34,14 @@ export async function GET() {
       participant = refreshed;
     }
 
-    const [screenerSubmitted, surveySubmitted, rewards] = await Promise.all([
+    const [screenerSubmitted, rewards] = await Promise.all([
       hasScreenerResponse(participant.leadId),
-      hasSurveyResponse(participant.leadId),
       getRewardAmounts(),
     ]);
-
-    const accessFields = toSurveyAccessFields(participant);
-    const canSubmitSurvey =
-      canAccessSurvey(accessFields) && !surveySubmitted;
 
     const normalized = normalizeParticipantStatus(participant.status);
     const upiRequired =
       normalized === "successful" && !participant.upiId?.trim();
-
-    const surveyUrl =
-      participant.surveyAccessGranted && participant.surveyToken
-        ? buildSurveyUrl(participant.surveyToken)
-        : null;
 
     const referralStats =
       normalizeParticipantStatus(participant.status) === "not_eligible"
@@ -72,13 +56,13 @@ export async function GET() {
       status: participant.status,
       displayStatus: formatParticipantStatusLabel(participant.status),
       screenerSubmitted,
-      surveySubmitted,
-      canSubmitSurvey,
+      surveySubmitted: false,
+      canSubmitSurvey: false,
       refillRequired: participant.refillRequired,
       showReferral: shouldShowReferral(participant),
       upiRequired,
-      surveyAccessGranted: participant.surveyAccessGranted,
-      surveyUrl,
+      surveyAccessGranted: false,
+      surveyUrl: null,
       upiId: participant.upiId,
       referralStats,
       referralRewardAmount: rewards.referralRewardAmount,

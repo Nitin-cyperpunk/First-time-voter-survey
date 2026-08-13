@@ -92,18 +92,3 @@ export async function fetchScreenerExportRows(leadIds?: string[]) {
   return payload.rows as Record<string, string | number>[];
 }
 
-export async function fetchSurveyExportRows(leadIds?: string[]) {
-  const query =
-    leadIds && leadIds.length > 0
-      ? `?lead_ids=${encodeURIComponent(leadIds.join(","))}`
-      : "";
-  const response = await fetch(`/api/admin/survey-responses/export${query}`);
-  const payload = await response.json();
-
-  if (!response.ok) {
-    throw new Error(payload.error ?? "Export failed.");
-  }
-
-  return payload.rows as Record<string, string | number>[];
-}
-

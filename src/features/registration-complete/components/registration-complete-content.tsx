@@ -25,7 +25,7 @@ import { toastUnexpectedError, toastWhatsAppShareInitiated } from "@/lib/toast";
 
 function QualifiedThankYouCopy() {
   return (
-    <div className="center space-y-3 text-center text-[15px] leading-relaxed text-[#2B2230]">
+    <div className="center space-y-3 text-center text-[15px] leading-relaxed text-text-primary">
       <div className="text-[22px] font-bold">Thank you! 🌸</div>
       <p>
         Thank you for your responses. This screening exercise is only a
@@ -49,7 +49,7 @@ function QualifiedThankYouCopy() {
 
 function TerminatedThankYouCopy() {
   return (
-    <div className="center space-y-3 text-center text-[15px] leading-relaxed text-[#2B2230]">
+    <div className="center space-y-3 text-center text-[15px] leading-relaxed text-text-primary">
       <div className="text-[22px] font-bold">Thank you for your interest!</div>
       <p>
         This particular study is open only to women, so it isn&apos;t a fit for
@@ -164,8 +164,8 @@ export function RegistrationCompleteContent() {
   if (loading || !data) {
     return (
       <RegistrationCompleteShell>
-        <p className="mt-6 text-center text-[13px] font-semibold leading-relaxed text-[#7A6E78] sm:text-[13.5px]">
-          <strong className="font-bold text-[#7A6E78]">
+        <p className="mt-6 text-center text-[13px] font-semibold leading-relaxed text-text-muted sm:text-[13.5px]">
+          <strong className="font-bold text-text-muted">
             Preparing you for the next step…
           </strong>
         </p>

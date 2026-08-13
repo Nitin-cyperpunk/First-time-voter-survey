@@ -1,4 +1,3 @@
-import { injectSurveyImagesScript } from "@/lib/forms/inject-survey-images";
 import type { FormType } from "@/lib/forms/types";
 
 import { injectFieldQKeyMap } from "@/lib/forms/inject-field-q-key-map";
@@ -11,10 +10,8 @@ const REFERRAL_ATTRIBUTION_SCRIPT =
   '<script src="/forms/referral-attribution.js"></script>';
 const REGISTRATION_BRIDGE_SCRIPT =
   '<script src="/forms/registration-bridge.js"></script>';
-const SURVEY_BRIDGE_SCRIPT = '<script src="/forms/survey-bridge.js"></script>';
 const REGISTRATION_BRIDGE_ATTACH =
   "showResult = ConcaveRegistrationBridge.attach(showResult);";
-const SURVEY_BRIDGE_ATTACH = "showResult = ConcaveSurveyBridge.attach(showResult);";
 const MAX_HTML_BYTES = 1024 * 1024;
 
 export function validateUploadedHtmlFile(input: {
@@ -30,12 +27,8 @@ export function validateUploadedHtmlFile(input: {
   }
 }
 
-export function prepareUploadedFormHtml(html: string, formType: FormType) {
-  if (formType === "registration") {
-    return prepareRegistrationHtml(html);
-  }
-
-  return prepareSurveyHtml(html);
+export function prepareUploadedFormHtml(html: string, _formType: FormType) {
+  return prepareRegistrationHtml(html);
 }
 
 function injectScript(html: string, scriptTag: string) {
@@ -117,25 +110,6 @@ export function injectRegistrationBridge(html: string): string {
   );
 }
 
-function prepareSurveyHtml(html: string) {
-  const validationErrors = validateSurveyHtml(html);
-  if (validationErrors.length > 0) {
-    throw new Error(validationErrors.join(" "));
-  }
-
-  let nextHtml = injectScript(html, ANALYTICS_SCRIPT);
-  nextHtml = injectScript(nextHtml, FORM_DRAFT_SCRIPT);
-  nextHtml = injectScript(nextHtml, '<script src="/forms/survey-response-document.js"></script>');
-  nextHtml = injectScript(nextHtml, SURVEY_BRIDGE_SCRIPT);
-  nextHtml = injectSurveyImagesScript(nextHtml);
-  nextHtml = injectFieldQKeyMapScripts(nextHtml, false);
-  return injectBridgeAttach(
-    nextHtml,
-    SURVEY_BRIDGE_ATTACH,
-    "ConcaveSurveyBridge.attach",
-  );
-}
-
 function hasFieldName(html: string, name: string) {
   return new RegExp(`name=["']${name}["']`, "i").test(html);
 }
@@ -168,37 +142,6 @@ function validateRegistrationHtml(html: string) {
 
   if (!/s-thankyou/.test(html)) {
     errors.push("Missing required thank-you screen id: s-thankyou.");
-  }
-
-  return errors;
-}
-
-function validateSurveyHtml(html: string) {
-  const errors: string[] = [];
-
-  const hasForm = /<form[\s>]/i.test(html);
-  const hasShowResult = /function\s+showResult\s*\(/.test(html);
-
-  if (!hasForm && !hasShowResult) {
-    errors.push(
-      "Survey HTML must include a <form> or a showResult(id) completion handler.",
-    );
-  }
-
-  if (hasShowResult && !/s-thankyou/.test(html)) {
-    errors.push("Missing required thank-you screen id: s-thankyou.");
-  }
-
-  if (/<img[^>]+src=["']\/images\//i.test(html)) {
-    errors.push(
-      'Use <img data-img="filename.webp" alt="..."> instead of src="/images/...".',
-    );
-  }
-
-  if (/<img[^>]+src=["'][^"']*supabase\.co\/storage/i.test(html)) {
-    errors.push(
-      "Do not hardcode Supabase Storage URLs in survey HTML. Use data-img instead.",
-    );
   }
 
   return errors;

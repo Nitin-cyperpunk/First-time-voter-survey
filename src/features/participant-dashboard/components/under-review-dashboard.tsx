@@ -27,12 +27,12 @@ export function UnderReviewDashboard({ fullName }: UnderReviewDashboardProps) {
 
       <div className="rounded-[14px] border border-border bg-card p-6 shadow-sm">
         <div className="flex flex-col items-center gap-4 py-4">
-          <Loader2Icon className="size-10 animate-spin text-[#C99449]" />
+          <Loader2Icon className="size-10 animate-spin text-primary" />
           <p className="text-center text-sm font-semibold text-plum-muted">
             Verifying your eligibility…
           </p>
-          <div className="h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-[#F7EEDB]">
-            <div className="h-full w-full animate-pulse rounded-full bg-[#C99449]" />
+          <div className="h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-border">
+            <div className="h-full w-full animate-pulse rounded-full bg-primary" />
           </div>
         </div>
       </div>

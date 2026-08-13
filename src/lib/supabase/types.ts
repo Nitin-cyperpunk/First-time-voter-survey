@@ -56,10 +56,6 @@ export type Database = {
           acquisition_type: string | null;
           referral_platform: string | null;
           other_source: string | null;
-          survey_token: string | null;
-          survey_access_granted: boolean;
-          survey_token_created_at: string | null;
-          survey_token_expires_at: string | null;
           verified_at: string | null;
           verification_method: string | null;
           dm_status: string | null;
@@ -105,10 +101,6 @@ export type Database = {
           acquisition_type?: string | null;
           referral_platform?: string | null;
           other_source?: string | null;
-          survey_token?: string | null;
-          survey_access_granted?: boolean;
-          survey_token_created_at?: string | null;
-          survey_token_expires_at?: string | null;
           verified_at?: string | null;
           verification_method?: string | null;
           dm_status?: string | null;
@@ -297,32 +289,6 @@ export type Database = {
           created_at?: string;
         }
       >;
-      survey_responses: TableDefinition<
-        {
-          id: string;
-          lead_id: string;
-          answers: Json;
-          response_times: Json | null;
-          analytics: Json | null;
-          normalized_export: Json | null;
-          form_version: number | null;
-          started_at: string | null;
-          submitted_at: string;
-          total_duration_sec: number | null;
-        },
-        {
-          id?: string;
-          lead_id: string;
-          answers?: Json;
-          response_times?: Json | null;
-          analytics?: Json | null;
-          normalized_export?: Json | null;
-          form_version?: number | null;
-          started_at?: string | null;
-          submitted_at?: string;
-          total_duration_sec?: number | null;
-        }
-      >;
       status_history: TableDefinition<
         {
           id: string;
@@ -411,30 +377,6 @@ export type Database = {
           updated_at?: string;
         }
       >;
-      survey_tokens: TableDefinition<
-        {
-          id: string;
-          lead_id: string;
-          token: string;
-          form_version: number | null;
-          created_at: string;
-          expires_at: string;
-          used_at: string | null;
-          created_by: string | null;
-          is_active: boolean;
-        },
-        {
-          id?: string;
-          lead_id: string;
-          token: string;
-          form_version?: number | null;
-          created_at?: string;
-          expires_at: string;
-          used_at?: string | null;
-          created_by?: string | null;
-          is_active?: boolean;
-        }
-      >;
       fingerprint_events: TableDefinition<
         {
           id: string;
@@ -455,30 +397,6 @@ export type Database = {
           event_type: string;
           original_participant_lead_id?: string | null;
           created_at?: string;
-        }
-      >;
-      survey_images: TableDefinition<
-        {
-          id: string;
-          image_name: string;
-          image_url: string;
-          category: string;
-          question_key: string | null;
-          description: string | null;
-          is_active: boolean;
-          created_at: string;
-          updated_at: string;
-        },
-        {
-          id?: string;
-          image_name: string;
-          image_url: string;
-          category: string;
-          question_key?: string | null;
-          description?: string | null;
-          is_active?: boolean;
-          created_at?: string;
-          updated_at?: string;
         }
       >;
       form_terminations: TableDefinition<
@@ -513,12 +431,7 @@ export type Database = {
       >;
     };
     Views: Record<string, never>;
-    Functions: {
-      sync_survey_images_from_storage: {
-        Args: { p_public_base?: string | null };
-        Returns: number;
-      };
-    };
+    Functions: Record<string, never>;
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

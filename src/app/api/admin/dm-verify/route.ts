@@ -7,7 +7,6 @@ import {
   executeDmVerifyAction,
   mapDmVerifyActionError,
 } from "@/server/handlers/dm-verify-action.handler";
-import { getSurveyUrlForParticipant } from "@/server/services/dm-verify.service";
 
 export async function GET() {
   if (!(await isAdminAuthenticated())) {
@@ -24,10 +23,8 @@ export async function GET() {
       createdAt: participant.createdAt.toISOString(),
       dmStatus: displayDmStatus(participant),
       verifiedAt: participant.verifiedAt?.toISOString() ?? null,
-      surveyAccessGranted: participant.surveyAccessGranted,
-      surveyUrl:
-        participant.surveyUrl ??
-        getSurveyUrlForParticipant(participant.surveyToken),
+      surveyAccessGranted: false,
+      surveyUrl: null,
     }));
 
     return NextResponse.json({ participants: rows });

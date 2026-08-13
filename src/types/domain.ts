@@ -22,10 +22,6 @@ export type Participant = {
   eligibilityOverriddenAt: Date | null;
   upiId: string | null;
   upiSubmittedAt: Date | null;
-  surveyToken: string | null;
-  surveyAccessGranted: boolean;
-  surveyTokenCreatedAt: Date | null;
-  surveyTokenExpiresAt: Date | null;
   verifiedAt: Date | null;
   verificationMethod: string | null;
   acquisitionSource: string | null;

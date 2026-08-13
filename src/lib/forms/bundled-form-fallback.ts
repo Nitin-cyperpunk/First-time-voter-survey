@@ -21,11 +21,6 @@ const BUNDLED_FORMS: Record<FormType, BundledFormConfig> = {
     name: "Innerwear Screener V2",
     publicPath: "/forms/innerwear_screener_v2.html",
   },
-  survey: {
-    version: 1,
-    name: "Lingerie Study",
-    publicPath: "/form/lingerie_study.html",
-  },
 };
 
 export function publicFormPathToFilePath(publicPath: string): string {

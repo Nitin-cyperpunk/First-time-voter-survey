@@ -56,8 +56,8 @@ export function ReferEarnUpiCard({
 
   if (upiId?.trim()) {
     return (
-      <div className="rounded-[14px] border border-[#C9E5DE] bg-[#E2F0EC] p-6 shadow-sm">
-        <p className="text-sm font-semibold text-[#3E8E7E]">
+      <div className="rounded-[14px] border border-primary/20 bg-accent-soft p-6 shadow-sm">
+        <p className="text-sm font-semibold text-primary">
           ✅ UPI Added Successfully
         </p>
         <p className="mt-2 text-sm text-plum-muted">
@@ -105,11 +105,11 @@ export function ReferEarnUpiCard({
   }
 
   return (
-    <div className="rounded-[14px] border border-[#B8E6C8] bg-[#F0FFF4] p-5 shadow-sm">
-      <p className="text-[15px] font-bold text-[#2E8B6F]">
+    <div className="rounded-[14px] border border-border bg-accent-soft p-5 shadow-sm">
+      <p className="text-[15px] font-bold text-text-primary">
         💸 {formatInr(displayAmount)} reward available
       </p>
-      <p className="mt-2 text-[13.5px] leading-relaxed text-[#3E8E7E]">
+      <p className="mt-2 text-[13.5px] leading-relaxed text-text-body">
         {qualifiedCount} friend{qualifiedCount === 1 ? "" : "s"} you referred
         qualified. Add your UPI and we&apos;ll send your reward via Razorpay.
       </p>
@@ -117,7 +117,7 @@ export function ReferEarnUpiCard({
       <form onSubmit={(event) => void handleSubmit(event)} className="mt-4 space-y-3">
         <Input
           id="upiId"
-          className="rounded-lg border-[#C9E5DE] bg-white"
+          className="rounded-lg border-border bg-surface"
           placeholder="yourname@upi"
           value={value}
           onChange={(event) => setValue(event.target.value)}
@@ -126,7 +126,7 @@ export function ReferEarnUpiCard({
         />
         <Button
           type="submit"
-          className="h-11 w-full rounded-xl bg-[#3FA76F] text-[15px] font-bold text-white shadow-[0_6px_16px_-8px_rgba(0,0,0,0.35)] hover:bg-[#359A63]"
+          className="h-11 w-full rounded-xl bg-primary text-[15px] font-bold text-white hover:bg-accent-hover"
           disabled={saving || !value.trim()}
         >
           {saving ? "Saving..." : "Add UPI & get paid"}

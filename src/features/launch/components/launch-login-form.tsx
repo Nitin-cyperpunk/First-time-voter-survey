@@ -160,7 +160,7 @@ export function LaunchLoginForm() {
           </label>
           <Input id="mobile" type="tel" className="mt-1" {...register("mobile")} />
           {errors.mobile && (
-            <p className="mt-1 text-sm text-red-600">{errors.mobile.message}</p>
+            <p className="mt-1 text-sm text-error">{errors.mobile.message}</p>
           )}
         </div>
 
@@ -170,7 +170,7 @@ export function LaunchLoginForm() {
           </label>
           <Input id="dob" type="date" className="mt-1" {...register("dob")} />
           {errors.dob && (
-            <p className="mt-1 text-sm text-red-600">{errors.dob.message}</p>
+            <p className="mt-1 text-sm text-error">{errors.dob.message}</p>
           )}
         </div>
 

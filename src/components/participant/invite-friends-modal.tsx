@@ -50,7 +50,7 @@ export function InviteFriendsModal({
             type="button"
             className={cn(
               "h-11 w-full",
-              "bg-gradient-to-r from-[#C13584] via-[#E1306C] to-[#F77737] text-white hover:opacity-90",
+              "bg-primary text-white hover:bg-accent-hover",
             )}
             disabled={busy}
             onClick={onShareInstagram}
@@ -60,7 +60,7 @@ export function InviteFriendsModal({
           </Button>
           <Button
             type="button"
-            className="h-11 w-full bg-[#3FA76F] text-white hover:bg-[#3FA76F]/90"
+            className="h-11 w-full bg-primary text-white hover:bg-accent-hover"
             disabled={busy}
             onClick={onShareWhatsApp}
           >

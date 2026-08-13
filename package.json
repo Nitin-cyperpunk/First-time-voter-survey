@@ -13,7 +13,8 @@
     "start": "next start",
     "lint": "eslint src",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "seed:admin": "node --env-file=.env scripts/seed-super-admin.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

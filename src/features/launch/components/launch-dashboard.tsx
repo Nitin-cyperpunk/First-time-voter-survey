@@ -96,12 +96,8 @@ export function LaunchDashboard() {
     if (!data) return;
 
     const awaitingEligibility = isAwaitingEligibilityDecision(data.status);
-    const awaitingSurveyAccess =
-      data.status === "eligible" &&
-      !data.surveyAccessGranted &&
-      !data.surveySubmitted;
 
-    if (!awaitingEligibility && !awaitingSurveyAccess) {
+    if (!awaitingEligibility) {
       return;
     }
 
@@ -114,8 +110,6 @@ export function LaunchDashboard() {
     return () => window.clearInterval(interval);
   }, [
     data?.status,
-    data?.surveyAccessGranted,
-    data?.surveySubmitted,
     loadDashboard,
   ]);
 

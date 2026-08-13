@@ -14,13 +14,13 @@ const badgeVariants = cva(
           "border-transparent bg-secondary text-secondary-foreground",
         outline: "text-foreground",
         healthcare:
-          "border-emerald-200 bg-emerald-50 text-emerald-800",
+          "border-primary/20 bg-accent-soft text-primary",
         finance:
-          "border-blue-200 bg-blue-50 text-blue-800",
+          "border-border bg-accent-soft/70 text-text-primary",
         retail:
-          "border-amber-200 bg-amber-50 text-amber-800",
+          "border-border bg-muted text-text-muted",
         technology:
-          "border-violet-200 bg-violet-50 text-violet-800",
+          "border-primary/15 bg-accent-soft text-text-body",
       },
     },
     defaultVariants: {

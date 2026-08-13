@@ -16,19 +16,4 @@ export async function getInstagramVerificationMessage(input: {
   return getRenderedMessage(MESSAGE_TEMPLATE_KEYS.INSTAGRAM_VERIFICATION, context);
 }
 
-export async function getInstagramSurveyInvitationMessage(input: {
-  fullName: string;
-  surveyLink: string;
-}): Promise<string> {
-  return getRenderedMessage(
-    MESSAGE_TEMPLATE_KEYS.SURVEY_INVITATION,
-    buildParticipantTemplateContext({
-      fullName: input.fullName,
-      mobile: "",
-      leadId: "",
-      surveyUrl: input.surveyLink.trim(),
-    }),
-  );
-}
-
 export { INSTAGRAM_DM_URL } from "@/config/social";

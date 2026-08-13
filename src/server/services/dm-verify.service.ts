@@ -4,21 +4,18 @@ import {
   dispositionContradictsVerified,
 } from "@/lib/call-dispositions/defaults";
 import type { DmStatus } from "@/lib/dm-verify";
-import { buildSurveyUrl } from "@/lib/survey-token.service";
 import {
   findParticipantByLeadId,
   updateParticipantCallDisposition,
   updateParticipantDmStatus,
 } from "@/server/repositories/participants.repository";
 import { assertEnabledDispositionKey } from "@/server/services/call-dispositions.service";
-import { grantParticipantSurveyAccess } from "@/server/services/survey-access.service";
 
 export type DmVerifyAction =
   | "mark_message_received"
   | "mark_call_completed"
   | "set_call_disposition"
   | "verify_participant"
-  | "generate_survey_token"
   | "mark_completed";
 
 export async function setCallDisposition(
@@ -101,26 +98,7 @@ export async function applyDmVerifyAction(
         verificationMethod: "instagram_dm",
       });
 
-    case "generate_survey_token": {
-      const result = await grantParticipantSurveyAccess(
-        leadId,
-        "instagram_dm",
-      );
-      return {
-        participant: await findParticipantByLeadId(leadId),
-        surveyToken: result.surveyToken,
-        surveyUrl: result.surveyUrl,
-      };
-    }
-
     case "mark_completed":
       return updateParticipantDmStatus(leadId, "completed" satisfies DmStatus);
   }
-}
-
-export function getSurveyUrlForParticipant(
-  surveyToken: string | null,
-): string | null {
-  if (!surveyToken) return null;
-  return buildSurveyUrl(surveyToken);
 }

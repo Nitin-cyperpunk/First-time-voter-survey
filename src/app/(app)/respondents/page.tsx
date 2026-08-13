@@ -5,14 +5,12 @@ import { canAccess } from "@/lib/roles";
 import { listParticipants } from "@/server/repositories/admin.repository";
 import { ParticipantSearch } from "@/components/admin/participant-search";
 import { ScreenerExportButtons } from "@/components/admin/screener-export-buttons";
-import { SurveyExportButtons } from "@/components/admin/survey-export-buttons";
 import {
   RespondentsTable,
   type RespondentTableRow,
 } from "@/components/admin/respondents-table";
 import { formatAdminDateTime } from "@/lib/format-admin-datetime";
 import { buildRefillUrl } from "@/lib/refill-token.service";
-import { buildSurveyUrl } from "@/lib/survey-token.service";
 
 export const dynamic = "force-dynamic";
 
@@ -51,7 +49,7 @@ export default async function RespondentsOpsPage() {
     acquisitionType: participant.acquisitionType,
     referralPlatform: participant.referralPlatform,
     otherSource: participant.otherSource,
-    surveyAccessGranted: participant.surveyAccessGranted,
+    surveyAccessGranted: false,
     verifiedAt: participant.verifiedAt?.toISOString() ?? null,
     verificationMethod: participant.verificationMethod,
     dmStatus: participant.dmStatus,
@@ -63,9 +61,7 @@ export default async function RespondentsOpsPage() {
     refillUrl: participant.refillToken
       ? buildRefillUrl(participant.refillToken)
       : null,
-    surveyUrl: participant.surveyToken
-      ? buildSurveyUrl(participant.surveyToken)
-      : null,
+    surveyUrl: null,
     createdAt: formatDate(participant.createdAt),
   }));
 
@@ -92,12 +88,6 @@ export default async function RespondentsOpsPage() {
                 Screener export
               </p>
               <ScreenerExportButtons />
-            </div>
-            <div>
-              <p className="mb-1 text-xs font-medium text-plum-muted">
-                Survey export
-              </p>
-              <SurveyExportButtons />
             </div>
           </div>
         </div>

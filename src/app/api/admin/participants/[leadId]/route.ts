@@ -36,13 +36,7 @@ export async function GET(_request: Request, context: RouteContext) {
             submittedAt: record.screener.submittedAt.toISOString(),
           }
         : null,
-      survey: record.survey
-        ? {
-            ...record.survey,
-            startedAt: record.survey.startedAt?.toISOString() ?? null,
-            submittedAt: record.survey.submittedAt.toISOString(),
-          }
-        : null,
+      survey: null,
       statusHistory: record.statusHistory.map((entry) => ({
         ...entry,
         changedAt: entry.changedAt.toISOString(),

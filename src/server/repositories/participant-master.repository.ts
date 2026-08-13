@@ -4,10 +4,6 @@ import { getRewardAmounts } from "@/lib/study-config/rewards";
 import type { ScreenerSchema } from "@/types/domain";
 import { mapParticipant } from "@/server/repositories/participants.repository";
 import { listRegistrationTerminationsByLeadId } from "@/server/repositories/form-terminations.repository";
-import {
-  extractQuestionAnswers,
-  extractScreenTimes,
-} from "@/lib/survey-response-document";
 import type { FormTerminationRow } from "@/server/repositories/form-terminations.repository";
 
 export type StatusHistoryEntry = {
@@ -57,15 +53,6 @@ export type ParticipantMasterRecord = {
     questionSchema: ScreenerSchema | null;
     eligibilityDecision: string;
   } | null;
-  survey: {
-    answers: Record<string, Json>;
-    responseTimes: Record<string, number> | null;
-    startedAt: Date | null;
-    submittedAt: Date;
-    totalDurationSec: number | null;
-    completionPercent: number | null;
-    status: string;
-  } | null;
   statusHistory: StatusHistoryEntry[];
   registrationTerminations: FormTerminationRow[];
 };
@@ -78,7 +65,6 @@ export async function getParticipantMasterRecord(
   const [
     { data: participantRow, error: participantError },
     { data: screenerRow },
-    { data: surveyRow },
     { data: statusRows },
     { count: totalReferrals },
     { data: incomingReferral },
@@ -87,11 +73,6 @@ export async function getParticipantMasterRecord(
     supabase.from("participants").select("*").eq("lead_id", leadId).maybeSingle(),
     supabase
       .from("screener_responses")
-      .select("*")
-      .eq("lead_id", leadId)
-      .maybeSingle(),
-    supabase
-      .from("survey_responses")
       .select("*")
       .eq("lead_id", leadId)
       .maybeSingle(),
@@ -190,22 +171,6 @@ export async function getParticipantMasterRecord(
           totalDurationSec: screenerRow.total_duration_sec ?? null,
           questionSchema,
           eligibilityDecision,
-        }
-      : null,
-    survey: surveyRow
-      ? {
-          answers: extractQuestionAnswers(surveyRow.answers ?? {}),
-          responseTimes: extractScreenTimes(
-            surveyRow.answers ?? {},
-            parseResponseTimes(surveyRow.response_times),
-          ),
-          startedAt: surveyRow.started_at
-            ? new Date(surveyRow.started_at)
-            : null,
-          submittedAt: new Date(surveyRow.submitted_at),
-          totalDurationSec: surveyRow.total_duration_sec ?? null,
-          completionPercent: null,
-          status: participant.status,
         }
       : null,
     statusHistory,

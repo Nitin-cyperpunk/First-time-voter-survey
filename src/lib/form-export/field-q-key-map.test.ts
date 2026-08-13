@@ -1,6 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { test } from "node:test";
 
 import {
@@ -59,32 +57,6 @@ test("explicit data-q overrides sequential assignment without renumbering others
   assert.equal(map.get("alpha"), "Q1");
   assert.equal(map.get("beta"), "Q9");
   assert.equal(map.get("gamma"), "Q2");
-});
-
-test("lingerie_study.html html map aligns with parsed schema field names", () => {
-  const htmlPath = join(process.cwd(), "public/form/lingerie_study.html");
-  const html = readFileSync(htmlPath, "utf8");
-
-  const htmlMap = buildFieldNameToQKeyMap(html, { excludeCoreFields: true });
-  const schema = parseFormExportSchemaFromHtml(html, { excludeCoreFields: true });
-  const schemaMap = buildFieldNameToQKeyMapFromSchema(schema);
-
-  const mismatches: string[] = [];
-  for (const [fieldName, schemaQ] of schemaMap) {
-    if (!htmlMap.has(fieldName)) {
-      continue;
-    }
-    const htmlQ = htmlMap.get(fieldName);
-    if (htmlQ !== schemaQ) {
-      mismatches.push(`${fieldName}: html=${htmlQ} schema=${schemaQ}`);
-    }
-  }
-
-  assert.equal(
-    mismatches.length,
-    0,
-    `field → Q-key mismatches:\n${mismatches.join("\n")}`,
-  );
 });
 
 test("registration core fields are excluded from html field map", () => {

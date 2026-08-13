@@ -84,10 +84,10 @@ function statusCopy(
 }
 
 function dropChipClass(severity: DropSeverity) {
-  if (severity === "lo") return "bg-[#E2F0EC] text-[#3E8E7E]";
-  if (severity === "mid") return "bg-[#F7EEDB] text-[#A6772F]";
-  if (severity === "hi") return "bg-[#F6E3E3] text-[#C25B5B]";
-  return "bg-rose-tint text-plum-faint";
+  if (severity === "lo") return "bg-accent-soft text-text-muted";
+  if (severity === "mid") return "bg-accent-soft text-text-body";
+  if (severity === "hi") return "bg-accent-soft text-primary";
+  return "bg-accent-soft text-text-muted";
 }
 
 export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
@@ -188,14 +188,14 @@ export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
           className={cn(
             "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors duration-300",
             status.open
-              ? "bg-[#E2F0EC] text-[#3E8E7E]"
-              : "bg-[#F6EEF1] text-[#94838C]",
+              ? "bg-accent-soft text-primary"
+              : "bg-accent-soft text-text-muted",
           )}
         >
           <span
             className={cn(
               "size-1.5 rounded-full transition-colors duration-300",
-              status.open ? "bg-[#3E8E7E]" : "bg-primary",
+              status.open ? "bg-primary" : "bg-text-muted",
               refreshing && "animate-pulse",
             )}
           />
@@ -254,7 +254,7 @@ export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
             {
               label: "Completed",
               value: kpis.completed,
-              hint: "main survey",
+              hint: "screener completed",
               accent: "plum" as const,
             },
             {
@@ -295,7 +295,7 @@ export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
                   <span className="font-medium text-foreground">
                     {stage.label}
                     {stage.isBiggestCliff ? (
-                      <span className="ml-2 rounded-full bg-[#F6E3E3] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#C25B5B]">
+                      <span className="ml-2 rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
                         Biggest cliff
                       </span>
                     ) : null}
@@ -315,11 +315,11 @@ export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
                     ) : null}
                   </span>
                 </div>
-                <div className="h-2.5 overflow-hidden rounded-full bg-rose-tint">
+                <div className="h-2.5 overflow-hidden rounded-full bg-border">
                   <div
                     className={cn(
                       "h-full rounded-full transition-[width] duration-700 ease-out",
-                      stage.isBiggestCliff ? "bg-[#C25B5B]" : "bg-primary",
+                      stage.isBiggestCliff ? "bg-accent-hover" : "bg-primary",
                     )}
                     style={{
                       width: `${Math.max(3, (stage.count / maxStage) * 100)}%`,
@@ -332,7 +332,7 @@ export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
           {funnel.cliffLabel ? (
             <p
               key={`cliff-${animKey}`}
-              className="metrics-row-enter mt-4 rounded-[10px] border border-[#F0D0D0] bg-[#FBF1F1] px-3 py-2 text-sm text-[#8A4A4A]"
+              className="metrics-row-enter mt-4 rounded-[10px] border border-border bg-accent-soft px-3 py-2 text-sm text-text-body"
               style={{ animationDelay: "180ms" }}
             >
               Biggest drop-off: <strong>{funnel.cliffLabel}</strong> (−
@@ -354,8 +354,8 @@ export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
                 className={cn(
                   "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
                   status.open
-                    ? "bg-[#E2F0EC] text-[#3E8E7E]"
-                    : "bg-[#F6EEF1] text-[#94838C]",
+                    ? "bg-accent-soft text-primary"
+                    : "bg-accent-soft text-text-muted",
                 )}
               >
                 {status.pill}
@@ -381,7 +381,7 @@ export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="12"
-                  className="text-rose-tint"
+                  className="text-border"
                 />
                 <circle
                   cx="70"
@@ -451,7 +451,7 @@ export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
                 />
               </div>
 
-              <p className="rounded-[10px] border border-[#C5D8F0] bg-[#E8F1FB] px-3 py-2 text-sm leading-relaxed text-[#3A5F8A]">
+              <p className="rounded-[10px] border border-border bg-accent-soft px-3 py-2 text-sm leading-relaxed text-text-primary">
                 Buffer gap: {funnel.buffer} extra seats beyond target{" "}
                 {funnel.target}. Not verified (reached eligible, not verified):{" "}
                 {funnel.notVerified}.
@@ -571,10 +571,10 @@ function KpiTile({
 }) {
   const bar = {
     rose: "before:bg-primary",
-    teal: "before:bg-[#3E8E7E]",
-    blue: "before:bg-[#4A7BB5]",
-    plum: "before:bg-[#8C7BA8]",
-    amber: "before:bg-[#C99449]",
+    teal: "before:bg-[color-mix(in_srgb,var(--accent)_80%,white)]",
+    blue: "before:bg-[color-mix(in_srgb,var(--accent)_60%,white)]",
+    plum: "before:bg-[color-mix(in_srgb,var(--accent)_45%,white)]",
+    amber: "before:bg-[color-mix(in_srgb,var(--accent)_30%,white)]",
   }[accent];
 
   return (

@@ -124,7 +124,7 @@ export function AdminMessagingPanel({
 
   if (error) {
     return (
-      <div className="rounded-[14px] border border-border bg-card p-4 text-sm text-rose-700 shadow-sm">
+      <div className="rounded-[14px] border border-border bg-card p-4 text-sm text-error shadow-sm">
         {error}
       </div>
     );

@@ -135,8 +135,8 @@ export async function listPayouts(params: PayoutListParams) {
   const page = Math.max(1, params.page);
   const pageSize = Math.min(10_000, Math.max(1, params.pageSize));
   const { surveyRewardAmount, referralRewardAmount } = await getRewardAmounts();
-  const activeSurvey = await getActivePublishedForm("survey");
-  const surveyName = (activeSurvey?.name ?? "Survey").trim() || "Survey";
+  const activeScreener = await getActivePublishedForm("registration");
+  const surveyName = (activeScreener?.name ?? "Study").trim() || "Study";
 
   const { data: participants, error } = await getSupabaseAdmin()
     .from("participants")

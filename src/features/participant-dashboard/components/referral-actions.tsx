@@ -128,7 +128,7 @@ export function ReferralActions({
           className={cn(
             "sm:flex-1",
             shareMode === "both" &&
-              "bg-gradient-to-r from-[#C13584] via-[#E1306C] to-[#F77737] text-white hover:opacity-90",
+              "bg-primary text-white hover:bg-accent-hover",
           )}
           disabled={!referralLink}
           onClick={() => void shareOnInstagram()}

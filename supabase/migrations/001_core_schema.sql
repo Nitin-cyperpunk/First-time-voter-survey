@@ -1,3 +1,300 @@
+-- Consolidated core schema (001–006) without survey_responses.
+-- Phase 0 launch slice + lead_id identity for a fresh database.
+
+create extension if not exists pgcrypto;
+
+create table if not exists participants (
+  id uuid primary key default gen_random_uuid(),
+
+  participant_code text unique,
+
+  full_name text not null,
+  mobile text unique not null,
+  dob date not null,
+
+  city text,
+  status text default 'lead',
+
+  referred_by uuid references participants(id),
+
+  ip_address text,
+  user_agent text,
+  is_flagged_duplicate boolean default false,
+
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_participants_mobile on participants(mobile);
+create unique index if not exists idx_participants_mobile_unique on participants(mobile);
+create index if not exists idx_participants_status on participants(status);
+
+-- Keep existing launch databases in sync when this script is re-run.
+-- `create table if not exists` does not add columns to an existing table.
+alter table participants add column if not exists participant_code text;
+alter table participants add column if not exists status text default 'lead';
+alter table participants add column if not exists referred_by uuid references participants(id);
+alter table participants add column if not exists ip_address text;
+alter table participants add column if not exists user_agent text;
+alter table participants add column if not exists is_flagged_duplicate boolean default false;
+alter table participants add column if not exists created_at timestamptz default now();
+
+create unique index if not exists idx_participants_code on participants(participant_code);
+
+create table if not exists referrals (
+  id uuid primary key default gen_random_uuid(),
+
+  referrer_id uuid references participants(id),
+  referred_id uuid references participants(id),
+
+  reward_status text default 'pending',
+
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_referrals_referrer on referrals(referrer_id);
+create index if not exists idx_referrals_referred on referrals(referred_id);
+
+create table if not exists screener_responses (
+  id uuid primary key default gen_random_uuid(),
+
+  participant_id uuid references participants(id),
+  mobile text unique,
+  form_version integer not null,
+  answers jsonb not null,
+  csv_row jsonb,
+  started_at timestamptz,
+  submitted_at timestamptz default now(),
+  ip_address text
+);
+
+create table if not exists participant_sessions (
+  id uuid primary key default gen_random_uuid(),
+
+  participant_id uuid references participants(id),
+  token_hash text not null,
+  remember_me boolean default false,
+  expires_at timestamptz not null,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_participant_sessions_token_hash
+  on participant_sessions(token_hash);
+
+create table if not exists form_versions (
+  id uuid primary key default gen_random_uuid(),
+
+  version integer not null,
+  schema jsonb not null,
+  published boolean default false,
+  created_at timestamptz default now()
+);
+
+create unique index if not exists idx_form_versions_version on form_versions(version);
+
+create table if not exists form_settings (
+  id uuid primary key default gen_random_uuid(),
+  active_version integer default 1
+);
+
+insert into form_settings (active_version)
+select 1
+where not exists (select 1 from form_settings);
+
+insert into form_versions (version, schema, published)
+select
+  1,
+  '{ "fields": [] }'::jsonb,
+  true
+where not exists (select 1 from form_versions where version = 1);
+
+alter table participants enable row level security;
+alter table referrals enable row level security;
+alter table screener_responses enable row level security;
+alter table participant_sessions enable row level security;
+alter table form_versions enable row level security;
+alter table form_settings enable row level security;
+
+drop policy if exists "service_role_participants_all" on participants;
+create policy "service_role_participants_all"
+  on participants for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
+
+drop policy if exists "service_role_referrals_all" on referrals;
+create policy "service_role_referrals_all"
+  on referrals for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
+
+drop policy if exists "service_role_screener_responses_all" on screener_responses;
+create policy "service_role_screener_responses_all"
+  on screener_responses for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
+
+drop policy if exists "service_role_participant_sessions_all" on participant_sessions;
+create policy "service_role_participant_sessions_all"
+  on participant_sessions for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
+
+drop policy if exists "service_role_form_versions_all" on form_versions;
+create policy "service_role_form_versions_all"
+  on form_versions for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
+
+drop policy if exists "service_role_form_settings_all" on form_settings;
+create policy "service_role_form_settings_all"
+  on form_settings for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
+
+-- Patch existing Phase 0 databases that were created before the final launch schema.
+
+alter table participants add column if not exists participant_code text;
+alter table participants add column if not exists status text default 'lead';
+alter table participants add column if not exists referred_by uuid references participants(id);
+alter table participants add column if not exists ip_address text;
+alter table participants add column if not exists user_agent text;
+alter table participants add column if not exists is_flagged_duplicate boolean default false;
+alter table participants add column if not exists created_at timestamptz default now();
+
+create unique index if not exists idx_participants_code on participants(participant_code);
+create unique index if not exists idx_participants_mobile_unique on participants(mobile);
+create index if not exists idx_participants_status on participants(status);
+
+alter table screener_responses add column if not exists participant_id uuid references participants(id);
+alter table screener_responses add column if not exists mobile text;
+alter table screener_responses add column if not exists form_version integer;
+alter table screener_responses add column if not exists answers jsonb default '{}'::jsonb;
+alter table screener_responses add column if not exists csv_row jsonb;
+alter table screener_responses add column if not exists started_at timestamptz;
+alter table screener_responses add column if not exists submitted_at timestamptz default now();
+alter table screener_responses add column if not exists ip_address text;
+
+create unique index if not exists idx_screener_responses_mobile_unique
+  on screener_responses(mobile)
+  where mobile is not null;
+
+alter table referrals add column if not exists referrer_id uuid references participants(id);
+alter table referrals add column if not exists referred_id uuid references participants(id);
+alter table referrals add column if not exists reward_status text default 'pending';
+alter table referrals add column if not exists created_at timestamptz default now();
+
+create index if not exists idx_referrals_referrer on referrals(referrer_id);
+create index if not exists idx_referrals_referred on referrals(referred_id);
+
+do $$
+declare
+  legacy_column text;
+begin
+  foreach legacy_column in array array[
+    'panel_id',
+    'lead_id',
+    'respondent_id',
+    'source',
+    'category',
+    'referral_status',
+    'cool_off_until',
+    'last_activity_at'
+  ]
+  loop
+    if exists (
+      select 1
+      from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'participants'
+        and column_name = legacy_column
+        and is_nullable = 'NO'
+    ) then
+      execute format(
+        'alter table public.participants alter column %I drop not null',
+        legacy_column
+      );
+    end if;
+  end loop;
+end $$;
+
+-- Dynamic HTML form versions for admin-controlled registration
+
+alter table form_versions add column if not exists name text;
+alter table form_versions add column if not exists html_file_path text;
+
+update form_versions
+set
+  name = coalesce(name, 'Innerwear Screener V1'),
+  html_file_path = coalesce(html_file_path, '/forms/innerwear_screener_v1.html')
+where version = 1;
+
+insert into form_versions (version, name, html_file_path, schema, published)
+select
+  2,
+  'Innerwear Screener V2',
+  '/forms/innerwear_screener_v2.html',
+  '{ "fields": [] }'::jsonb,
+  true
+where not exists (select 1 from form_versions where version = 2);
+
+create or replace function generate_en_participant_code()
+returns text
+language plpgsql
+as $$
+declare
+  alphabet constant text := '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+  code text;
+  suffix text;
+  i int;
+begin
+  loop
+    suffix := '';
+    for i in 1..6 loop
+      suffix := suffix || substr(
+        alphabet,
+        1 + floor(random() * length(alphabet))::int,
+        1
+      );
+    end loop;
+    code := 'EN' || suffix;
+
+    if not exists (
+      select 1 from participants where participant_code = code
+    ) then
+      return code;
+    end if;
+  end loop;
+end;
+$$;
+
+do $$
+declare
+  participant_row record;
+  new_code text;
+begin
+  for participant_row in select id from participants order by created_at loop
+    loop
+      new_code := generate_en_participant_code();
+      begin
+        update participants
+        set participant_code = new_code
+        where id = participant_row.id;
+        exit;
+      exception
+        when unique_violation then
+          null;
+      end;
+    end loop;
+  end loop;
+end;
+$$;
+
+drop function generate_en_participant_code();
+
+-- Store uploaded HTML forms directly in form_versions.
+
+alter table form_versions add column if not exists html_content text;
+alter table form_versions add column if not exists uploaded_file_name text;
+
 -- T-09: Migrate internal identity from UUID to lead_id (CI_EN_0001)
 -- Idempotent — safe to re-run on partially migrated databases.
 
@@ -343,25 +640,8 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------------
--- 9. Future tables: survey_responses, status_history
+-- 9. status_history (survey_responses omitted)
 -- ---------------------------------------------------------------------------
-
-create table if not exists survey_responses (
-  id uuid primary key default gen_random_uuid(),
-  lead_id text not null,
-  answers jsonb not null default '{}'::jsonb,
-  submitted_at timestamptz default now()
-);
-
-create unique index if not exists idx_survey_responses_lead_id_unique
-  on survey_responses(lead_id);
-
-alter table survey_responses drop constraint if exists survey_responses_lead_id_fkey;
-alter table survey_responses
-  add constraint survey_responses_lead_id_fkey
-  foreign key (lead_id) references participants(lead_id)
-  not valid;
-alter table survey_responses validate constraint survey_responses_lead_id_fkey;
 
 create table if not exists status_history (
   id uuid primary key default gen_random_uuid(),
@@ -417,15 +697,7 @@ end $$;
 
 alter table participants add primary key (lead_id);
 
--- RLS for new tables
-alter table survey_responses enable row level security;
 alter table status_history enable row level security;
-
-drop policy if exists "service_role_survey_responses_all" on survey_responses;
-create policy "service_role_survey_responses_all"
-  on survey_responses for all
-  using (auth.role() = 'service_role')
-  with check (auth.role() = 'service_role');
 
 drop policy if exists "service_role_status_history_all" on status_history;
 create policy "service_role_status_history_all"

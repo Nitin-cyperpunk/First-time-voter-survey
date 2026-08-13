@@ -1,5 +1,4 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { buildSurveyUrl } from "@/lib/survey-token.service";
 import { mapParticipant } from "@/server/repositories/participants.repository";
 import type { Participant } from "@/types/domain";
 
@@ -8,8 +7,7 @@ export type DmVerifyParticipantRow = Participant & {
 };
 
 export async function listDmVerifyParticipants(limit = 300) {
-  // Eligible queue + main-survey Not Eligible (call disposition set). Excludes
-  // screener-phase not_eligible rows that never reached DM & Verify.
+  // Eligible queue + Not Eligible with a call disposition (reached DM & Verify).
   const { data, error } = await getSupabaseAdmin()
     .from("participants")
     .select("*")
@@ -23,9 +21,6 @@ export async function listDmVerifyParticipants(limit = 300) {
 
   return (data ?? []).map((row) => {
     const participant = mapParticipant(row);
-    const surveyUrl = participant.surveyToken
-      ? buildSurveyUrl(participant.surveyToken)
-      : null;
-    return { ...participant, surveyUrl } satisfies DmVerifyParticipantRow;
+    return { ...participant, surveyUrl: null } satisfies DmVerifyParticipantRow;
   });
 }

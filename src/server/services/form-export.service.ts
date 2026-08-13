@@ -17,7 +17,7 @@ type FormVersionRecord = {
 };
 
 export async function getPublishedFormVersion(
-  formType: "registration" | "survey",
+  formType: "registration",
   version: number,
 ): Promise<FormVersionRecord | null> {
   const { data, error } = await getSupabaseAdmin()
@@ -72,7 +72,7 @@ export async function getActiveRegistrationExportSchema(): Promise<FormExportSch
 }
 
 export async function loadSchemasForVersions(
-  formType: "registration" | "survey",
+  formType: "registration",
   versions: number[],
 ): Promise<Map<number, FormExportSchema>> {
   const uniqueVersions = [...new Set(versions.filter((value) => value > 0))];

@@ -578,7 +578,7 @@ export function PayoutsTable() {
                   <TableCell className="font-mono text-[11.5px]">
                     <Link
                       href={`/respondents/${encodeURIComponent(row.leadId)}`}
-                      className="text-rose hover:underline"
+                      className="text-primary hover:underline"
                       onClick={(event) => event.stopPropagation()}
                     >
                       {row.leadId}
@@ -655,7 +655,7 @@ export function PayoutsTable() {
 
               <div className="flex-1 overflow-y-auto p-6">
                 {isAnyDuplicate(selected) ? (
-                  <div className="mb-5 rounded-[10px] border border-[#F0C7C7] border-l-4 border-l-[#C25B5B] bg-[#F6E3E3] p-4 text-sm text-[#8D3D3D]">
+                  <div className="mb-5 rounded-[10px] border border-error/30 border-l-4 border-l-error bg-error/10 p-4 text-sm text-error">
                     <span className="font-semibold">Duplicate detected.</span>{" "}
                     {formatDuplicateStatusLabel(selected)}
                     {selected.ipAddress ? (

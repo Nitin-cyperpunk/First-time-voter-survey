@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 
 import { findDispositionLabel } from "@/lib/call-dispositions/parse";
 import { resolveDmStatus } from "@/lib/dm-verify";
-import { buildSurveyUrl } from "@/lib/survey-token.service";
 import { getCallDispositions } from "@/server/repositories/form-settings.repository";
 import { findParticipantByLeadId } from "@/server/repositories/participants.repository";
 import {
@@ -15,7 +14,6 @@ const VALID_ACTIONS = new Set<DmVerifyAction>([
   "mark_call_completed",
   "set_call_disposition",
   "verify_participant",
-  "generate_survey_token",
   "mark_completed",
 ]);
 
@@ -26,8 +24,6 @@ export function mapDmVerifyActionError(error: unknown) {
       return "Participant not found.";
     case "NOT_ELIGIBLE":
       return "Only eligible participants can be updated in DM & Verify.";
-    case "SURVEY_ALREADY_SUBMITTED":
-      return "This participant has already submitted the survey.";
     case "INVALID_DISPOSITION":
       return "Select a valid call disposition.";
     case "DISPOSITION_REQUIRED":
@@ -55,7 +51,7 @@ export async function executeDmVerifyAction(
     return NextResponse.json({ error: "Invalid action." }, { status: 400 });
   }
 
-  const result = await applyDmVerifyAction(leadId, action, {
+  await applyDmVerifyAction(leadId, action, {
     dispositionKey:
       typeof body?.dispositionKey === "string"
         ? body.dispositionKey
@@ -63,16 +59,7 @@ export async function executeDmVerifyAction(
     notes: typeof body?.notes === "string" ? body.notes : null,
   });
 
-  const participant =
-    action === "generate_survey_token" && result && "participant" in result
-      ? result.participant
-      : result;
-
-  const resolved =
-    participant && "leadId" in participant
-      ? participant
-      : await findParticipantByLeadId(leadId);
-
+  const resolved = await findParticipantByLeadId(leadId);
   const dispositionConfig = await getCallDispositions();
 
   return NextResponse.json({
@@ -87,11 +74,6 @@ export async function executeDmVerifyAction(
     callDispositionNotes: resolved?.callDispositionNotes ?? null,
     callDispositionAt: resolved?.callDispositionAt?.toISOString() ?? null,
     verifiedAt: resolved?.verifiedAt?.toISOString() ?? null,
-    surveyUrl:
-      action === "generate_survey_token" && result && "surveyUrl" in result
-        ? result.surveyUrl
-        : resolved?.surveyToken
-          ? buildSurveyUrl(resolved.surveyToken)
-          : null,
+    surveyUrl: null,
   });
 }

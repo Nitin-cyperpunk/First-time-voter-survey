@@ -70,7 +70,6 @@ import {
 import { useBulkTableState } from "@/hooks/use-bulk-table-state";
 import {
   fetchScreenerExportRows,
-  fetchSurveyExportRows,
   postBulkLeadIds,
   runBulkActionWithToast,
 } from "@/lib/bulk-selection/bulk-actions-client";
@@ -722,23 +721,6 @@ export function RespondentsTable({
     }
   }
 
-  async function handleExportSurveySelected(format: "csv" | "excel") {
-    const loadingId = toastLoading("Exporting selected survey responses...");
-    try {
-      const rows = await fetchSurveyExportRows(bulk.selectedIdList);
-      if (format === "csv") {
-        downloadCsv("survey-selected.csv", rows);
-      } else {
-        downloadExcel("survey-selected.xlsx", "Survey", rows);
-      }
-      dismissToast(loadingId);
-      toastSuccess("Export ready.");
-    } catch (error) {
-      dismissToast(loadingId);
-      toastError(error instanceof Error ? error.message : "Export failed.");
-    }
-  }
-
   const bulkActions: BulkAction[] = [
     ...(canVerify
       ? [
@@ -771,11 +753,6 @@ export function RespondentsTable({
       id: "export-screener",
       label: "Export Screener",
       onClick: () => void handleExportSelected("csv"),
-    },
-    {
-      id: "export-survey",
-      label: "Export Survey",
-      onClick: () => void handleExportSurveySelected("csv"),
     },
   ];
 
@@ -1230,7 +1207,7 @@ export function RespondentsTable({
 
               <div className="flex-1 overflow-y-auto p-6">
                 {isAnyDuplicate(selected) ? (
-                  <div className="mb-5 rounded-[10px] border border-[#F0C7C7] border-l-4 border-l-[#C25B5B] bg-[#F6E3E3] p-4 text-sm text-[#8D3D3D]">
+                  <div className="mb-5 rounded-[10px] border border-error/30 border-l-4 border-l-error bg-error/10 p-4 text-sm text-error">
                     <span className="font-semibold">Duplicate detected.</span>{" "}
                     {formatDuplicateStatusLabel(selected)} — review before
                     payout or referral approval.

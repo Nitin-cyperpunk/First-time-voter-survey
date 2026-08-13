@@ -6,7 +6,7 @@ import { DashboardLayout } from "@/features/participant-dashboard/components/das
 export function RefillRequiredCard() {
   return (
     <DashboardLayout>
-      <div className="rounded-[14px] border border-[#EAD9B8] bg-[#F7EEDB] p-6 shadow-sm">
+      <div className="rounded-[14px] border border-border bg-accent-soft p-6 shadow-sm">
         <h2 className="text-xl font-semibold text-foreground">
           Registration Update Required
         </h2>

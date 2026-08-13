@@ -114,7 +114,7 @@ export function InstagramVerificationModal({
             </button>
           </p>
         ) : (
-          <p className="text-xs font-semibold text-[#2E8B6F]">
+          <p className="text-xs font-semibold text-primary">
             Verification message copied to clipboard.
           </p>
         )}

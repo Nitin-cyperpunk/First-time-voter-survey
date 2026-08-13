@@ -7,20 +7,28 @@
   <title>Innerwear Screener — Concave Insights</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link
-    href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
     rel="stylesheet">
   <style>
     :root {
-      --rose: #C2476B;
-      --rose-dark: #9C2F50;
-      --rose-light: #F7E6EC;
-      --ink: #2B2230;
-      --muted: #7A6E78;
-      --bg: #FCF7F9;
-      --card: #FFFFFF;
-      --border: #E7D5DD;
-      --ok: #2E7D5B;
-      --err: #C0392B;
+      --bg: #F8F9FA;
+      --surface: #FFFFFF;
+      --text-primary: #1E3A8A;
+      --text-body: #334155;
+      --text-muted: #64748B;
+      --border: #E2E8F0;
+      --accent: #5B4B8A;
+      --accent-hover: #4A3C73;
+      --accent-soft: #EFECF5;
+      --error: #B91C1C;
+      --rose: var(--accent);
+      --rose-dark: var(--accent-hover);
+      --rose-light: var(--accent-soft);
+      --ink: var(--text-primary);
+      --muted: var(--text-muted);
+      --card: var(--surface);
+      --ok: var(--accent);
+      --err: var(--error);
     }
 
     * {
@@ -37,7 +45,7 @@
     }
 
     .wrap {
-      max-width: 720px;
+      max-width: 640px;
       margin: 0 auto;
       padding: 24px 18px 90px
     }
@@ -74,7 +82,7 @@
 
     .progress {
       height: 6px;
-      background: var(--rose-light);
+      background: var(--border);
       border-radius: 99px;
       overflow: hidden;
       margin-bottom: 22px
@@ -93,15 +101,15 @@
       border: 1px solid var(--border);
       border-radius: 16px;
       padding: 24px 22px;
-      box-shadow: 0 2px 14px rgba(155, 47, 80, .05)
+      box-shadow: 0 2px 14px rgba(30, 58, 138, .04)
     }
 
     .screen-title {
-      font-family: 'Fraunces', serif;
+      font-family: inherit;
       font-size: 22px;
       font-weight: 600;
       margin-bottom: 4px;
-      color: var(--rose-dark)
+      color: var(--text-primary);
     }
 
     .screen-sub {
@@ -116,7 +124,7 @@
 
     .q-label {
       font-weight: 600;
-      font-size: 15px;
+      font-size: 18px; color: var(--text-primary);
       margin-bottom: 8px;
       display: block
     }
@@ -188,7 +196,7 @@
       display: flex;
       align-items: flex-start;
       gap: 10px;
-      padding: 11px 14px;
+      min-height: 44px; padding: 12px 14px;
       border: 1px solid var(--border);
       border-radius: 10px;
       cursor: pointer;
@@ -284,7 +292,7 @@
     }
 
     .btn {
-      padding: 13px 26px;
+      min-height: 44px; padding: 12px 26px;
       border: none;
       border-radius: 10px;
       font-size: 15px;
@@ -305,8 +313,7 @@
     }
 
     .btn-ghost {
-      background: #fff;
-      color: var(--rose);
+      background: transparent; color: var(--text-body);
       border: 1px solid var(--border)
     }
 
@@ -320,9 +327,9 @@
     }
 
     .center .big {
-      font-family: 'Fraunces', serif;
+      font-family: inherit;
       font-size: 26px;
-      color: var(--rose-dark);
+      color: var(--text-primary);
       margin-bottom: 12px
     }
 
@@ -340,6 +347,41 @@
       margin-bottom: 14px;
       font-size: 15px
     }
+  
+    @media (max-width: 640px) {
+      .wrap { max-width: 640px; }
+      .q-label { font-size: 18px; color: var(--text-primary); }
+      .opt { min-height: 44px; font-size: 16px; }
+      .btn { min-height: 44px; }
+      .btn-ghost { background: transparent; color: var(--text-body); }
+      .gridtbl, .gridtbl thead, .gridtbl tbody, .gridtbl tr, .gridtbl th, .gridtbl td {
+        display: block; width: 100%;
+      }
+      .gridtbl thead { display: none; }
+      .gridtbl tbody tr {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 14px 14px 8px;
+        margin-bottom: 12px;
+        background: var(--surface);
+      }
+      .gridtbl td { border: none; padding: 0; text-align: left; }
+      .gridtbl td:first-child {
+        font-weight: 600; color: var(--text-primary); font-size: 16px; padding-bottom: 8px;
+      }
+      .gridtbl td:not(:first-child) {
+        display: flex; align-items: center; gap: 12px; min-height: 44px;
+        border-top: 1px solid var(--border);
+      }
+      .gridtbl td:nth-child(2)::before { content: "1"; color: var(--text-body); font-size: 15px; flex: 1; }
+      .gridtbl td:nth-child(3)::before { content: "2"; color: var(--text-body); font-size: 15px; flex: 1; }
+      .gridtbl td:nth-child(4)::before { content: "3"; color: var(--text-body); font-size: 15px; flex: 1; }
+      .gridtbl td:nth-child(5)::before { content: "4"; color: var(--text-body); font-size: 15px; flex: 1; }
+      .gridtbl td:nth-child(6)::before { content: "5"; color: var(--text-body); font-size: 15px; flex: 1; }
+      .gridtbl[data-scale="yn"] td:nth-child(2)::before { content: "Yes"; }
+      .gridtbl[data-scale="yn"] td:nth-child(3)::before { content: "No"; }
+    }
+
   </style>
 </head>
 
@@ -905,7 +947,7 @@
 
       <div class="q" data-key="travel"><label class="q-label">9.1 Have you travelled for holiday in the last 2
           years?</label>
-        <table class="gridtbl">
+        <table class="gridtbl" data-scale="yn">
           <thead>
             <tr>
               <th></th>
@@ -1489,7 +1531,7 @@
       const banner = document.createElement("div");
       banner.id = "registration-error";
       banner.style.cssText =
-        "position:fixed;left:16px;right:16px;bottom:16px;z-index:9999;background:#FDECEC;color:#8B1E1E;border:1px solid #F5B7B1;border-radius:12px;padding:14px 16px;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.12)";
+        "position:fixed;left:16px;right:16px;bottom:16px;z-index:9999;background:var(--accent-soft);color:var(--error);border:1px solid var(--error);border-radius:12px;padding:14px 16px;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.12)";
       banner.textContent = message;
       document.body.appendChild(banner);
     }

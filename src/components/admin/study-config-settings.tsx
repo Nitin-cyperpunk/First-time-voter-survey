@@ -249,7 +249,7 @@ export function StudyConfigSettings({ initialConfig }: StudyConfigSettingsProps)
           </div>
         </div>
 
-        <div className="mt-4 rounded-[12px] border border-[#C5D8F0] bg-[#E8F1FB] px-4 py-3 text-sm leading-relaxed text-[#3A5F8A]">
+        <div className="mt-4 rounded-[12px] border border-border bg-accent-soft px-4 py-3 text-sm leading-relaxed text-text-primary">
           This single cap is tracked at both funnel points on the dashboard —
           Eligible (primary target) and Verified (further down the funnel).
           You&apos;ll see how many fill the form and where they drop off, without
@@ -468,14 +468,14 @@ function StatusBadge({ config }: { config: StudyConfig }) {
       className={cn(
         "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold",
         open
-          ? "bg-[#E2F0EC] text-[#3E8E7E]"
-          : "bg-[#F6EEF1] text-[#94838C]",
+          ? "bg-accent-soft text-primary"
+          : "bg-accent-soft text-text-muted",
       )}
     >
       <span
         className={cn(
           "size-1.5 rounded-full",
-          open ? "bg-[#3E8E7E]" : "bg-[#C97B8E]",
+          open ? "bg-primary" : "bg-text-muted",
         )}
       />
       {open
@@ -510,7 +510,7 @@ function Toggle({
     >
       <span
         className={cn(
-          "absolute top-0.5 size-5 rounded-full bg-white shadow-sm transition-transform",
+          "absolute top-0.5 size-5 rounded-full bg-surface shadow-sm transition-transform",
           checked ? "left-6" : "left-0.5",
         )}
       />

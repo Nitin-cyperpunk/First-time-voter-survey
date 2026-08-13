@@ -26,9 +26,9 @@ export function ReferralSummaryStats({
         {tiles.map((tile) => (
           <div
             key={tile.label}
-            className="rounded-[14px] border border-border bg-white px-3 py-4 text-center shadow-sm"
+            className="rounded-[14px] border border-border bg-surface px-3 py-4 text-center shadow-sm"
           >
-            <p className="text-[28px] font-bold leading-none tracking-[-0.02em] text-[#C2476B]">
+            <p className="text-[28px] font-bold leading-none tracking-[-0.02em] text-primary">
               {tile.value}
             </p>
             <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">

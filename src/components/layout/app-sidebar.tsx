@@ -75,7 +75,7 @@ export function AppSidebar({
           collapsed && "md:justify-center md:px-2 xl:justify-start xl:px-4",
         )}
       >
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-linear-to-br from-rose to-[#D9A0AC] text-white shadow-sm">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-primary text-white shadow-sm">
           <PanelTop className="size-5" />
         </div>
         <div className={cn("min-w-0", collapsed && "md:hidden xl:block")}>
@@ -107,7 +107,7 @@ export function AppSidebar({
                   "gap-3 px-3 py-2.5 text-[13.5px]",
                   collapsed && "md:justify-center md:px-2 xl:justify-start xl:px-3",
                   isActive
-                    ? "border-rose/40 bg-gradient-to-r from-rose/30 to-rose/10 text-white"
+                    ? "border-white/20 bg-sidebar-accent text-white"
                     : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                 )}
               >

@@ -292,7 +292,7 @@ export function LaunchRegistrationForm() {
             </label>
             <Input id="fullName" className="mt-1" {...register("fullName")} />
             {errors.fullName && (
-              <p className="mt-1 text-sm text-red-600">
+              <p className="mt-1 text-sm text-error">
                 {errors.fullName.message}
               </p>
             )}
@@ -316,7 +316,7 @@ export function LaunchRegistrationForm() {
               }}
             />
             {errors.mobile && (
-              <p className="mt-1 text-sm text-red-600">
+              <p className="mt-1 text-sm text-error">
                 {errors.mobile.message}
               </p>
             )}
@@ -331,7 +331,7 @@ export function LaunchRegistrationForm() {
             </label>
             <Input id="dob" type="date" className="mt-1" {...register("dob")} />
             {errors.dob && (
-              <p className="mt-1 text-sm text-red-600">{errors.dob.message}</p>
+              <p className="mt-1 text-sm text-error">{errors.dob.message}</p>
             )}
           </div>
 
@@ -344,7 +344,7 @@ export function LaunchRegistrationForm() {
             </label>
             <Input id="city" className="mt-1" {...register("city")} />
             {errors.city && (
-              <p className="mt-1 text-sm text-red-600">{errors.city.message}</p>
+              <p className="mt-1 text-sm text-error">{errors.city.message}</p>
             )}
           </div>
 

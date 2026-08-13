@@ -17,21 +17,6 @@ export type EligibilityDecision = {
   manualOverride?: boolean;
 };
 
-export type SurveyAccessParticipant = {
-  status: string;
-  refillRequired: boolean;
-  surveyAccessGranted: boolean;
-  surveyToken: string | null;
-  surveyTokenExpiresAt: Date | null;
-};
-
-export {
-  canAccessSurvey,
-  toSurveyAccessFields,
-  validateSurveyToken,
-  buildSurveyUrl,
-} from "@/lib/survey-token.service";
-
 export function resolveEligibilityStatus(
   duplicateCount: number,
 ): EligibilityValue {

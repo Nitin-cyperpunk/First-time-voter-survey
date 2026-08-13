@@ -34,7 +34,6 @@ function formatSubmittedAt(value: string) {
 
 function formLabel(formType: string) {
   if (formType === "registration") return "Registration Form";
-  if (formType === "survey") return "Survey Form";
   return formType;
 }
 

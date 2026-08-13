@@ -57,7 +57,7 @@ export default function AdminLoginPage() {
         className="w-full max-w-sm space-y-5 rounded-[14px] border border-border bg-card p-6 shadow-sm"
       >
         <div className="text-center">
-          <div className="mx-auto mb-4 flex size-10 items-center justify-center rounded-[10px] bg-linear-to-br from-rose to-[#D9A0AC] text-sm font-bold text-white">
+          <div className="mx-auto mb-4 flex size-10 items-center justify-center rounded-[10px] bg-primary text-sm font-bold text-white">
             C
           </div>
           <h1 className="text-xl font-semibold text-foreground">Admin login</h1>

@@ -44,7 +44,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     capability: "dm",
     title: "DM & Verify",
     href: "/dm-verify",
-    description: "Instagram DM verification and survey access workflow",
+    description: "Instagram DM verification workflow",
   },
   {
     capability: "screener",
@@ -62,7 +62,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     capability: "screener",
     title: "Forms",
     href: "/forms",
-    description: "Registration and main survey form versions",
+    description: "Registration / screener form versions",
   },
   {
     capability: "dm",
@@ -74,7 +74,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     capability: "export",
     title: "Payouts",
     href: "/payouts",
-    description: "Referral and survey earnings with payment status",
+    description: "Referral earnings with payment status",
   },
   {
     capability: "settings",
