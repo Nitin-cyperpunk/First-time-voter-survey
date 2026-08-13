@@ -449,7 +449,7 @@ export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
         </Collapsible>
 
         <Collapsible
-          title="Screener terminations"
+          title="Survey terminations"
           summary={
             metrics.terminationsAvailable
               ? `${metrics.terminationsByReason.reduce((n, r) => n + r.count, 0)} events`
@@ -463,7 +463,7 @@ export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
           {!metrics.terminationsAvailable ? (
             <PendingNote text="form_terminations table not available yet." />
           ) : metrics.terminationsByReason.length === 0 ? (
-            <PendingNote text="No screener terminations recorded yet." />
+            <PendingNote text="No survey terminations recorded yet." />
           ) : (
             <BarList
               title="Screen-out reasons"

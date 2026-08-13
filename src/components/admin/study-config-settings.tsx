@@ -36,15 +36,15 @@ const OPEN_SWITCHES: Array<{
   {
     key: "survey_active",
     label: "Survey active (master)",
-    description: "Master switch for accepting new screener responses.",
+    description: "Master switch for accepting new survey responses.",
     offConsequence:
-      "New screener responses will stop being accepted until you turn this back on.",
+      "New survey responses will stop being accepted until you turn this back on.",
     onConsequence:
-      "New screener responses will be accepted again (subject to other open/close gates).",
+      "New survey responses will be accepted again (subject to other open/close gates).",
   },
   {
     key: "screener_open",
-    label: "Screener form live",
+    label: "Survey form live",
     description: "When off, the registration form shows the closed page.",
     offConsequence:
       "The registration form will show the closed page until you turn this back on.",
@@ -441,11 +441,11 @@ export function StudyConfigSettings({ initialConfig }: StudyConfigSettingsProps)
 
       <section className="rounded-[14px] border border-border bg-card p-6 shadow-sm">
         <h3 className="text-base font-semibold text-foreground">
-          Screener terminations
+          Survey terminations
         </h3>
         <p className="mt-1 text-sm text-plum-muted">
           Age rule is enforced on registration. Other flags are stored for the
-          screener ruleset / Part 2 metrics.
+          survey ruleset / Part 2 metrics.
         </p>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-rose-tint/30 px-3 py-3">
           <div>
