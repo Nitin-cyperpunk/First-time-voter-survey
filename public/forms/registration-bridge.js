@@ -2,17 +2,12 @@
   "use strict";
 
   const CORE_FIELDS = new Set([
-    "name",
-    "phone",
     "city",
     "city_id",
     "email",
     "area",
     "zip",
-    "dob_date",
-    "dob_month",
-    "dob_day",
-    "dob_year",
+    "age_band",
   ]);
 
   const fieldStartTimes = {};
@@ -1246,14 +1241,19 @@
     return Boolean(document.querySelector('input[name="consent"]:checked'));
   }
 
+  function readAgeBand() {
+    const checked = document.querySelector('input[name="age_band"]:checked');
+    if (checked && checked.value) return String(checked.value).trim();
+    const named = document.querySelector("[name=age_band]");
+    return named?.value?.trim() || "";
+  }
+
   function demoContactFieldsValid() {
-    const fullName = document.querySelector("[name=name]")?.value?.trim() || "";
-    const mobile = document.querySelector("[name=phone]")?.value?.trim() || "";
     const cityId =
       document.querySelector("[name=city_id]")?.value?.trim() || "";
     const city = document.querySelector("[name=city]")?.value?.trim() || "";
-    const dob = buildDobIso();
-    return Boolean(fullName && mobile && (cityId || city) && dob);
+    const ageBand = readAgeBand();
+    return Boolean((cityId || city) && ageBand);
   }
 
   function showScreenById(screenId) {
@@ -2756,17 +2756,12 @@
     const area = document.querySelector("[name=area]")?.value?.trim() || "";
     const pincode = document.querySelector("[name=zip]")?.value?.trim() || "";
     const dob = buildDobIso();
+    const ageBand = readAgeBand();
 
-    if (!fullName || !mobile || !cityId || !dob) {
+    if (!cityId || !ageBand) {
       showRegistrationError(
-        "Please complete your name, phone, city, and date of birth before submitting.",
+        "Please complete your city and age before submitting.",
       );
-      return;
-    }
-
-    const dobError = validateDobValue(dob);
-    if (dobError) {
-      showRegistrationError(dobError);
       return;
     }
 
@@ -2785,9 +2780,10 @@
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          fullName,
-          mobile,
-          dob,
+          fullName: fullName || undefined,
+          mobile: mobile || undefined,
+          dob: dob || undefined,
+          age_band: ageBand,
           city_id: cityId,
           city: cityName || undefined,
           email: email || undefined,

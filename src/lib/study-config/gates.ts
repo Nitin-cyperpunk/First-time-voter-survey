@@ -37,6 +37,37 @@ export function isAgeWithinStudyRule(
   return age >= config.age_min && age <= config.age_max;
 }
 
+export const AGE_BAND_VALUES = ["18", "19", "20", "21", "22", "23+"] as const;
+export type AgeBandValue = (typeof AGE_BAND_VALUES)[number];
+
+/** Discrete years 18–22, or 23+ (open-ended). */
+export function parseAgeBand(
+  band: string,
+): { min: number; max: number } | null {
+  const value = band.trim();
+  if (/^23\+$/i.test(value) || /^23\s*or\s*older$/i.test(value)) {
+    return { min: 23, max: Number.POSITIVE_INFINITY };
+  }
+  if (!/^\d{1,3}$/.test(value)) return null;
+  const age = Number(value);
+  if (!Number.isFinite(age) || age < 1 || age > 120) return null;
+  return { min: age, max: age };
+}
+
+/**
+ * When age_rule_on, the selected age_band must overlap [age_min, age_max].
+ * `23+` overlaps any window whose max is ≥ 23 (cannot distinguish 23 vs 40).
+ */
+export function isAgeBandWithinStudyRule(
+  band: string,
+  config: StudyConfig,
+): boolean {
+  if (!config.age_rule_on) return true;
+  const parsed = parseAgeBand(band);
+  if (!parsed) return false;
+  return parsed.min <= config.age_max && parsed.max >= config.age_min;
+}
+
 export function ageOutOfRangeMessage(config: StudyConfig): string {
   return `You must be between ${config.age_min} and ${config.age_max} years old to participate.`;
 }

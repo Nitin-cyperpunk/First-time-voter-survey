@@ -8,8 +8,9 @@ type ParticipantInsert = Database["public"]["Tables"]["participants"]["Insert"];
 export type ParticipantCreateInput = {
   referralCode: string;
   fullName: string;
-  mobile: string;
-  dob: string;
+  mobile?: string | null;
+  dob?: string | null;
+  ageBand?: string | null;
   city: string;
   cityId?: string | null;
   email?: string | null;
@@ -31,9 +32,9 @@ export function mapParticipant(row: ParticipantRow): Participant {
   return {
     leadId: row.lead_id,
     referralCode: row.referral_code,
-    fullName: row.full_name,
-    mobile: row.mobile,
-    dob: row.dob,
+    fullName: row.full_name || "Anonymous",
+    mobile: row.mobile ?? "",
+    dob: row.dob ?? "",
     city: row.city,
     cityId: row.city_id ?? null,
     email: row.email ?? null,
@@ -66,9 +67,10 @@ export function mapParticipant(row: ParticipantRow): Participant {
 function toInsert(input: ParticipantCreateInput): ParticipantInsert {
   return {
     referral_code: input.referralCode,
-    full_name: input.fullName.trim(),
-    mobile: input.mobile.trim(),
-    dob: input.dob,
+    full_name: input.fullName.trim() || "Anonymous",
+    mobile: input.mobile?.trim() || null,
+    dob: input.dob?.trim() || null,
+    age_band: input.ageBand?.trim() || null,
     city: input.city.trim(),
     ...(input.cityId !== undefined ? { city_id: input.cityId } : {}),
     ...(input.email !== undefined ? { email: input.email?.trim() || null } : {}),

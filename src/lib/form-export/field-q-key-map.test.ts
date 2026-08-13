@@ -61,17 +61,19 @@ test("explicit data-q overrides sequential assignment without renumbering others
 
 test("registration core fields are excluded from html field map", () => {
   const html = `
-    <input type="text" name="name">
-    <input type="tel" name="phone">
+    <select name="city_id"></select>
+    <input type="hidden" name="age_band">
     <input type="text" name="city">
+    <input type="email" name="email">
     <input type="radio" name="consent" value="Yes">
   `;
 
   const map = buildFieldNameToQKeyMap(html, { excludeCoreFields: true });
 
-  assert.equal(map.has("name"), false);
-  assert.equal(map.has("phone"), false);
+  assert.equal(map.has("city_id"), false);
+  assert.equal(map.has("age_band"), false);
   assert.equal(map.has("city"), false);
+  assert.equal(map.has("email"), false);
   assert.equal(map.get("consent"), "Q1");
 });
 
@@ -107,7 +109,7 @@ test("parsed schema qKeys are stable across repeated HTML parses", () => {
 test("schema field map preserves per-version Q-keys for shared field names", () => {
   const htmlV1 = `
     <div class="q" data-key="age">
-      <input type="radio" name="age_band" value="18-25">
+      <input type="radio" name="age_group" value="18-25">
     </div>
   `;
   const htmlV2 = `
@@ -115,7 +117,7 @@ test("schema field map preserves per-version Q-keys for shared field names", () 
       <input type="radio" name="consent" value="Yes">
     </div>
     <div class="q" data-key="age">
-      <input type="radio" name="age_band" value="18-25">
+      <input type="radio" name="age_group" value="18-25">
     </div>
   `;
 
@@ -132,11 +134,11 @@ test("schema field map preserves per-version Q-keys for shared field names", () 
   assert.equal(ageV1?.qKey, "Q1");
   assert.equal(ageV2?.qKey, "Q2");
   assert.equal(
-    buildFieldNameToQKeyMapFromSchema(schemaV1).get("age_band"),
+    buildFieldNameToQKeyMapFromSchema(schemaV1).get("age_group"),
     "Q1",
   );
   assert.equal(
-    buildFieldNameToQKeyMapFromSchema(schemaV2).get("age_band"),
+    buildFieldNameToQKeyMapFromSchema(schemaV2).get("age_group"),
     "Q2",
   );
 });

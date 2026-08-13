@@ -33,8 +33,9 @@ export type Database = {
           lead_id: string;
           referral_code: string;
           full_name: string;
-          mobile: string;
-          dob: string;
+          mobile: string | null;
+          dob: string | null;
+          age_band: string | null;
           city: string | null;
           city_id: string | null;
           email: string | null;
@@ -63,8 +64,9 @@ export type Database = {
           lead_id?: string;
           referral_code: string;
           full_name: string;
-          mobile: string;
-          dob: string;
+          mobile?: string | null;
+          dob?: string | null;
+          age_band?: string | null;
           city?: string | null;
           city_id?: string | null;
           email?: string | null;

@@ -8,9 +8,10 @@ create table if not exists participants (
 
   participant_code text unique,
 
-  full_name text not null,
-  mobile text unique not null,
-  dob date not null,
+  full_name text not null default 'Anonymous',
+  mobile text unique,
+  dob date,
+  age_band text,
 
   city text,
   status text default 'completed',
@@ -37,6 +38,10 @@ alter table participants add column if not exists ip_address text;
 alter table participants add column if not exists user_agent text;
 alter table participants add column if not exists is_flagged_duplicate boolean default false;
 alter table participants add column if not exists created_at timestamptz default now();
+alter table participants add column if not exists age_band text;
+alter table participants alter column full_name set default 'Anonymous';
+alter table participants alter column mobile drop not null;
+alter table participants alter column dob drop not null;
 
 create unique index if not exists idx_participants_code on participants(participant_code);
 

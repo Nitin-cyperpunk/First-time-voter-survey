@@ -24,7 +24,7 @@ export async function hasScreenerResponse(leadId: string) {
 
 export async function createResponse(input: {
   leadId: string;
-  mobile: string;
+  mobile?: string | null;
   formVersion: number;
   answers: Json;
   completionStatus: "Completed" | "Terminated";
@@ -57,7 +57,7 @@ export async function createResponse(input: {
     "insert_screener_response_with_capacity",
     {
       p_lead_id: input.leadId,
-      p_mobile: input.mobile,
+      p_mobile: input.mobile?.trim() || null,
       p_form_version: input.formVersion,
       p_answers: input.answers,
       p_completion_status: input.completionStatus,

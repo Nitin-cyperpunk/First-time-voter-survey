@@ -314,8 +314,8 @@ test("excludeCoreFields omits registration PII blocks from export schema", () =>
       <input type="radio" name="consent" value="Yes">
       <input type="radio" name="consent" value="No">
     </div>
-    <div class="q" data-key="name"><label class="q-label">Name</label><input type="text" name="name"></div>
-    <div class="q" data-key="phone"><label class="q-label">Phone</label><input type="tel" name="phone"></div>
+    <div class="q" data-key="city_id"><label class="q-label">City</label><select name="city_id"></select></div>
+    <div class="q" data-key="age_band"><label class="q-label">Age</label><input type="hidden" name="age_band"></div>
     <div class="q" data-key="gender">
       <label class="q-label">Gender</label>
       <input type="radio" name="gender" value="Female">

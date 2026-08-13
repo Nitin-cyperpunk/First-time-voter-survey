@@ -57,15 +57,12 @@ export type NormalizedExportMap = Record<string, string>;
 
 export type FormExportRow = Record<string, string | number>;
 
+/** Identity / capacity fields excluded from survey Q-key export. */
 export const REGISTRATION_CORE_FIELDS = new Set([
-  "name",
-  "phone",
   "city",
+  "city_id",
   "email",
   "area",
   "zip",
-  "dob_date",
-  "dob_month",
-  "dob_day",
-  "dob_year",
+  "age_band",
 ]);
