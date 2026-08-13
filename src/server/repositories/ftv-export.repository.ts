@@ -8,6 +8,7 @@ import {
   type FtvRespondentRow,
 } from "@/lib/ftv-export";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { backfillMissingFtvFromScreener } from "@/server/repositories/ftv-responses.repository";
 
 export type FtvFieldSummaryRow = {
   status: string;
@@ -41,6 +42,15 @@ async function fetchAll<T>(
 export async function listFtvExportBundle(
   leadIdsFilter?: string[],
 ): Promise<FtvExportBundle> {
+  try {
+    const recovered = await backfillMissingFtvFromScreener();
+    if (recovered.inserted > 0) {
+      console.info("[ftv-export] backfilled missing analysis rows", recovered);
+    }
+  } catch (error) {
+    console.error("[ftv-export] backfill failed:", error);
+  }
+
   const supabase = getSupabaseAdmin();
 
   let respondentQuery = supabase

@@ -118,6 +118,20 @@ function alignResponseTimes(
   return aligned;
 }
 
+function withFtvPayloadAnalytics(
+  analytics: LaunchRegistrationInput["analytics"],
+  answerJson?: Record<string, unknown> | null,
+): Json | null {
+  const base =
+    analytics && typeof analytics === "object" && !Array.isArray(analytics)
+      ? { ...(analytics as Record<string, unknown>) }
+      : {};
+  if (answerJson && Object.keys(answerJson).length > 0) {
+    base.__ftv_payload = answerJson;
+  }
+  return Object.keys(base).length > 0 ? (base as Json) : null;
+}
+
 function withTimingMetadata(
   answers: Record<string, StoredAnswerValue>,
   responseTimes: Record<string, number> | null,
@@ -410,7 +424,7 @@ export async function registerParticipant(
         completionStatus: screenerTracking.completionStatus,
         terminationReason: screenerTracking.terminationReason,
         responseTimes: alignedResponseTimes,
-        analytics: (input.analytics ?? null) as Json | null,
+        analytics: withFtvPayloadAnalytics(input.analytics, input.answerJson),
         csvRow: resolveScreenerCsvRow({
           input,
           form,
