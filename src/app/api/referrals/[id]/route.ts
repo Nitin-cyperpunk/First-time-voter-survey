@@ -1,0 +1,8 @@
+import { NextResponse } from "next/server";
+
+export async function PATCH() {
+  return NextResponse.json(
+    { error: "Admin referrals API is not part of the launch slice." },
+    { status: 501 },
+  );
+}

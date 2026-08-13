@@ -1,0 +1,117 @@
+import { Suspense } from "react";
+
+import { getCurrentAdmin } from "@/lib/auth/admin-session";
+import { canAccess } from "@/lib/roles";
+import { listParticipants } from "@/server/repositories/admin.repository";
+import { ParticipantSearch } from "@/components/admin/participant-search";
+import { ScreenerExportButtons } from "@/components/admin/screener-export-buttons";
+import { SurveyExportButtons } from "@/components/admin/survey-export-buttons";
+import {
+  RespondentsTable,
+  type RespondentTableRow,
+} from "@/components/admin/respondents-table";
+import { formatAdminDateTime } from "@/lib/format-admin-datetime";
+import { buildRefillUrl } from "@/lib/refill-token.service";
+import { buildSurveyUrl } from "@/lib/survey-token.service";
+
+export const dynamic = "force-dynamic";
+
+function formatDate(date: Date) {
+  return formatAdminDateTime(date);
+}
+
+export default async function RespondentsOpsPage() {
+  const admin = await getCurrentAdmin();
+  const canVerify = admin ? canAccess(admin.role, "verify") : false;
+
+  const participants = await listParticipants();
+  const rows: RespondentTableRow[] = participants.map((participant) => ({
+    leadId: participant.leadId,
+    referralCode: participant.referralCode,
+    fullName: participant.fullName,
+    mobile: participant.mobile,
+    dob: participant.dob,
+    city: participant.city,
+    status: participant.status,
+    referredBy: participant.referredBy,
+    isFlaggedDuplicate: participant.isFlaggedDuplicate,
+    duplicateFlag: participant.duplicateFlag,
+    duplicateReason: participant.duplicateReason,
+    duplicateDetectedAt: participant.duplicateDetectedAt
+      ? formatDate(participant.duplicateDetectedAt)
+      : null,
+    reviewStatus: participant.reviewStatus,
+    originalParticipantLeadId: participant.originalParticipantLeadId,
+    deviceFingerprint: participant.deviceFingerprint,
+    ipAddress: participant.ipAddress,
+    hasScreener: participant.hasScreener,
+    screenerCompletionStatus: participant.screenerCompletionStatus,
+    screenerTerminationReason: participant.screenerTerminationReason,
+    acquisitionSource: participant.acquisitionSource,
+    acquisitionType: participant.acquisitionType,
+    referralPlatform: participant.referralPlatform,
+    otherSource: participant.otherSource,
+    surveyAccessGranted: participant.surveyAccessGranted,
+    verifiedAt: participant.verifiedAt?.toISOString() ?? null,
+    verificationMethod: participant.verificationMethod,
+    dmStatus: participant.dmStatus,
+    instagramId: participant.instagramId,
+    instagramVisibility: participant.instagramVisibility ?? "public",
+    eligibilityOverrideReason: participant.eligibilityOverrideReason,
+    refillRequired: participant.refillRequired,
+    refillReason: participant.refillReason,
+    refillUrl: participant.refillToken
+      ? buildRefillUrl(participant.refillToken)
+      : null,
+    surveyUrl: participant.surveyToken
+      ? buildSurveyUrl(participant.surveyToken)
+      : null,
+    createdAt: formatDate(participant.createdAt),
+  }));
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-[14px] border border-border bg-card p-6 shadow-sm">
+        <h2 className="text-xl font-bold tracking-[-0.015em] text-foreground">
+          Respondents
+        </h2>
+        <p className="mt-1 text-sm text-plum-muted">
+          {participants.length} registered participant
+          {participants.length === 1 ? "" : "s"}. Manage eligibility
+          verification, messaging, and exports from one place. Click a row to
+          open the detail drawer or search by Lead ID, mobile, name, or referral
+          code.
+        </p>
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+          <div className="min-w-0 w-full sm:max-w-xl sm:flex-1">
+            <ParticipantSearch />
+          </div>
+          <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
+            <div>
+              <p className="mb-1 text-xs font-medium text-plum-muted">
+                Screener export
+              </p>
+              <ScreenerExportButtons />
+            </div>
+            <div>
+              <p className="mb-1 text-xs font-medium text-plum-muted">
+                Survey export
+              </p>
+              <SurveyExportButtons />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Suspense
+        fallback={
+          <div className="rounded-[14px] border border-border bg-card p-6 text-sm text-plum-muted shadow-sm">
+            Loading respondents…
+          </div>
+        }
+      >
+        <RespondentsTable participants={rows} canVerify={canVerify} />
+      </Suspense>
+    </div>
+  );
+}

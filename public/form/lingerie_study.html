@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lingerie Study — Concave Insights</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --rose:#C2476B; --rose-dark:#9C2F50; --rose-light:#F7E6EC;
+  --ink:#2B2230; --muted:#7A6E78; --bg:#FCF7F9; --card:#FFFFFF;
+  --border:#E7D5DD; --ok:#2E7D5B; --err:#C0392B;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+.wrap{max-width:720px;margin:0 auto;padding:24px 18px 90px}
+.brandbar{display:flex;align-items:center;gap:10px;padding:14px 0;border-bottom:1px solid var(--border);margin-bottom:18px}
+.brandbar .logo{width:34px;height:34px;border-radius:8px;background:var(--rose);color:#fff;display:grid;place-items:center;font-weight:700}
+.brandbar h1{font-size:17px;font-weight:700}
+.brandbar span{font-size:12px;color:var(--muted)}
+.progress{height:6px;background:var(--rose-light);border-radius:99px;overflow:hidden;margin-bottom:22px}
+.progress>i{display:block;height:100%;background:var(--rose);width:0;transition:width .3s}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px 22px;box-shadow:0 2px 14px rgba(155,47,80,.05)}
+.screen-title{font-family:'Fraunces',serif;font-size:22px;font-weight:600;margin-bottom:4px;color:var(--rose-dark)}
+.screen-sub{font-size:13px;color:var(--muted);margin-bottom:20px}
+.q{margin-bottom:22px}
+.q-label{font-weight:600;font-size:15px;margin-bottom:8px;display:block}
+.q-hint{font-size:12.5px;color:var(--muted);font-weight:400;display:block;margin-top:3px}
+input[type=text],input[type=tel],input[type=number],input[type=email],input[type=date],select,textarea{
+  width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:10px;
+  font-size:15px;font-family:inherit;background:#fff;color:var(--ink)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--rose);box-shadow:0 0 0 3px var(--rose-light)}
+textarea{min-height:72px;resize:vertical}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+@media(max-width:520px){.grid2,.grid3{grid-template-columns:1fr}}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{display:flex;align-items:flex-start;gap:10px;padding:11px 14px;border:1px solid var(--border);
+  border-radius:10px;cursor:pointer;transition:.15s;font-size:14.5px}
+.opt:hover{border-color:var(--rose)}
+.opt input{accent-color:var(--rose);width:18px;height:18px;flex:none;margin-top:1px}
+.opt.sel{border-color:var(--rose);background:var(--rose-light)}
+.spec{margin-top:2px}
+.brand-list{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.brand-box{width:100%}
+@media(max-width:560px){.brand-list{grid-template-columns:1fr}}
+.bq11-empty{font-size:13.5px;padding:10px 2px}
+.opts .spec{margin-top:-2px;margin-bottom:2px}
+.follow{margin-top:14px;padding-left:14px;border-left:3px solid var(--rose-light)}
+.err-msg{color:var(--err);font-size:12px;margin-top:6px;display:none}
+.q.invalid .err-msg{display:block}
+.q.invalid input,.q.invalid select,.q.invalid textarea{border-color:var(--err)}
+.q.invalid .opts{outline:1px solid var(--err);border-radius:10px;padding:6px;outline-offset:2px}
+.gridtbl{width:100%;border-collapse:collapse;font-size:14px}
+.gridtbl th,.gridtbl td{padding:8px;border:1px solid var(--border);text-align:center}
+.gridtbl th:first-child,.gridtbl td:first-child{text-align:left}
+.gridtbl input{accent-color:var(--rose);width:18px;height:18px}
+.nav{display:flex;justify-content:space-between;gap:12px;margin-top:8px}
+.btn{padding:13px 26px;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s}
+.btn-primary{background:var(--rose);color:#fff;margin-left:auto}
+.btn-primary:hover{background:var(--rose-dark)}
+.btn-ghost{background:#fff;color:var(--rose);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:var(--rose)}
+.center{text-align:center;padding:40px 10px}
+.center .big{font-family:'Fraunces',serif;font-size:26px;color:var(--rose-dark);margin-bottom:12px}
+.ty-check{width:84px;height:84px;border-radius:50%;background:#E3F0EC;display:grid;place-items:center;margin:6px auto 18px}
+.ty-check svg{width:40px;height:40px;stroke:#2E8B6F;stroke-width:2.6;fill:none}
+.ty-sub{color:var(--muted);font-size:15px;margin-bottom:22px}
+.ty-card{background:var(--card);border:1px solid var(--rose-light);border-radius:16px;padding:22px 22px 8px;text-align:left;max-width:460px;margin:0 auto 18px;box-shadow:0 10px 30px -22px rgba(156,47,80,.35)}
+.ty-step{display:flex;gap:14px;margin-bottom:16px}
+.ty-num{flex:none;width:28px;height:28px;border-radius:50%;background:var(--rose-light);color:var(--rose-dark);font-weight:700;font-size:14px;display:grid;place-items:center;margin-top:1px}
+.ty-step .tt{font-weight:700;font-size:15.5px;color:var(--ink)}
+.ty-step .td{font-size:13.5px;color:var(--muted);margin-top:2px;line-height:1.45}
+.ty-note{text-align:left;max-width:460px;margin:0 auto 12px;font-size:13.5px;color:var(--muted);line-height:1.55}
+.ty-cta{display:flex;gap:12px;max-width:460px;margin:0 auto 16px}
+.ty-cta .cta{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:13px 14px;border:none;border-radius:12px;cursor:pointer;font-family:inherit;text-decoration:none;font-weight:700;font-size:14.5px;color:#fff;box-shadow:0 8px 20px -10px rgba(0,0,0,.35)}
+.ty-cta .cta small{font-weight:500;font-size:11.5px;opacity:.92}
+.ty-cta .cta-ig{background:linear-gradient(90deg,#C13584,#E1306C,#F77737)}
+.ty-cta .cta-wa{background:#3FA76F}
+.ty-cta .cta-ref{background:var(--rose)}
+.ty-dashboard{max-width:460px;margin:0 auto 20px;text-align:center}
+.ty-dashboard a{color:var(--muted);font-size:13.5px;font-weight:500;text-decoration:none}
+.ty-dashboard a:hover{color:var(--ink);text-decoration:underline}
+.ty-refer-earn{display:flex;flex-direction:column;gap:12px;max-width:460px;margin:24px auto 0;text-align:left}
+.ty-refer-earn-loading{text-align:center;color:var(--muted);font-size:14px;padding:10px 0}
+.ty-upi-card{background:#F0FFF4;border:1px solid #B8E6C8;border-radius:14px;padding:18px;box-shadow:0 2px 14px rgba(46,139,111,.08)}
+.ty-upi-card h3{margin:0;font-size:15px;font-weight:700;color:#2E8B6F}
+.ty-upi-card p{margin:8px 0 0;font-size:13.5px;line-height:1.45;color:#3E8E7E}
+.ty-upi-card input{width:100%;margin-top:14px;padding:12px 14px;border:1px solid #C9E5DE;border-radius:10px;font-size:15px}
+.ty-upi-card button{width:100%;margin-top:10px;padding:13px;border:none;border-radius:12px;background:#3FA76F;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
+.ty-upi-card button:disabled{opacity:.55;cursor:not-allowed}
+.ty-upi-success{background:#E2F0EC;border:1px solid #C9E5DE;border-radius:14px;padding:18px}
+.ty-upi-success strong{color:#3E8E7E;font-size:14px}
+.ty-upi-success p{margin:8px 0 0;font-size:13.5px;color:var(--muted)}
+.ty-stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.ty-stat-tile{background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px 8px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.04)}
+.ty-stat-tile .val{font-size:26px;font-weight:700;line-height:1;color:var(--rose);margin-bottom:8px}
+.ty-stat-tile .lbl{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.ty-keep-earning{background:#fff;border:1px solid #F0D9E0;border-radius:14px;padding:18px;box-shadow:0 2px 14px rgba(155,47,80,.05)}
+.ty-keep-earning .ke-label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#C2476B;margin:0}
+.ty-link-box{display:flex;align-items:center;gap:8px;margin-top:12px;padding:10px 12px;border:1px dashed #D4A8BC;border-radius:10px;background:#fff}
+.ty-link-box span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:#5C4F58}
+.ty-link-box button{flex:none;border:none;border-radius:8px;background:#FCE8EF;color:#C2476B;font-size:12px;font-weight:600;padding:6px 10px;cursor:pointer;font-family:inherit}
+.ty-share-row{display:flex;gap:8px;margin-top:14px}
+.ty-share-row button{flex:1;border:none;border-radius:12px;padding:12px 8px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;font-family:inherit}
+.ty-share-ig{background:linear-gradient(90deg,#C13584,#E1306C,#F77737)}
+.ty-share-wa{background:#3FA76F}
+@media(max-width:560px){.ty-cta{flex-direction:column}}
+.center p{color:var(--muted);font-size:15px;margin-bottom:12px}
+.hidden{display:none}
+.intro p{margin-bottom:14px;font-size:15px}
+.survey-img{display:block;width:100%;max-width:320px;margin:0 auto 14px;border-radius:12px;border:1px solid var(--border);background:#fff}
+
+/* ===== MOBILE TUNING ===== */
+@media(max-width:520px){
+  .wrap{padding:14px 12px 96px}
+  .card{padding:18px 14px;border-radius:14px}
+  .screen-title{font-size:20px}
+  .opt{padding:13px 13px;font-size:14px}      /* bigger tap target */
+  .q-label{font-size:14.5px}
+  /* DOB stays 3 across even on phone (they're small) */
+  #s-demo .grid3{grid-template-columns:1fr 1fr 1fr;gap:8px}
+  #s-demo .grid3 select{padding:11px 8px;font-size:14px}
+  .gridtbl th,.gridtbl td{padding:10px 6px;font-size:13.5px}
+  /* sticky bottom nav bar */
+  .nav{
+    position:fixed;left:0;right:0;bottom:0;margin:0;
+    background:#fff;border-top:1px solid var(--border);
+    padding:10px 14px;z-index:50;gap:10px;
+    box-shadow:0 -4px 14px rgba(155,47,80,.07)
+  }
+  .nav .btn{padding:14px 18px;flex:1}
+  .btn-primary{margin-left:0}
+  .center{padding:30px 6px}
+  .center .big{font-size:23px}
+}
+</style>
+<script src="/forms/referral-attribution.js"></script>
+<script src="/forms/registration-bridge.js"></script>
+<script src="/forms/survey-images.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <div class="brandbar">
+    <div class="logo">C</div>
+    <div><h1>Lingerie Study</h1><span>By Concave Insights</span></div>
+  </div>
+  <div class="progress"><i id="bar"></i></div>
+
+  <!-- ================= INTRO / CONSENT ================= -->
+  <div class="card screen" id="s-consent">
+    <div class="screen-title">Hello! 🌸</div>
+    <div class="intro" style="margin-top:10px">
+      <p>Thank you for your time. We are conducting a market research study to understand women's preferences and shopping behaviour for everyday personal essentials like bras. This is purely for research purposes, and your responses will be kept confidential.</p>
+      <p>The registration form will take around 3–4 minutes. Your participation is completely voluntary.</p>
+    </div>
+    <div class="q" data-key="consent">
+      <label class="q-label">Do you agree to take part?</label>
+      <div class="opts" data-single="consent">
+        <label class="opt"><input type="radio" name="consent" value="Yes"><span>Yes</span></label>
+        <label class="opt"><input type="radio" name="consent" value="No"><span>No</span></label>
+      </div>
+      <div class="err-msg">Please select an option.</div>
+    </div>
+    <div class="nav"><button class="btn btn-primary" data-next>Begin →</button></div>
+  </div>
+
+  <!-- ================= S1: DEMOGRAPHICS ================= -->
+  <!-- ===== SCREEN: Basic details till DOB ===== -->
+  <div class="card screen hidden" id="s-basic">
+    <div class="screen-title">Basic Details</div>
+    <div class="grid2">
+      <div class="q" data-key="name"><label class="q-label">Name</label><input type="text" name="name"><div class="err-msg">Required.</div></div>
+      <div class="q" data-key="email"><label class="q-label">Email</label><input type="email" name="email"><div class="err-msg">Enter a valid email.</div></div>
+      <div class="q" data-key="phone"><label class="q-label">Phone Number</label><input type="tel" name="phone" maxlength="10"><div class="err-msg">Enter a valid 10-digit number.</div></div>
+      <div class="q" data-key="area"><label class="q-label">Area you reside</label><input type="text" name="area"><div class="err-msg">Required.</div></div>
+      <div class="q" data-key="city"><label class="q-label">City</label><input type="text" name="city"><div class="err-msg">Required.</div></div>
+      <div class="q" data-key="zip"><label class="q-label">ZIP code</label><input type="text" name="zip" maxlength="6"><div class="err-msg">Enter a valid 6-digit PIN.</div></div>
+    </div>
+    <div class="q" data-key="dob"><label class="q-label">Date of Birth</label>
+      <input type="date" name="dob_date">
+      <div class="err-msg">Please select your date of birth.</div>
+    </div>
+    <div class="nav"><button class="btn btn-ghost" data-back>← Back</button><button class="btn btn-primary" data-next>Next →</button></div>
+  </div>
+
+  <!-- ===== SCREEN: Gender to Education ===== -->
+  <div class="card screen hidden" id="s-demo2">
+    <div class="screen-title">About You</div>
+    <div class="q" data-key="age_band"><label class="q-label">Which age group do you belong to?</label>
+      <div class="opts" data-single="age_band">
+        <label class="opt"><input type="radio" name="age_band" value="Under 18"><span>Under 18</span></label>
+        <label class="opt"><input type="radio" name="age_band" value="18-24"><span>18 &ndash; 24</span></label>
+        <label class="opt"><input type="radio" name="age_band" value="25-35"><span>25 &ndash; 35</span></label>
+        <label class="opt"><input type="radio" name="age_band" value="36-40"><span>36 &ndash; 40</span></label>
+        <label class="opt"><input type="radio" name="age_band" value="41-44"><span>41 &ndash; 44</span></label>
+        <label class="opt"><input type="radio" name="age_band" value="45-54"><span>45 &ndash; 54</span></label>
+        <label class="opt"><input type="radio" name="age_band" value="55+"><span>55 +</span></label>
+      </div><div class="err-msg">Please select an option.</div>
+    </div>
+    <div class="q" data-key="gender"><label class="q-label">Gender</label>
+      <div class="opts" data-single="gender">
+        <label class="opt"><input type="radio" name="gender" value="Male"><span>Male</span></label>
+        <label class="opt"><input type="radio" name="gender" value="Female"><span>Female</span></label>
+      </div><div class="err-msg">Please select an option.</div>
+    </div>
+    <div class="q" data-key="relationship"><label class="q-label">Relationship Status</label>
+      <div class="opts" data-single="relationship">
+        <label class="opt"><input type="radio" name="relationship" value="Single"><span>Single</span></label>
+        <label class="opt"><input type="radio" name="relationship" value="In Relationship"><span>In Relationship</span></label>
+        <label class="opt"><input type="radio" name="relationship" value="Married (no kids)"><span>Married (with no kids)</span></label>
+        <label class="opt"><input type="radio" name="relationship" value="Married (with kids)"><span>Married (with Kid/s)</span></label>
+        <label class="opt"><input type="radio" name="relationship" value="Divorced/Separated"><span>Divorced/Separated</span></label>
+      </div><div class="err-msg">Please select an option.</div>
+    </div>
+    <div class="q" data-key="education"><label class="q-label">Highest Education Level</label>
+      <div class="opts" data-single="education">
+        <label class="opt"><input type="radio" name="education" value="No Formal Education"><span>No Formal Education</span></label>
+        <label class="opt"><input type="radio" name="education" value="Schooling (up to 4th)"><span>Schooling (up to 4th Std)</span></label>
+        <label class="opt"><input type="radio" name="education" value="Schooling (5th-9th)"><span>Schooling (5th to 9th Std)</span></label>
+        <label class="opt"><input type="radio" name="education" value="SSC/HSC"><span>SSC/HSC</span></label>
+        <label class="opt"><input type="radio" name="education" value="Diploma"><span>Diploma (After SSC/HSC)</span></label>
+        <label class="opt"><input type="radio" name="education" value="Some College"><span>Some College but not Graduate</span></label>
+        <label class="opt"><input type="radio" name="education" value="Grad/PG General"><span>Graduate/Post Graduate (General Courses)</span></label>
+        <label class="opt"><input type="radio" name="education" value="Grad/PG Professional"><span>Graduate/Post Graduate (Professional Courses)</span></label>
+        <label class="opt"><input type="radio" name="education" value="Doctoral"><span>Doctoral Degree</span></label>
+      </div><div class="err-msg">Please select an option.</div>
+    </div>
+    <div class="nav"><button class="btn btn-ghost" data-back>← Back</button><button class="btn btn-primary" data-next>Next →</button></div>
+  </div>
+
+  <!-- ===== SCREEN: Occupation + follow-ups ===== -->
+  <div class="card screen hidden" id="s-occ">
+    <div class="screen-title">What you do for living</div>
+    <div class="q" data-key="occupation"><label class="q-label">Occupation</label>
+      <div class="opts" data-single="occupation">
+        <label class="opt"><input type="radio" name="occupation" value="Student"><span>Student</span></label>
+        <label class="opt"><input type="radio" name="occupation" value="Manage Home (Homemaker)"><span>Manage Home (Homemaker)</span></label>
+        <label class="opt"><input type="radio" name="occupation" value="Working Professional (Private)"><span>Working Professionals (Private Organisations)</span></label>
+        <label class="opt"><input type="radio" name="occupation" value="Working Professional (Government)"><span>Working Professional (Government Organisations)</span></label>
+        <label class="opt"><input type="radio" name="occupation" value="Self-Employed General"><span>Self-Employed – General (Tuition Teacher, Influencer, etc.)</span></label>
+        <label class="opt"><input type="radio" name="occupation" value="Self-Employed Professional"><span>Self-Employed – Professional (Lawyer, Doctor, etc.)</span></label>
+        <label class="opt"><input type="radio" name="occupation" value="Shop Owner"><span>Shop Owner</span></label>
+        <label class="opt"><input type="radio" name="occupation" value="Business Owner (0-3)"><span>Business Owner (with 0-3 employees)</span></label>
+        <label class="opt"><input type="radio" name="occupation" value="Business Owner (4-10)"><span>Business Owner (with 4-10 employees)</span></label>
+        <label class="opt"><input type="radio" name="occupation" value="Business Owner (10+)"><span>Business Owner (with 10+ employees)</span></label>
+        <label class="opt"><input type="radio" name="occupation" value="Retired"><span>Retired</span></label>
+      </div><div class="err-msg">Please select an option.</div>
+
+      <div class="follow hidden" data-show-when="occupation:Working Professional (Private),Working Professional (Government)">
+        <div class="q" data-key="company"><label class="q-label">Which company do you work for?</label><input type="text" name="company"><div class="err-msg">Required.</div></div>
+        <div class="q" data-key="designation"><label class="q-label">What is your designation?</label><input type="text" name="designation"><div class="err-msg">Required.</div></div>
+      </div>
+      <div class="follow hidden" data-show-when="occupation:Business Owner (0-3),Business Owner (4-10),Business Owner (10+)">
+        <div class="q" data-key="biz_name"><label class="q-label">What is the name of your business?</label><input type="text" name="biz_name"><div class="err-msg">Required.</div></div>
+        <div class="q" data-key="biz_nature"><label class="q-label">What is the nature of your business?</label>
+          <div class="opts" data-single="biz_nature" data-other="Other">
+            <label class="opt"><input type="radio" name="biz_nature" value="Manufacturing"><span>Manufacturing (Producing goods, factories, industrial production)</span></label>
+            <label class="opt"><input type="radio" name="biz_nature" value="Trading"><span>Trading (Buying and selling of goods, wholesalers, distributors)</span></label>
+            <label class="opt"><input type="radio" name="biz_nature" value="Retail"><span>Retail (Shops, stores, e-commerce)</span></label>
+            <label class="opt"><input type="radio" name="biz_nature" value="Service Industry"><span>Service Industry (Consulting, IT, healthcare, education, hospitality, finance, etc.)</span></label>
+            <label class="opt"><input type="radio" name="biz_nature" value="Real Estate & Construction"><span>Real Estate & Construction (Property development, brokerage, infrastructure)</span></label>
+            <label class="opt"><input type="radio" name="biz_nature" value="Agriculture & Farming"><span>Agriculture & Farming (Crop production, dairy, livestock, agri-business)</span></label>
+            <label class="opt"><input type="radio" name="biz_nature" value="Transportation & Logistics"><span>Transportation & Logistics (Freight, supply chain, courier services)</span></label>
+            <label class="opt"><input type="radio" name="biz_nature" value="Media & Entertainment"><span>Media & Entertainment (Advertising, film, music, content creation)</span></label>
+            <label class="opt"><input type="radio" name="biz_nature" value="Finance & Investments"><span>Finance & Investments (Banking, insurance, investment firms)</span></label>
+            <label class="opt"><input type="radio" name="biz_nature" value="Other"><span>Other – please specify</span></label>
+            <input type="text" class="spec hidden" name="biz_nature_other" placeholder="Please specify">
+          </div>
+          <div class="err-msg">Please select an option.</div>
+        </div>
+      </div>
+      <div class="follow hidden" data-show-when="occupation:Self-Employed General,Self-Employed Professional">
+        <div class="q" data-key="service"><label class="q-label">What service do you provide?</label><input type="text" name="service"><div class="err-msg">Required.</div></div>
+      </div>
+    </div>
+    <div class="nav"><button class="btn btn-ghost" data-back>← Back</button><button class="btn btn-primary" data-next>Next →</button></div>
+  </div>
+
+  <!-- ===== SCREEN: CWE (with gate) ===== -->
+  <div class="card screen hidden" id="s-cwe">
+    <div class="screen-title">Bread Earner of Household</div>
+
+    <!-- Asked to everyone EXCEPT Student/Homemaker (handled in JS visibility) -->
+    <div class="q" id="q-iscwe" data-key="is_cwe"><label class="q-label">Are you the Chief Wage Earner (CWE) of your household?
+      <span class="q-hint">The person who contributes the maximum to the running of the household.</span></label>
+      <div class="opts" data-single="is_cwe">
+        <label class="opt"><input type="radio" name="is_cwe" value="Yes"><span>Yes</span></label>
+        <label class="opt"><input type="radio" name="is_cwe" value="No"><span>No</span></label>
+      </div><div class="err-msg">Please select an option.</div>
+    </div>
+
+    <!-- CWE edu/occ: shown when (Student/Homemaker) OR (is_cwe == No) -->
+    <div id="cwe-detail">
+      <div class="q" data-key="cwe_edu"><label class="q-label">What is the highest education qualification of the Chief Wage Earner?</label>
+        <div class="opts" data-single="cwe_edu">
+          <label class="opt"><input type="radio" name="cwe_edu" value="No Formal Education"><span>No Formal Education</span></label>
+          <label class="opt"><input type="radio" name="cwe_edu" value="Schooling (up to 4th)"><span>Schooling (Up to 4th Std)</span></label>
+          <label class="opt"><input type="radio" name="cwe_edu" value="Schooling (5th-9th)"><span>Schooling (5th to 9th Std)</span></label>
+          <label class="opt"><input type="radio" name="cwe_edu" value="SSC/HSC"><span>SSC/HSC</span></label>
+          <label class="opt"><input type="radio" name="cwe_edu" value="Some college"><span>Some college but not Graduate</span></label>
+          <label class="opt"><input type="radio" name="cwe_edu" value="Grad/PG General"><span>Graduate/Post Graduate (General)</span></label>
+          <label class="opt"><input type="radio" name="cwe_edu" value="Grad/PG Professional"><span>Graduate/Post Graduate (Professional)</span></label>
+        </div><div class="err-msg">Please select an option.</div>
+      </div>
+      <div class="q" data-key="cwe_occ"><label class="q-label">What is the occupation of the Chief Wage Earner?</label>
+        <div class="opts" data-single="cwe_occ">
+          <label class="opt"><input type="radio" name="cwe_occ" value="Unskilled"><span>Unskilled</span></label>
+          <label class="opt"><input type="radio" name="cwe_occ" value="Skilled"><span>Skilled</span></label>
+          <label class="opt"><input type="radio" name="cwe_occ" value="Petty Traders"><span>Petty Traders</span></label>
+          <label class="opt"><input type="radio" name="cwe_occ" value="Shop Owners"><span>Shop Owners</span></label>
+          <label class="opt"><input type="radio" name="cwe_occ" value="Business (0 Emp)"><span>Business Owner (0 Employee)</span></label>
+          <label class="opt"><input type="radio" name="cwe_occ" value="Business (1-9 Emp)"><span>Business (1 to 9 Employee)</span></label>
+          <label class="opt"><input type="radio" name="cwe_occ" value="Business (10+ Emp)"><span>Business (10+ Employee)</span></label>
+          <label class="opt"><input type="radio" name="cwe_occ" value="Self Employed General"><span>Self Employed (General)</span></label>
+          <label class="opt"><input type="radio" name="cwe_occ" value="Self Employed Professional"><span>Self Employed (Professional)</span></label>
+          <label class="opt"><input type="radio" name="cwe_occ" value="Clerk/Salesman"><span>Clerk/Salesman</span></label>
+          <label class="opt"><input type="radio" name="cwe_occ" value="Supervisor"><span>Supervisor Level</span></label>
+          <label class="opt"><input type="radio" name="cwe_occ" value="Officer Junior"><span>Officer/Executive – Junior</span></label>
+          <label class="opt"><input type="radio" name="cwe_occ" value="Officer Middle/Senior"><span>Officer/Executive – Middle/Senior</span></label>
+        </div><div class="err-msg">Please select an option.</div>
+      </div>
+    </div>
+
+    <div class="nav"><button class="btn btn-ghost" data-back>← Back</button><button class="btn btn-primary" data-next>Next →</button></div>
+  </div>
+
+  <!-- ===== SCREEN: Items at home + follow-ups ===== -->
+  <div class="card screen hidden" id="s-items">
+    <div class="screen-title">List of Household Items</div>
+    <div class="q" data-key="items"><label class="q-label">Select the items you have / own at home <span class="q-hint">(Select all that apply) — owned by you, family, or available in the house you live in.</span></label>
+      <div class="opts" data-multi="items">
+        <label class="opt"><input type="checkbox" name="items" value="Electricity Connection"><span>Electricity Connection</span></label>
+        <label class="opt"><input type="checkbox" name="items" value="Ceiling Fan"><span>Ceiling Fan</span></label>
+        <label class="opt"><input type="checkbox" name="items" value="LPG/Gas Connection"><span>LPG / Gas Connection</span></label>
+        <label class="opt"><input type="checkbox" name="items" value="Two-wheeler"><span>Two-wheeler (Scooter, Motorcycle, Moped)</span></label>
+        <label class="opt"><input type="checkbox" name="items" value="Colour TV"><span>Colour TV</span></label>
+        <label class="opt"><input type="checkbox" name="items" value="Refrigerator"><span>Refrigerator</span></label>
+        <label class="opt"><input type="checkbox" name="items" value="Washing Machine"><span>Washing Machine</span></label>
+        <label class="opt"><input type="checkbox" name="items" value="PC/Laptop"><span>Personal Computer / Laptop</span></label>
+        <label class="opt"><input type="checkbox" name="items" value="Car/Jeep/Van"><span>Car / Jeep / Van</span></label>
+        <label class="opt"><input type="checkbox" name="items" value="Air Conditioner"><span>Air Conditioner</span></label>
+        <label class="opt"><input type="checkbox" name="items" value="Agricultural Land"><span>Agricultural Land</span></label>
+        <label class="opt"><input type="checkbox" name="items" value="Gaming console"><span>Gaming console</span></label>
+      </div><div class="err-msg">Please select at least one.</div>
+
+      <div class="follow hidden" data-show-when="items:Two-wheeler">
+        <div class="q" data-key="tw_which"><label class="q-label">Which two-wheeler do you own?</label><input type="text" name="tw_which"><div class="err-msg">Required.</div></div>
+        <div class="q" data-key="tw_type"><label class="q-label">Select the type of two-wheeler you own <span class="q-hint">(Select all that apply)</span></label>
+          <div class="opts" data-multi="tw_type">
+            <label class="opt"><input type="checkbox" name="tw_type" value="Fuel-based"><span>Fuel-based (Petrol/Diesel/CNG)</span></label>
+            <label class="opt"><input type="checkbox" name="tw_type" value="EV"><span>Electric Vehicles (EV)</span></label>
+            <label class="opt"><input type="checkbox" name="tw_type" value="Hybrid"><span>Hybrid Vehicles</span></label>
+          </div><div class="err-msg">Please select at least one.</div>
+        </div>
+      </div>
+      <div class="follow hidden" data-show-when="items:Car/Jeep/Van">
+        <div class="q" data-key="car_which"><label class="q-label">Which car do you own?</label><input type="text" name="car_which"><div class="err-msg">Required.</div></div>
+        <div class="q" data-key="car_type"><label class="q-label">Select the type of car you own <span class="q-hint">(Select all that apply)</span></label>
+          <div class="opts" data-multi="car_type">
+            <label class="opt"><input type="checkbox" name="car_type" value="Fuel-based"><span>Fuel-based (Petrol/Diesel/CNG)</span></label>
+            <label class="opt"><input type="checkbox" name="car_type" value="EV"><span>Electric Vehicles (EV)</span></label>
+            <label class="opt"><input type="checkbox" name="car_type" value="Hybrid"><span>Hybrid Vehicles</span></label>
+          </div><div class="err-msg">Please select at least one.</div>
+        </div>
+      </div>
+    </div>
+    <div class="nav"><button class="btn btn-ghost" data-back>← Back</button><button class="btn btn-primary" data-next>Next →</button></div>
+  </div>
+  <!-- ===== SCREEN: Household members + income ===== -->
+  <div class="card screen hidden" id="s-income">
+    <div class="screen-title">Household & Income</div>
+    <div class="grid2">
+      <div class="q" data-key="members_total"><label class="q-label">Including yourself, how many members live in your house?</label><input type="number" name="members_total" min="1" max="50"><div class="err-msg">Required.</div></div>
+      <div class="q" data-key="members_working"><label class="q-label">How many members in your family are currently working?</label><input type="number" name="members_working" min="1" max="50"><div class="err-msg">Required.</div></div>
+    </div>
+    <div class="q" data-key="income"><label class="q-label">What is your monthly income?</label>
+      <select name="income">
+        <option value="">Select</option>
+        <option>Less Than 25K</option><option>25K to 50K</option><option>50K to 75K</option>
+        <option>75K to 1Lac</option><option>1Lac to 1.25Lac</option><option>1.25Lac to 1.5Lac</option>
+        <option>1.5Lac to 2Lac</option><option>2Lac to 3Lac</option><option>More than 3Lac</option>
+      </select><div class="err-msg">Required.</div>
+    </div>
+    <div class="q" data-key="hh_income"><label class="q-label">What is your monthly household income?</label>
+      <select name="hh_income">
+        <option value="">Select</option>
+        <option>Less than 25K</option><option>25K to 50K</option><option>50K to 75K</option>
+        <option>75K to 1Lac</option><option>1Lac to 1.25Lac</option><option>1.25Lac to 1.5Lac</option>
+        <option>1.5Lac to 2Lac</option><option>2Lac to 3Lac</option><option>More than 3Lac</option>
+      </select><div class="err-msg">Required.</div>
+    </div>
+    <div class="nav"><button class="btn btn-ghost" data-back>← Back</button><button class="btn btn-primary" data-next>Next →</button></div>
+  </div>
+
+  <!-- ===== SCREEN: Online activities + Residency ===== -->
+  <div class="card screen hidden" id="s-digital">
+    <div class="screen-title"> Digital Usage</div>
+    <div class="q" data-key="online"><label class="q-label">Please select the online activities you carried out in last 3 months <span class="q-hint">(Select all that apply)</span></label>
+      <div class="opts" data-multi="online" data-none="No Digital activity">
+        <label class="opt"><input type="checkbox" name="online" value="Online Shopping"><span>Online Shopping (Clothes/Footwear/Mobiles/Appliances etc. — Amazon/Meesho/Flipkart)</span></label>
+        <label class="opt"><input type="checkbox" name="online" value="Online Food Delivery"><span>Online Food Delivery (Zomato/Swiggy/Domino's)</span></label>
+        <label class="opt"><input type="checkbox" name="online" value="Online Grocery"><span>Online Grocery Delivery (Daal/Atta/Rice/Fruits/Vegetables)</span></label>
+        <label class="opt"><input type="checkbox" name="online" value="Buy Medicines Online"><span>Buy Medicines Online</span></label>
+        <label class="opt"><input type="checkbox" name="online" value="Online Doctor Consult"><span>Online Doctor Consultation</span></label>
+        <label class="opt"><input type="checkbox" name="online" value="OTT"><span>Watched content on OTT apps (paid — Netflix/Hotstar/Prime)</span></label>
+        <label class="opt"><input type="checkbox" name="online" value="Online/Mobile Games"><span>Online/Mobile Games</span></label>
+        <label class="opt"><input type="checkbox" name="online" value="Long Videos"><span>Long Videos (YouTube etc.)</span></label>
+        <label class="opt"><input type="checkbox" name="online" value="Short Videos"><span>Short Videos (Instagram Reels/Josh/Moj/MX TakaTak)</span></label>
+        <label class="opt"><input type="checkbox" name="online" value="Digital Payments"><span>Used Digital Payments (UPI/Wallets/Cards/Net Banking)</span></label>
+        <label class="opt"><input type="checkbox" name="online" value="No Digital activity"><span>None of the above.</span></label>
+      </div><div class="err-msg">Please select at least one.</div>
+    </div>
+    <div class="nav"><button class="btn btn-ghost" data-back>← Back</button><button class="btn btn-primary" data-next>Next →</button></div>
+  </div>
+
+
+  <!-- ===== SCREEN: Residency ===== -->
+  <div class="card screen hidden" id="s-residency">
+    <div class="screen-title"> Residency</div>
+
+    <div class="q" data-key="residency"><label class="q-label"> Your current living arrangement <span class="q-hint">Select the option that best describes Type of Residency.</span></label>
+      <div class="opts" data-single="residency" data-other="Other">
+        <label class="opt"><input type="radio" name="residency" value="Owned flat in society"><span>Owned flat/apartment in a housing society</span></label>
+        <label class="opt"><input type="radio" name="residency" value="Rented flat in society"><span>Rented flat/apartment in a housing society</span></label>
+        <label class="opt"><input type="radio" name="residency" value="Standalone building"><span>Standalone building (owned/rented)</span></label>
+        <label class="opt"><input type="radio" name="residency" value="PG"><span>PG (Paying Guest accommodation)</span></label>
+        <label class="opt"><input type="radio" name="residency" value="Hostel/Company"><span>Hostel/Company accommodation</span></label>
+        <label class="opt"><input type="radio" name="residency" value="Shared flat"><span>Shared flat with friends/colleagues (non-family)</span></label>
+        <label class="opt"><input type="radio" name="residency" value="Independent bungalow"><span>Independent bungalow (standalone house)</span></label>
+        <label class="opt"><input type="radio" name="residency" value="Bungalow in society"><span>Bungalow within a gated society</span></label>
+        <label class="opt"><input type="radio" name="residency" value="Chawl"><span>Chawl</span></label>
+        <label class="opt"><input type="radio" name="residency" value="Other"><span>Other (Please specify)</span></label>
+        <input type="text" class="spec hidden" name="residency_other" placeholder="Please specify">
+      </div>
+      <div class="err-msg">Please select an option.</div>
+    </div>
+    <div class="nav"><button class="btn btn-ghost" data-back>← Back</button><button class="btn btn-primary" data-next>Next →</button></div>
+  </div>
+
+  <!-- ===== SCREEN: Travel + Fitness ===== -->
+  <div class="card screen hidden" id="s-life">
+    <div class="screen-title">Travel & Fitness</div>
+    <div class="q" data-key="travel"><label class="q-label">Have you travelled for holiday in the last 2 years?</label>
+      <table class="gridtbl">
+        <thead><tr><th></th><th>Yes</th><th>No</th></tr></thead>
+        <tbody>
+          <tr><td>International</td>
+            <td><input type="radio" name="travel_intl" value="Yes"></td>
+            <td><input type="radio" name="travel_intl" value="No"></td></tr>
+          <tr><td>Domestic</td>
+            <td><input type="radio" name="travel_dom" value="Yes"></td>
+            <td><input type="radio" name="travel_dom" value="No"></td></tr>
+        </tbody>
+      </table><div class="err-msg">Please answer both rows.</div>
+    </div>
+    <div class="q" data-key="fitness"><label class="q-label">Select the fitness or physical activities you regularly participate in. <span class="q-hint">(Select all that apply)</span></label>
+      <img class="survey-img" data-img="q30_yoga.webp" alt="Yoga activity illustration">
+      <div class="opts" data-multi="fitness" data-none="No fitness activity" data-other="Other">
+        <label class="opt"><input type="checkbox" name="fitness" value="Exercise/Gym"><span>Exercise/Gym Workouts (weightlifting, cardio, bodyweight, HIIT, bootcamp)</span></label>
+        <label class="opt"><input type="checkbox" name="fitness" value="Sports"><span>Sports (swimming, basketball, soccer, tennis, running, cycling, martial arts)</span></label>
+        <label class="opt"><input type="checkbox" name="fitness" value="Yoga"><span>Yoga (Hatha, Vinyasa, Ashtanga, restorative)</span></label>
+        <label class="opt"><input type="checkbox" name="fitness" value="Zumba/Dance"><span>Zumba/Dance Fitness (Zumba, salsa, hip-hop dance)</span></label>
+        <label class="opt"><input type="checkbox" name="fitness" value="Daily Walks"><span>Daily Walks</span></label>
+        <label class="opt"><input type="checkbox" name="fitness" value="Running/Jogging"><span>Running/Jogging</span></label>
+        <label class="opt"><input type="checkbox" name="fitness" value="Other"><span>Other (Please specify)</span></label>
+        <input type="text" class="spec hidden" name="fitness_other" placeholder="Please specify">
+        <label class="opt"><input type="checkbox" name="fitness" value="No fitness activity"><span>I do not regularly participate in any fitness activities.</span></label>
+      </div>
+      <div class="err-msg">Please select at least one.</div>
+    </div>
+    <div class="nav"><button class="btn btn-ghost" data-back>← Back</button><button class="btn btn-primary" data-next>Next →</button></div>
+  </div>
+
+  <!-- ===== SCREEN: Bra Q1-Q4 ===== -->
+  <div class="card screen hidden" id="s-bra1">
+    <div class="screen-title">Your Bra Preferences</div>
+    <div class="q" data-key="bq2_decider"><label class="q-label">Who decides which innerwear brand you buy?</label>
+      <div class="opts" data-single="bq2_decider">
+        <label class="opt"><input type="radio" name="bq2_decider" value="Myself"><span>I decide entirely myself</span></label>
+        <label class="opt"><input type="radio" name="bq2_decider" value="Some input"><span>I decide with some input from others</span></label>
+        <label class="opt"><input type="radio" name="bq2_decider" value="Someone else"><span>Someone else mostly decides</span></label>
+      </div><div class="err-msg">Please select an option.</div>
+    </div>
+    <div class="q" data-key="bq3_lastbuy"><label class="q-label">When did you last buy a bra for yourself?</label>
+      <div class="opts" data-single="bq3_lastbuy">
+        <label class="opt"><input type="radio" name="bq3_lastbuy" value="Last 1 month"><span>In the last 1 month</span></label>
+        <label class="opt"><input type="radio" name="bq3_lastbuy" value="1-3 months"><span>1–3 months ago</span></label>
+        <label class="opt"><input type="radio" name="bq3_lastbuy" value="3-6 months"><span>3–6 months ago</span></label>
+        <label class="opt"><input type="radio" name="bq3_lastbuy" value="6-12 months"><span>6–12 months ago</span></label>
+        <label class="opt"><input type="radio" name="bq3_lastbuy" value=">12 months"><span>More than 12 months ago</span></label>
+      </div><div class="err-msg">Please select an option.</div>
+    </div>
+    <div class="q" data-key="bq4_statement"><label class="q-label">Which statement describes you best?</label>
+      <div class="opts" data-single="bq4_statement">
+        <label class="opt"><input type="radio" name="bq4_statement" value="Only branded"><span>I buy only popular branded bras</span></label>
+        <label class="opt"><input type="radio" name="bq4_statement" value="Mostly branded"><span>Mostly popular brands, occasionally local brands</span></label>
+        <label class="opt"><input type="radio" name="bq4_statement" value="Equal mix"><span>Equal mix of popular brands and local brands</span></label>
+        <label class="opt"><input type="radio" name="bq4_statement" value="Mostly local"><span>Mostly local brands, occasionally popular brands</span></label>
+        <label class="opt"><input type="radio" name="bq4_statement" value="Only local"><span>Only local brands</span></label>
+      </div><div class="err-msg">Please select an option.</div>
+    </div>
+    <div class="nav"><button class="btn btn-ghost" data-back>← Back</button><button class="btn btn-primary" data-next>Next →</button></div>
+  </div>
+
+  <!-- ===== SCREEN: Bra Q5-Q8 ===== -->
+  <div class="card screen hidden" id="s-bra2">
+    <div class="screen-title">Your Bra Shopping Preferences</div>
+    <div class="q" data-key="bq5_behaviour"><label class="q-label">Which statement best describes your bra shopping behaviour?</label>
+      <div class="opts" data-single="bq5_behaviour">
+        <label class="opt"><input type="radio" name="bq5_behaviour" value="Planned"><span>Planned purchase</span></label>
+        <label class="opt"><input type="radio" name="bq5_behaviour" value="Replace when necessary"><span>Replace only when necessary</span></label>
+        <label class="opt"><input type="radio" name="bq5_behaviour" value="Impulse"><span>Impulse purchase</span></label>
+      </div><div class="err-msg">Please select an option.</div>
+    </div>
+    <div class="q" data-key="bq6_sales"><label class="q-label">Which of the following best describes how you usually purchase bras?</label>
+      <div class="opts" data-single="bq6_sales">
+        <label class="opt"><input type="radio" name="bq6_sales" value="mostly buy during sales"><span>I mostly buy only during sales or discounts.</span></label>
+        <label class="opt"><input type="radio" name="bq6_sales" value="prefer waiting"><span>I prefer waiting for sales, but occasionally buy at full price if needed.</span></label>
+        <label class="opt"><input type="radio" name="bq6_sales" value="I buy whenever I need a bra"><span>I buy whenever I need a bra and price or discounts do not matter much.</span></label>
+        <label class="opt"><input type="radio" name="bq6_sales" value="Usually at full price"><span>I usually buy at full price because I prefer specific brands/styles and don’t want to wait for sales.</span></label>
+      </div><div class="err-msg">Please select an option.</div>
+    </div>
+    <div class="q" data-key="bq7_types"><label class="q-label">Which types of bras do you currently use? <span class="q-hint">(Select all that apply)</span></label>
+      <!-- Images load from survey_images (question_key=Q37); no hardcoded Supabase URLs -->
+      <div class="survey-img-group" data-img-question="Q37" data-img-alt="Bra type example" data-img-class="survey-img"></div>
+      <div class="opts" data-multi="bq7_types" data-other="Other">
+        <label class="opt"><input type="checkbox" name="bq7_types" value="Everyday bra"><span>Everyday bra</span></label>
+        <label class="opt"><input type="checkbox" name="bq7_types" value="T-shirt bra"><span>T-shirt bra</span></label>
+        <label class="opt"><input type="checkbox" name="bq7_types" value="Non-padded bra"><span>Non-padded bra</span></label>
+        <label class="opt"><input type="checkbox" name="bq7_types" value="Padded bra"><span>Padded bra</span></label>
+        <label class="opt"><input type="checkbox" name="bq7_types" value="Wired bra"><span>Wired bra</span></label>
+        <label class="opt"><input type="checkbox" name="bq7_types" value="Non-wired bra"><span>Non-wired bra</span></label>
+        <label class="opt"><input type="checkbox" name="bq7_types" value="Sports bra"><span>Sports bra</span></label>
+        <label class="opt"><input type="checkbox" name="bq7_types" value="Seamless bra"><span>Seamless bra</span></label>
+        <label class="opt"><input type="checkbox" name="bq7_types" value="Push-up bra"><span>Push-up bra</span></label>
+        <label class="opt"><input type="checkbox" name="bq7_types" value="Strapless bra"><span>Strapless bra</span></label>
+        <label class="opt"><input type="checkbox" name="bq7_types" value="Bralette"><span>Bralette</span></label>
+        <label class="opt"><input type="checkbox" name="bq7_types" value="Nursing bra"><span>Nursing bra</span></label>
+        <label class="opt"><input type="checkbox" name="bq7_types" value="Shapewear bra"><span>Shapewear bra</span></label>
+        <label class="opt"><input type="checkbox" name="bq7_types" value="Other"><span>Other – please specify</span></label>
+        <input type="text" class="spec hidden" name="bq7_types_other" placeholder="Please specify">
+      </div>
+      <div class="err-msg">Please select at least one.</div>
+    </div>
+    <div class="q" data-key="bq8_freq"><label class="q-label">How frequently do you purchase bras?</label>
+      <img class="survey-img" data-img="q39_purchase_frequency.webp" alt="Purchase frequency illustration">
+      <div class="opts" data-single="bq8_freq">
+        <label class="opt"><input type="radio" name="bq8_freq" value="Every month"><span>Every month</span></label>
+        <label class="opt"><input type="radio" name="bq8_freq" value="2-3 months"><span>Every 2–3 months</span></label>
+        <label class="opt"><input type="radio" name="bq8_freq" value="4-6 months"><span>Every 4–6 months</span></label>
+        <label class="opt"><input type="radio" name="bq8_freq" value="7-12 months"><span>Every 7–12 months</span></label>
+        <label class="opt"><input type="radio" name="bq8_freq" value=">1 year"><span>More than a year</span></label>
+      </div><div class="err-msg">Please select an option.</div>
+    </div>
+    <div class="q" data-key="bq8a_switching"><label class="q-label">Thinking about the everyday bras you wear regularly, which of the following best describes your purchase behaviour over the last 1&ndash;2 years?</label>
+      <div class="opts" data-single="bq8a_switching">
+        <label class="opt"><input type="radio" name="bq8a_switching" value="Switched completely"><span>I have switched completely to a different bra brand, in the last 1&ndash;2 years.</span></label>
+        <label class="opt"><input type="radio" name="bq8a_switching" value="Stayed same"><span>I have mostly stayed with the same brand and products, with no major changes.</span></label>
+        <label class="opt"><input type="radio" name="bq8a_switching" value="Usual plus others"><span>I continue to buy my usual brand but have also started buying other brands.</span></label>
+        <label class="opt"><input type="radio" name="bq8a_switching" value="Frequently try different"><span>I frequently try different brands and do not stick to any one brand.</span></label>
+      </div><div class="err-msg">Please select an option.</div>
+    </div>
+    <div class="nav"><button class="btn btn-ghost" data-back>← Back</button><button class="btn btn-primary" data-next>Next →</button></div>
+  </div>
+
+  <!-- ===== SCREEN: Bra Q9-Q11 + source ===== -->
+  <div class="card screen hidden" id="s-bra3">
+    <div class="screen-title">Your Bra Shopping Preferences</div>
+    <div class="q" data-key="bq9_spend"><label class="q-label">We understand that you own several bras. Thinking only about the EVERYDAY bras that you wear regularly (multiple times per week), approximately how much do you usually spend on one bra?</label>
+      <div class="opts" data-single="bq9_spend">
+        <label class="opt"><input type="radio" name="bq9_spend" value="<100"><span>Less than ₹100</span></label>
+        <label class="opt"><input type="radio" name="bq9_spend" value="100-199"><span>₹100–199</span></label>
+        <label class="opt"><input type="radio" name="bq9_spend" value="200-299"><span>₹200–299</span></label>
+        <label class="opt"><input type="radio" name="bq9_spend" value="300-399"><span>₹300–399</span></label>
+        <label class="opt"><input type="radio" name="bq9_spend" value="400-499"><span>₹400–499</span></label>
+        <label class="opt"><input type="radio" name="bq9_spend" value="500-599"><span>₹500–599</span></label>
+        <label class="opt"><input type="radio" name="bq9_spend" value="600-699"><span>₹600–699</span></label>
+        <label class="opt"><input type="radio" name="bq9_spend" value="700-799"><span>₹700–799</span></label>
+        <label class="opt"><input type="radio" name="bq9_spend" value="800-899"><span>₹800–899</span></label>
+        <label class="opt"><input type="radio" name="bq9_spend" value="900-999"><span>₹900 - 999</span></label>
+        <label class="opt"><input type="radio" name="bq9_spend" value="1000+"><span>₹1000 or above</span></label>
+      </div><div class="err-msg">Please select an option.</div>
+    </div>
+    <div class="q" data-key="bq10_brands_used"><label class="q-label">Write the names of everyday bra brands you personally use. <span class="q-hint">(At least 1, up to 4 — each at least 3 characters)</span></label>
+      <img class="survey-img" data-img="brand_jockey_logo.webp" alt="Example brand logo">
+      <div class="brand-list" id="brand-list">
+        <input type="text" class="brand-box" name="bq10_brand_1" maxlength="40" placeholder="Brand 1" autocomplete="off">
+        <input type="text" class="brand-box" name="bq10_brand_2" maxlength="40" placeholder="Brand 2 (optional)" autocomplete="off">
+        <input type="text" class="brand-box" name="bq10_brand_3" maxlength="40" placeholder="Brand 3 (optional)" autocomplete="off">
+        <input type="text" class="brand-box" name="bq10_brand_4" maxlength="40" placeholder="Brand 4 (optional)" autocomplete="off">
+      </div>
+      <div class="err-msg">Please enter at least one brand (minimum 3 characters).</div>
+    </div>
+    <div class="q" data-key="bq11_recent_brand"><label class="q-label">Which ONE brand of everyday bra did you purchase most recently? <span class="q-hint">(Pick from the brands you listed above)</span></label>
+      <div class="opts" data-single="bq11_recent_brand" id="bq11-opts">
+        <div class="bq11-empty muted">Fill in at least one brand above to choose from.</div>
+      </div>
+      <div class="err-msg">Please select one brand.</div>
+    </div>
+    <div class="nav"><button class="btn btn-ghost" data-back>← Back</button><button class="btn btn-primary" data-next>Submit ✓</button></div>
+  </div>
+
+  <!-- ================= CLOSING MESSAGE (qualified + terminated) ================= -->
+  <div class="card screen hidden" id="s-thankyou" data-concave-result>
+    <div class="center" data-concave-result-host>
+      <div data-concave-qualified-only>
+        <div class="ty-check"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+        <div class="big">Your registration is complete! 🎉</div>
+        <div class="ty-sub">Thank you for your response. Here's what happens next:</div>
+        <div class="ty-card">
+          <div class="ty-step"><div class="ty-num">1</div><div><div class="tt">Track your registration &amp; referrals</div><div class="td">We'll send you login details so you can track your status anytime.</div></div></div>
+          <div class="ty-step"><div class="ty-num">2</div><div><div class="tt">Share with friends meanwhile</div><div class="td">Share your link with friends and family who may be interested.</div></div></div>
+        </div>
+        <p class="ty-note">The main survey will include some personal but everyday questions related to lingerie such as your bust size, the types of bras you purchase, why you prefer certain products, and when you typically buy them.</p>
+        <p class="ty-note">Participation in the main survey is completely voluntary, and all information shared will remain confidential and used only for research purposes.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ============ STATE ============ */
+const SCREENS = ["s-consent","s-basic","s-demo2","s-occ","s-cwe","s-items","s-income","s-digital","s-life","s-bra1","s-bra2","s-bra3"];
+let idx = 0;
+const $  = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const bar = $("#bar");
+
+/* ============ OPTION HIGHLIGHT ============ */
+$$(".opt input").forEach(inp => {
+  inp.addEventListener("change", () => {
+    const group = inp.closest(".opts");
+    if (inp.type === "radio") {
+      group.querySelectorAll(".opt").forEach(o => o.classList.remove("sel"));
+      if (inp.checked) inp.closest(".opt").classList.add("sel");
+    } else {
+      inp.closest(".opt").classList.toggle("sel", inp.checked);
+    }
+  });
+});
+
+/* ============ "NONE OF THE ABOVE" + "OTHER" LOGIC (multi-select) ============ */
+$$("[data-multi]").forEach(group => {
+  const noneVal = group.dataset.none;       // e.g. "None of the above"
+  group.addEventListener("change", e => {
+    const checks = Array.from(group.querySelectorAll("input[type=checkbox]"));
+    const changed = e.target;
+    if (noneVal) {
+      if (changed.value === noneVal && changed.checked) {
+        // none selected -> clear all others
+        checks.forEach(c => { if (c.value !== noneVal) { c.checked = false; c.closest(".opt").classList.remove("sel"); } });
+      } else if (changed.value !== noneVal && changed.checked) {
+        // any other selected -> uncheck none
+        const noneBox = checks.find(c => c.value === noneVal);
+        if (noneBox && noneBox.checked) { noneBox.checked = false; noneBox.closest(".opt").classList.remove("sel"); }
+      }
+    }
+    syncOtherBox(group);
+    refreshFollows();
+  });
+});
+
+/* ============ "OTHER" SPECIFY (single-select radios) ============ */
+$$("[data-single][data-other]").forEach(group => {
+  group.addEventListener("change", () => syncOtherBox(group));
+});
+
+function syncOtherBox(group){
+  const otherVal = group.dataset.other;
+  if (!otherVal) return;
+  // spec input now lives INSIDE the group, right after the "Other" option
+  let spec = group.querySelector(".spec");
+  if (!spec) return;
+  let chosen = false;
+  if (group.dataset.single){
+    const r = group.querySelector("input[type=radio]:checked");
+    chosen = r && r.value === otherVal;
+  } else {
+    const c = group.querySelector(`input[value="${otherVal}"]`);
+    chosen = c && c.checked;
+  }
+  spec.classList.toggle("hidden", !chosen);
+  if (!chosen) spec.value = "";
+}
+
+/* ============ CONDITIONAL FOLLOW-UP BLOCKS ============ */
+function refreshFollows(){
+  $$("[data-show-when]").forEach(block => {
+    const [key, vals] = block.dataset.showWhen.split(":");
+    const wanted = vals.split(",");
+    let show = false;
+    // radios
+    const radio = document.querySelector(`input[name="${key}"]:checked`);
+    if (radio) show = wanted.includes(radio.value);
+    // checkboxes
+    const boxes = $$(`input[name="${key}"]:checked`);
+    if (boxes.length) show = boxes.some(b => wanted.includes(b.value));
+    block.classList.toggle("hidden", !show);
+  });
+}
+$$("input[type=radio]").forEach(r => r.addEventListener("change", refreshFollows));
+
+/* ============ NAVIGATION ============ */
+function showScreen(i){
+  $$(".screen").forEach(s => s.classList.add("hidden"));
+  $("#" + SCREENS[i]).classList.remove("hidden");
+  idx = i;
+  bar.style.width = ((i) / SCREENS.length * 100 + 5) + "%";
+  if (SCREENS[i] === "s-cwe" && typeof refreshCweGate === "function") refreshCweGate();
+  if (window.ConcaveSurveyImages && typeof window.ConcaveSurveyImages.applySurveyImages === "function") {
+    window.ConcaveSurveyImages.applySurveyImages();
+  }
+  window.scrollTo(0,0);
+}
+function showResult(id){
+  $$(".screen").forEach(s => s.classList.add("hidden"));
+  $("#"+id).classList.remove("hidden");
+  bar.style.width = "100%";
+  window.scrollTo(0,0);
+}
+
+$$("[data-next]").forEach(btn => btn.addEventListener("click", () => {
+  const screen = $("#" + SCREENS[idx]);
+  if (!validateScreen(screen)) return;
+
+  // Consent = No is an immediate stop — they declined to participate.
+  // It still shows the same closing message (no separate terminate screen).
+  if (SCREENS[idx] === "s-consent" && rv("consent") === "No"){
+    window.__terminated = true; window.__termReasons = ["consent"];
+    showResult("s-thankyou");
+    return;
+  }
+
+  // Gender = Male is an immediate stop — no further questions.
+  if (SCREENS[idx] === "s-demo2" && rv("gender") === "Male"){
+    window.__terminated = true; window.__termReasons = ["gender-male"];
+    showResult("s-thankyou");
+    return;
+  }
+
+  // For every other screen, terminations are recorded but the form continues.
+  // The respondent fills all questions; the decision happens only at Submit.
+  // Regardless of qualify/terminate, everyone sees the same closing message.
+  if (idx === SCREENS.length - 1){
+    const reasons = collectTerminations();
+    window.__terminated = reasons.length > 0;
+    window.__termReasons = reasons;
+    // Internal-only review flags (never shown to the respondent)
+    window.__reviewFlags = collectReviewFlags();
+    showResult("s-thankyou");
+    return;
+  }
+  showScreen(idx + 1);
+}));
+$$("[data-back]").forEach(btn => btn.addEventListener("click", () => { if (idx>0) showScreen(idx-1); }));
+
+/* ============ VALIDATION ============ */
+function setInvalid(q, bad){ q.classList.toggle("invalid", bad); }
+function visible(el){ return el && !el.closest(".hidden") && el.offsetParent !== null; }
+
+function validateScreen(screen){
+  let ok = true;
+  screen.querySelectorAll(".q").forEach(q => {
+    if (!visible(q)) { setInvalid(q,false); return; }
+    let valid = true;
+    const single = q.querySelector("[data-single]");
+    const multi  = q.querySelector("[data-multi]");
+    const text   = q.querySelector('input[type=text],input[type=tel],input[type=number],input[type=email]');
+    const sel    = q.querySelector("select");
+    const ta     = q.querySelector("textarea");
+
+    // grid (travel) special
+    if (q.dataset.key === "travel"){
+      valid = document.querySelector('input[name=travel_intl]:checked') && document.querySelector('input[name=travel_dom]:checked');
+    }
+    else if (q.dataset.key === "bq10_brands_used"){
+      // at least one brand box filled, each filled box >= 3 chars
+      const brands = getBrandBoxes();
+      const filled = brands.filter(v => v.length > 0);
+      valid = filled.length >= 1 && filled.every(v => v.length >= 3);
+    }
+    else if (q.dataset.key === "bq11_recent_brand"){
+      valid = !!document.querySelector('input[name="bq11_recent_brand"]:checked');
+    }
+    else if (q.dataset.key === "dob"){
+      const dobInput = q.querySelector('[name=dob_date]');
+      const dobVal = dobInput ? dobInput.value : "";
+      const bridge = window.ConcaveRegistrationBridge;
+      const dobError =
+        bridge && typeof bridge.validateDobValue === "function"
+          ? bridge.validateDobValue(dobVal)
+          : null;
+      valid = Boolean(dobVal) && !dobError;
+      const errMsg = q.querySelector(".err-msg");
+      if (errMsg) {
+        errMsg.textContent = dobError || "Required.";
+      }
+    }
+    else if (single){
+      valid = !!single.querySelector("input:checked");
+    }
+    else if (multi){
+      valid = multi.querySelectorAll("input:checked").length > 0;
+    }
+    else if (sel){
+      valid = !!sel.value;
+    }
+    else if (ta){
+      valid = ta.value.trim().length > 0;
+    }
+    else if (text){
+      const name = text.name;
+      const v = text.value.trim();
+      if (text.type === "tel") valid = /^\d{10}$/.test(v);
+      else if (text.type === "email") valid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v);
+      else if (name === "zip") valid = /^\d{6}$/.test(v);
+      else valid = v.length > 0;
+    }
+
+    // validate visible "other specify" box if its option chosen
+    const spec = q.querySelector(".spec");
+    if (spec && visible(spec) && !spec.value.trim()) valid = false;
+
+    setInvalid(q, !valid);
+    if (!valid) ok = false;
+  });
+  return ok;
+}
+
+/* ============ TERMINATION RULES ============ */
+function rv(name){ const e=document.querySelector(`input[name="${name}"]:checked`); return e?e.value:""; }
+function cv(name){ return $$(`input[name="${name}"]:checked`).map(e=>e.value); }
+
+// Evaluated only at Submit. Returns an array of triggered reasons (empty = qualified).
+function collectTerminations(){
+  const reasons = [];
+  // Consent = No is handled separately (immediate stop), but include for safety.
+  if (rv("consent") === "No") reasons.push("consent");
+  // Gender = Male (handled separately as immediate stop, included for safety)
+  if (rv("gender") === "Male") reasons.push("gender-male");
+  // Age band: only 18-24 and 25-35 continue; everything else terminates (evaluated at submit)
+  if (["Under 18","41-44","45-54","55+"].includes(rv("age_band"))) reasons.push("age-band");
+  // Bra Q2: someone else mostly decides
+  if (rv("bq2_decider") === "Someone else") reasons.push("decider");
+  // Bra Q3: last bought more than 12 months ago
+  if (rv("bq3_lastbuy") === ">12 months") reasons.push("lastbuy");
+  // Bra Q4: only local brands
+  if (rv("bq4_statement") === "Only local") reasons.push("only-local");
+  // Bra Q8: purchase frequency more than a year
+  if (rv("bq8_freq") === ">1 year") reasons.push("frequency");
+  // Bra Q9: spend less than ₹399 (i.e. up to ₹300-399 band)
+  if (["<100","100-199","200-299","300-399"].includes(rv("bq9_spend"))) reasons.push("spend");
+  return reasons;
+}
+
+function fieldValue(name) {
+  const checked = document.querySelector('input[name="' + name + '"]:checked');
+  if (checked) return checked.value;
+  const field = document.querySelector('[name="' + name + '"]');
+  return field ? String(field.value || "").trim() : "";
+}
+
+function collectTerminationDetails() {
+  const RULES = {
+    consent: { field: "consent", label: "Consent", ruleLabel: "Consent declined", reason: "Consent = No" },
+    "gender-male": { field: "gender", label: "Gender", ruleLabel: "Gender exclusion", reason: "Gender = Male" },
+    "age-band": { field: "age_band", label: "Age band", ruleLabel: "Age band", reason: "Age band not eligible" },
+    decider: { field: "bq2_decider", label: "Purchase decider", ruleLabel: "Decision maker", reason: "Someone else decides purchases" },
+    lastbuy: { field: "bq3_lastbuy", label: "Last purchase", ruleLabel: "Recency", reason: "Last purchase > 12 months" },
+    "only-local": { field: "bq4_statement", label: "Brand preference", ruleLabel: "Brand type", reason: "Only local brands" },
+    frequency: { field: "bq8_freq", label: "Purchase frequency", ruleLabel: "Frequency", reason: "Purchase frequency > 1 year" },
+    spend: { field: "bq9_spend", label: "Spend band", ruleLabel: "Spend threshold", reason: "Spend < ₹399" },
+  };
+
+  return collectTerminations().map(function (ruleKey) {
+    const meta = RULES[ruleKey] || {
+      field: ruleKey,
+      label: ruleKey,
+      ruleLabel: ruleKey,
+      reason: ruleKey,
+    };
+    return {
+      ruleKey: ruleKey,
+      ruleLabel: meta.ruleLabel,
+      questionKey: meta.field,
+      questionLabel: meta.label,
+      answerValue: fieldValue(meta.field),
+      reasonText: meta.reason,
+    };
+  });
+}
+
+window.__concaveCollectTerminations = collectTerminationDetails;
+
+/* ============ INTERNAL REVIEW FLAGS (admin-only, never shown to respondent) ============ */
+function ageFromDob(dobStr){
+  if (!dobStr) return null;
+  const d = new Date(dobStr); if (isNaN(d)) return null;
+  const now = new Date();
+  let a = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) a--;
+  return a;
+}
+function bandForAge(a){
+  if (a == null) return null;
+  if (a < 18) return "Under 18";
+  if (a <= 24) return "18-24";
+  if (a <= 35) return "25-35";
+  if (a <= 44) return "36-44";
+  if (a <= 54) return "45-54";
+  return "55+";
+}
+function collectReviewFlags(){
+  const flags = [];
+  // 1. DOB vs age_band mismatch: computed age band must match the selected age_band.
+  const dob = document.querySelector('[name=dob_date]') ? document.querySelector('[name=dob_date]').value : "";
+  const selBand = rv("age_band");
+  const computed = bandForAge(ageFromDob(dob));
+  if (dob && selBand && computed && computed !== selBand){
+    flags.push({ type: "dob_age_mismatch", computed_band: computed, selected_band: selBand });
+  }
+  // 2. Duplicate IP is detected server-side; the backend appends an "ip_duplicate" flag there.
+  return flags;
+}
+
+/* DOB max/min (18+ only, no future dates) is applied by registration-bridge.js */
+
+/* ============ CWE GATE LOGIC ============
+   - Student / Homemaker: do NOT ask "Are you the CWE?". Always ask CWE edu+occ.
+   - Everyone else: ask "Are you the CWE?".
+       Yes -> skip CWE edu+occ.
+       No  -> ask CWE edu+occ.
+*/
+function refreshCweGate(){
+  const occ = rv("occupation");
+  const skipIsCwe = (occ === "Student" || occ === "Homemaker");
+  const isCweQ   = document.getElementById("q-iscwe");
+  const detail   = document.getElementById("cwe-detail");
+  const isCweVal = rv("is_cwe");
+
+  // Hide/show the "Are you CWE?" question
+  isCweQ.classList.toggle("hidden", skipIsCwe);
+
+  // Decide whether CWE edu+occ detail is shown
+  let showDetail;
+  if (skipIsCwe) showDetail = true;            // student/homemaker always answer CWE detail
+  else showDetail = (isCweVal === "No");        // others only if NOT the CWE
+  detail.classList.toggle("hidden", !showDetail);
+}
+// React to occupation + is_cwe changes
+document.querySelectorAll('input[name="occupation"],input[name="is_cwe"]').forEach(r =>
+  r.addEventListener("change", refreshCweGate));
+
+/* ============ bq10 BRAND LIST → bq11 DYNAMIC SINGLE-SELECT ============ */
+function getBrandBoxes(){
+  return ["bq10_brand_1","bq10_brand_2","bq10_brand_3","bq10_brand_4"]
+    .map(n => { const el = document.querySelector(`[name="${n}"]`); return el ? el.value.trim() : ""; });
+}
+// The list of valid brands (>=3 chars), de-duplicated case-insensitively, order preserved.
+function getValidBrands(){
+  const seen = new Set(); const out = [];
+  getBrandBoxes().forEach(v => {
+    if (v.length >= 3){ const k = v.toLowerCase(); if (!seen.has(k)){ seen.add(k); out.push(v); } }
+  });
+  return out;
+}
+function rebuildBq11(){
+  const wrap = document.getElementById("bq11-opts");
+  if (!wrap) return;
+  const brands = getValidBrands();
+  // remember current selection so we can preserve it if still valid
+  const prev = document.querySelector('input[name="bq11_recent_brand"]:checked');
+  const prevVal = prev ? prev.value : "";
+  if (brands.length === 0){
+    wrap.innerHTML = '<div class="bq11-empty muted">Fill in at least one brand above to choose from.</div>';
+    return;
+  }
+  wrap.innerHTML = brands.map(b => {
+    const checked = (b.toLowerCase() === prevVal.toLowerCase()) ? " checked" : "";
+    const esc = b.replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    return `<label class="opt"><input type="radio" name="bq11_recent_brand" value="${esc}"${checked}><span>${esc}</span></label>`;
+  }).join("");
+  // re-apply the highlight + autosave handlers to the freshly built radios
+  wrap.querySelectorAll('input[name="bq11_recent_brand"]').forEach(r => {
+    r.addEventListener("change", () => { highlightOpts(wrap); scheduleSave(); });
+  });
+  highlightOpts(wrap);
+}
+// small helper to toggle the .sel class like the rest of the form does
+function highlightOpts(scope){
+  scope.querySelectorAll(".opt").forEach(o => {
+    const inp = o.querySelector("input");
+    o.classList.toggle("sel", inp && inp.checked);
+  });
+}
+// rebuild bq11 whenever a brand box changes
+document.querySelectorAll(".brand-box").forEach(inp => {
+  inp.addEventListener("input", () => { rebuildBq11(); scheduleSave(); });
+});
+
+/* ============ AUTOSAVE & RESTORE (by mobile number) ============
+   Storage is provided by /forms/form-draft.js (localStorage, 48h TTL).
+   window.supabaseSaveDraft / Load / Clear are installed by that script and
+   keep this FormStore API working for the bundled HTML. */
+const FormStore = {
+  // Persist the current draft for this mobile number.
+  async save(mobile, payload){
+    try {
+      if (window.supabaseSaveDraft) return await window.supabaseSaveDraft(mobile, payload);
+    } catch(e){ console.warn("draft save failed", e); }
+    return false;
+  },
+  // Fetch a saved draft for this mobile number (return the payload object or null).
+  async load(mobile){
+    try {
+      if (window.supabaseLoadDraft) return await window.supabaseLoadDraft(mobile);
+    } catch(e){ console.warn("draft load failed", e); }
+    return null;
+  },
+  // Remove the draft once the form is submitted.
+  async clear(mobile){
+    try {
+      if (window.supabaseClearDraft) return await window.supabaseClearDraft(mobile);
+    } catch(e){ console.warn("draft clear failed", e); }
+    return false;
+  }
+};
+
+// Serialize every answer in the form into a plain object.
+function serializeForm(){
+  const data = { __screen: idx, fields:{} };
+  // radios + checkboxes
+  document.querySelectorAll('input[type=radio]:checked').forEach(r => { data.fields[r.name] = r.value; });
+  const multi = {};
+  document.querySelectorAll('input[type=checkbox]:checked').forEach(c => {
+    (multi[c.name] = multi[c.name] || []).push(c.value);
+  });
+  Object.assign(data.fields, multi);
+  // text / tel / email / number / date / textarea / select / brand boxes
+  document.querySelectorAll('input[type=text],input[type=tel],input[type=email],input[type=number],input[type=date],textarea,select').forEach(el => {
+    if (el.value !== "") data.fields[el.name] = el.value;
+  });
+  return data;
+}
+
+// Restore a saved payload back into the form.
+function restoreForm(payload){
+  if (!payload || !payload.fields) return;
+  const f = payload.fields;
+  Object.keys(f).forEach(name => {
+    const val = f[name];
+    if (Array.isArray(val)){
+      val.forEach(v => { const el = document.querySelector(`input[name="${name}"][value="${CSS.escape(v)}"]`); if (el) el.checked = true; });
+    } else {
+      const radios = document.querySelectorAll(`input[type=radio][name="${name}"]`);
+      if (radios.length){
+        radios.forEach(r => { if (r.value === val) r.checked = true; });
+      } else {
+        const el = document.querySelector(`[name="${name}"]`);
+        if (el) el.value = val;
+      }
+    }
+  });
+  // rebuild dependent UI after restore
+  if (typeof refreshCweGate === "function") refreshCweGate();
+  rebuildBq11();
+  document.querySelectorAll(".opts").forEach(highlightOpts);
+  // jump back to the screen they were on
+  const s = Number(payload.__screen);
+  showScreen(Number.isFinite(s) && s >= 0 && s < SCREENS.length ? s : 0);
+}
+
+// Debounced save — called on any answer change. Only saves once a mobile number exists.
+let __saveTimer = null;
+function scheduleSave(){
+  const mobileEl = document.querySelector('[name="phone"]');
+  const mobile = mobileEl ? mobileEl.value.trim() : "";
+  if (!/^\d{10}$/.test(mobile)) return; // need a valid mobile to key the draft
+  clearTimeout(__saveTimer);
+  __saveTimer = setTimeout(() => { FormStore.save(mobile, serializeForm()); }, 600);
+}
+// Save on any input/change across the form
+document.addEventListener("input", scheduleSave);
+document.addEventListener("change", scheduleSave);
+
+// When a valid mobile number is entered, auto-restore any saved draft (no prompt).
+let __restoreChecked = "";
+async function maybeAutoRestore(){
+  const mobileEl = document.querySelector('[name="phone"]');
+  const mobile = mobileEl ? mobileEl.value.trim() : "";
+  if (!/^\d{10}$/.test(mobile) || mobile === __restoreChecked) return;
+  __restoreChecked = mobile;
+  const draft = await FormStore.load(mobile);
+  if (!draft) return;
+  restoreForm(draft);
+}
+const __phoneEl = document.querySelector('[name="phone"]');
+if (__phoneEl){ __phoneEl.addEventListener("blur", maybeAutoRestore); __phoneEl.addEventListener("change", maybeAutoRestore); }
+
+// Clear the draft on successful submit (hook into the existing thank-you path).
+const __origShowResult = showResult;
+showResult = function(id){
+  if (id === "s-thankyou"){
+    const mobileEl = document.querySelector('[name="phone"]');
+    const mobile = mobileEl ? mobileEl.value.trim() : "";
+    if (/^\d{10}$/.test(mobile)) FormStore.clear(mobile);
+  }
+  return __origShowResult(id);
+};
+
+/* init */
+showScreen(0);
+showResult = ConcaveRegistrationBridge.attach(showResult);
+refreshCweGate();
+rebuildBq11();
+
+</script>
+</body>
+</html>

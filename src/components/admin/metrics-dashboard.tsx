@@ -1,0 +1,738 @@
+"use client";
+
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import { ChevronDownIcon } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import type {
+  DashboardMetrics,
+  MetricBreakdown,
+} from "@/features/respondents/types";
+import type {
+  DropSeverity,
+  FunnelSnapshotStatus,
+} from "@/features/respondents/lib/funnel-snapshot";
+import { cn } from "@/lib/utils";
+
+const REFRESH_MS = 30_000;
+const RING_R = 54;
+const RING_C = 2 * Math.PI * RING_R;
+
+type SectionKey =
+  | "funnel"
+  | "target"
+  | "acquisition"
+  | "terminations"
+  | "geography"
+  | "timing";
+
+type MetricsDashboardProps = {
+  initialMetrics: DashboardMetrics;
+};
+
+function formatSyncedAt(iso: string) {
+  try {
+    return new Intl.DateTimeFormat("en-IN", {
+      timeZone: "Asia/Kolkata",
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+    }).format(new Date(iso));
+  } catch {
+    return iso;
+  }
+}
+
+function formatDuration(sec: number | null) {
+  if (sec == null) return "—";
+  if (sec < 60) return `${sec}s`;
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}m ${s}s`;
+}
+
+function statusCopy(
+  status: FunnelSnapshotStatus,
+  formAccepting: boolean,
+): { badge: string; pill: string; open: boolean } {
+  if (!formAccepting || status === "project-closed") {
+    return {
+      badge: "Closed — Not Accepting Responses",
+      pill: "Closed",
+      open: false,
+    };
+  }
+  const map: Record<FunnelSnapshotStatus, string> = {
+    open: "Open",
+    "near-full": "Near full",
+    full: "Full",
+    over: "Over",
+    "eligibility-closed": "Eligibility closed",
+    "project-closed": "Closed",
+  };
+  return {
+    badge: `Status: ${map[status]}`,
+    pill: map[status],
+    open: true,
+  };
+}
+
+function dropChipClass(severity: DropSeverity) {
+  if (severity === "lo") return "bg-[#E2F0EC] text-[#3E8E7E]";
+  if (severity === "mid") return "bg-[#F7EEDB] text-[#A6772F]";
+  if (severity === "hi") return "bg-[#F6E3E3] text-[#C25B5B]";
+  return "bg-rose-tint text-plum-faint";
+}
+
+export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
+  const [metrics, setMetrics] = useState(initialMetrics);
+  const [refreshing, setRefreshing] = useState(false);
+  const [animKey, setAnimKey] = useState(0);
+  const [open, setOpen] = useState<Record<SectionKey, boolean>>({
+    funnel: true,
+    target: true,
+    acquisition: false,
+    terminations: false,
+    geography: false,
+    timing: false,
+  });
+
+  const refresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const response = await fetch("/api/admin/metrics", { cache: "no-store" });
+      const payload = await response.json().catch(() => ({}));
+      if (response.ok && payload.metrics) {
+        setMetrics(payload.metrics as DashboardMetrics);
+      }
+    } catch {
+      // keep last snapshot
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    setMetrics(initialMetrics);
+  }, [initialMetrics]);
+
+  useEffect(() => {
+    setAnimKey((key) => key + 1);
+  }, [metrics.syncedAt]);
+
+  useEffect(() => {
+    function onFocus() {
+      void refresh();
+    }
+    window.addEventListener("focus", onFocus);
+    const id = window.setInterval(() => void refresh(), REFRESH_MS);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      window.clearInterval(id);
+    };
+  }, [refresh]);
+
+  const { funnel, kpis, config } = metrics;
+  const status = statusCopy(funnel.status, funnel.formAccepting);
+  const maxStage = Math.max(...funnel.stages.map((s) => s.count), 1);
+  const ringOffset = useMemo(() => {
+    const pct = Math.min(100, Math.max(0, funnel.eligiblePct)) / 100;
+    return RING_C * (1 - pct);
+  }, [funnel.eligiblePct]);
+
+  function setAll(next: boolean) {
+    setOpen({
+      funnel: next,
+      target: next,
+      acquisition: next,
+      terminations: next,
+      geography: next,
+      timing: next,
+    });
+  }
+
+  const verifyOfEligible =
+    (kpis.eligibleReached ?? kpis.eligible) > 0
+      ? Math.round(
+          (kpis.verified / (kpis.eligibleReached ?? kpis.eligible)) * 1000,
+        ) / 10
+      : 0;
+
+  return (
+    <div
+      className={cn(
+        "space-y-5 transition-opacity duration-200",
+        refreshing && "opacity-75",
+      )}
+    >
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p
+            key={animKey}
+            className="metrics-sync-flash mt-1 text-xs text-plum-faint"
+          >
+            Synced {formatSyncedAt(metrics.syncedAt)}
+            {refreshing ? " · refreshing…" : ""}
+            <span className="mx-1.5">·</span>
+            Refetch on focus + every 30s
+          </p>
+        </div>
+        <span
+          className={cn(
+            "inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors duration-300",
+            status.open
+              ? "bg-[#E2F0EC] text-[#3E8E7E]"
+              : "bg-[#F6EEF1] text-[#94838C]",
+          )}
+        >
+          <span
+            className={cn(
+              "size-1.5 rounded-full transition-colors duration-300",
+              status.open ? "bg-[#3E8E7E]" : "bg-primary",
+              refreshing && "animate-pulse",
+            )}
+          />
+          {status.badge}
+        </span>
+      </div>
+
+      {/* Toolbar */}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => setAll(true)}
+        >
+          Expand all
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => setAll(false)}
+        >
+          Collapse all
+        </Button>
+      </div>
+
+      {/* KPI strip */}
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+        {(
+          [
+            {
+              label: "Registered",
+              value: kpis.registered,
+              hint: "screener started",
+              accent: "rose" as const,
+            },
+            {
+              label: "Eligible",
+              value: kpis.eligible,
+              hint: `of ${config.closesAt} cap · now`,
+              accent: "teal" as const,
+            },
+            {
+              label: "Not verified",
+              value: kpis.notVerified ?? funnel.notVerified,
+              hint: "reached eligible, not verified",
+              accent: "amber" as const,
+            },
+            {
+              label: "Verified",
+              value: kpis.verified,
+              hint: `${verifyOfEligible}% of reached`,
+              accent: "blue" as const,
+            },
+            {
+              label: "Completed",
+              value: kpis.completed,
+              hint: "main survey",
+              accent: "plum" as const,
+            },
+            {
+              label: "Fraud-flagged",
+              value: kpis.fraudFlagged,
+              hint: "device / IP repeats",
+              accent: "amber" as const,
+            },
+          ] as const
+        ).map((tile, index) => (
+          <KpiTile
+            key={`${animKey}-${tile.label}`}
+            label={tile.label}
+            value={tile.value}
+            hint={tile.hint}
+            accent={tile.accent}
+            delayMs={index * 45}
+          />
+        ))}
+      </div>
+
+      {/* Collapsibles */}
+      <div className="space-y-3">
+        <Collapsible
+          title="Recruitment funnel & drop-off"
+          summary={`${funnel.stages.map((s) => s.count).join(" → ")}`}
+          open={open.funnel}
+          onToggle={() => setOpen((s) => ({ ...s, funnel: !s.funnel }))}
+        >
+          <ul key={animKey} className="space-y-3">
+            {funnel.stages.map((stage, index) => (
+              <li
+                key={stage.key}
+                className="metrics-row-enter"
+                style={{ animationDelay: `${index * 55}ms` }}
+              >
+                <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-sm">
+                  <span className="font-medium text-foreground">
+                    {stage.label}
+                    {stage.isBiggestCliff ? (
+                      <span className="ml-2 rounded-full bg-[#F6E3E3] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#C25B5B]">
+                        Biggest cliff
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="flex items-center gap-2 font-mono text-xs text-plum-muted">
+                    {stage.count}
+                    <span>· {stage.pctOfRegistered}% of reg</span>
+                    {index > 0 && stage.dropFromPrev > 0 ? (
+                      <span
+                        className={cn(
+                          "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase",
+                          dropChipClass(stage.dropSeverity),
+                        )}
+                      >
+                        −{stage.dropPct}%
+                      </span>
+                    ) : null}
+                  </span>
+                </div>
+                <div className="h-2.5 overflow-hidden rounded-full bg-rose-tint">
+                  <div
+                    className={cn(
+                      "h-full rounded-full transition-[width] duration-700 ease-out",
+                      stage.isBiggestCliff ? "bg-[#C25B5B]" : "bg-primary",
+                    )}
+                    style={{
+                      width: `${Math.max(3, (stage.count / maxStage) * 100)}%`,
+                    }}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+          {funnel.cliffLabel ? (
+            <p
+              key={`cliff-${animKey}`}
+              className="metrics-row-enter mt-4 rounded-[10px] border border-[#F0D0D0] bg-[#FBF1F1] px-3 py-2 text-sm text-[#8A4A4A]"
+              style={{ animationDelay: "180ms" }}
+            >
+              Biggest drop-off: <strong>{funnel.cliffLabel}</strong> (−
+              {funnel.stages.find((s) => s.isBiggestCliff)?.dropFromPrev ??
+                0}{" "}
+              respondents).
+            </p>
+          ) : null}
+        </Collapsible>
+
+        <Collapsible
+          title="Target progress"
+          summary={
+            <span className="inline-flex flex-wrap items-center gap-2">
+              <span className="font-mono">
+                {funnel.eligible} / {funnel.closesAt} eligible
+              </span>
+              <span
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                  status.open
+                    ? "bg-[#E2F0EC] text-[#3E8E7E]"
+                    : "bg-[#F6EEF1] text-[#94838C]",
+                )}
+              >
+                {status.pill}
+              </span>
+            </span>
+          }
+          open={open.target}
+          onToggle={() => setOpen((s) => ({ ...s, target: !s.target }))}
+        >
+          <div className="grid gap-6 lg:grid-cols-[200px_1fr]">
+            <div className="relative mx-auto flex h-[140px] w-[140px] items-center justify-center">
+              <svg
+                width="140"
+                height="140"
+                viewBox="0 0 140 140"
+                className="-rotate-90"
+                aria-label={`${funnel.eligiblePct}% of cap`}
+              >
+                <circle
+                  cx="70"
+                  cy="70"
+                  r={RING_R}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="12"
+                  className="text-rose-tint"
+                />
+                <circle
+                  cx="70"
+                  cy="70"
+                  r={RING_R}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="12"
+                  strokeLinecap="round"
+                  strokeDasharray={RING_C}
+                  strokeDashoffset={ringOffset}
+                  className="text-primary transition-[stroke-dashoffset] duration-700 ease-out"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                <p className="font-mono text-2xl font-bold text-foreground">
+                  {funnel.eligiblePct}%
+                </p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-plum-faint">
+                  of cap
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+                <LegendItem label="Target" value={funnel.target} />
+                <LegendItem label="Buffer" value={funnel.buffer} />
+                <LegendItem
+                  label="Closes at"
+                  value={funnel.closesAt}
+                  emphasize
+                />
+                <LegendItem label="Eligible now" value={funnel.eligible} />
+                <LegendItem
+                  label="Not verified"
+                  value={funnel.notVerified}
+                />
+                <LegendItem
+                  label="Remaining to cap"
+                  value={funnel.remainingToCap}
+                />
+                <LegendItem
+                  label="Verify rate"
+                  value={`${funnel.verifyRate}%`}
+                />
+              </dl>
+
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.06em] text-plum-faint">
+                  Funnel headroom
+                </p>
+                <HeadroomBar
+                  label="Eligible"
+                  value={funnel.eligible}
+                  max={funnel.closesAt}
+                />
+                <HeadroomBar
+                  label="Verified"
+                  value={funnel.verified}
+                  max={funnel.target}
+                />
+                <HeadroomBar
+                  label="Completed"
+                  value={funnel.completed}
+                  max={funnel.target}
+                />
+              </div>
+
+              <p className="rounded-[10px] border border-[#C5D8F0] bg-[#E8F1FB] px-3 py-2 text-sm leading-relaxed text-[#3A5F8A]">
+                Buffer gap: {funnel.buffer} extra seats beyond target{" "}
+                {funnel.target}. Not verified (reached eligible, not verified):{" "}
+                {funnel.notVerified}.
+              </p>
+            </div>
+          </div>
+        </Collapsible>
+
+        <Collapsible
+          title="Acquisition"
+          summary="Source & type"
+          open={open.acquisition}
+          onToggle={() =>
+            setOpen((s) => ({ ...s, acquisition: !s.acquisition }))
+          }
+        >
+          <div className="grid gap-6 md:grid-cols-2">
+            <BarList title="By source" rows={metrics.acquisitionBySource} />
+            <BarList title="By type" rows={metrics.acquisitionByType} />
+          </div>
+        </Collapsible>
+
+        <Collapsible
+          title="Screener terminations"
+          summary={
+            metrics.terminationsAvailable
+              ? `${metrics.terminationsByReason.reduce((n, r) => n + r.count, 0)} events`
+              : "pending data"
+          }
+          open={open.terminations}
+          onToggle={() =>
+            setOpen((s) => ({ ...s, terminations: !s.terminations }))
+          }
+        >
+          {!metrics.terminationsAvailable ? (
+            <PendingNote text="form_terminations table not available yet." />
+          ) : metrics.terminationsByReason.length === 0 ? (
+            <PendingNote text="No screener terminations recorded yet." />
+          ) : (
+            <BarList
+              title="Screen-out reasons"
+              rows={metrics.terminationsByReason}
+            />
+          )}
+        </Collapsible>
+
+        <Collapsible
+          title="Geography (soft)"
+          summary="Normalized cities · no quotas"
+          open={open.geography}
+          onToggle={() => setOpen((s) => ({ ...s, geography: !s.geography }))}
+        >
+          {metrics.geographyByCity.length === 0 ? (
+            <PendingNote text="No city data on participants yet." />
+          ) : (
+            <BarList
+              title="Cities (normalized)"
+              rows={metrics.geographyByCity}
+            />
+          )}
+        </Collapsible>
+
+        <Collapsible
+          title="Survey timing & abandonment"
+          summary={
+            metrics.surveyTiming.available
+              ? `median ${formatDuration(metrics.surveyTiming.medianDurationSec)}`
+              : "pending data"
+          }
+          open={open.timing}
+          onToggle={() => setOpen((s) => ({ ...s, timing: !s.timing }))}
+        >
+          {metrics.surveyTiming.available ? (
+            <div className="space-y-2 text-sm">
+              <p>
+                Sample size:{" "}
+                <span className="font-mono font-semibold">
+                  {metrics.surveyTiming.sampleSize}
+                </span>
+              </p>
+              <p>
+                Median total duration:{" "}
+                <span className="font-mono font-semibold">
+                  {formatDuration(metrics.surveyTiming.medianDurationSec)}
+                </span>
+              </p>
+              <p className="text-plum-muted">
+                {metrics.surveyTiming.abandonmentNote}
+              </p>
+            </div>
+          ) : (
+            <PendingNote
+              text={
+                metrics.surveyTiming.abandonmentNote ??
+                "Survey timing data pending."
+              }
+            />
+          )}
+        </Collapsible>
+      </div>
+    </div>
+  );
+}
+
+function KpiTile({
+  label,
+  value,
+  hint,
+  accent,
+  delayMs = 0,
+}: {
+  label: string;
+  value: number;
+  hint: string;
+  accent: "rose" | "teal" | "blue" | "plum" | "amber";
+  delayMs?: number;
+}) {
+  const bar = {
+    rose: "before:bg-primary",
+    teal: "before:bg-[#3E8E7E]",
+    blue: "before:bg-[#4A7BB5]",
+    plum: "before:bg-[#8C7BA8]",
+    amber: "before:bg-[#C99449]",
+  }[accent];
+
+  return (
+    <div
+      className={cn(
+        "metrics-kpi-enter relative overflow-hidden rounded-[14px] border border-border bg-card p-4 shadow-sm before:absolute before:inset-y-0 before:left-0 before:w-[3px]",
+        bar,
+      )}
+      style={{ animationDelay: `${delayMs}ms` }}
+    >
+      <p className="font-mono text-2xl font-bold tabular-nums tracking-tight text-foreground">
+        {value}
+      </p>
+      <p className="mt-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+        {label}
+      </p>
+      <p className="mt-0.5 text-[11px] text-plum-muted">{hint}</p>
+    </div>
+  );
+}
+
+function Collapsible({
+  title,
+  summary,
+  open,
+  onToggle,
+  children,
+}: {
+  title: string;
+  summary?: ReactNode;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <section className="overflow-hidden rounded-[14px] border border-border bg-card shadow-sm">
+      <button
+        type="button"
+        className="flex w-full items-center gap-2 bg-rose-tint/40 px-4 py-3 text-left"
+        onClick={onToggle}
+        aria-expanded={open}
+      >
+        <ChevronDownIcon
+          className={cn(
+            "size-4 shrink-0 text-plum-muted transition-transform duration-200",
+            open ? "rotate-0" : "-rotate-90",
+          )}
+        />
+        <span className="min-w-0 flex-1 text-sm font-semibold text-foreground">
+          {title}
+        </span>
+        {summary ? (
+          <span className="hidden text-xs text-plum-muted sm:inline">
+            {summary}
+          </span>
+        ) : null}
+      </button>
+      <div
+        className={cn(
+          "grid transition-[grid-template-rows] duration-300 ease-out",
+          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+        )}
+      >
+        <div className="overflow-hidden">
+          <div className="border-t border-border px-4 py-4">{children}</div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function LegendItem({
+  label,
+  value,
+  emphasize,
+}: {
+  label: string;
+  value: number | string;
+  emphasize?: boolean;
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-background px-3 py-2">
+      <dt className="text-[10px] font-semibold uppercase tracking-[0.06em] text-plum-faint">
+        {label}
+      </dt>
+      <dd
+        className={cn(
+          "mt-0.5 font-mono text-lg font-bold tabular-nums",
+          emphasize ? "text-primary" : "text-foreground",
+        )}
+      >
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+function HeadroomBar({
+  label,
+  value,
+  max,
+}: {
+  label: string;
+  value: number;
+  max: number;
+}) {
+  const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
+  return (
+    <div className="mb-2">
+      <div className="mb-1 flex justify-between text-xs">
+        <span className="text-foreground">{label}</span>
+        <span className="font-mono text-plum-muted">
+          {value} / {max}
+        </span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-rose-tint">
+        <div
+          className="h-full rounded-full bg-primary transition-all"
+          style={{ width: `${Math.max(2, pct)}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function BarList({ title, rows }: { title: string; rows: MetricBreakdown[] }) {
+  const max = Math.max(...rows.map((r) => r.count), 1);
+  return (
+    <div>
+      <p className="mb-3 text-xs font-semibold uppercase tracking-[0.06em] text-plum-faint">
+        {title}
+      </p>
+      <ul className="space-y-2">
+        {rows.map((row) => (
+          <li key={row.label}>
+            <div className="mb-1 flex justify-between gap-2 text-sm">
+              <span className="capitalize text-foreground">{row.label}</span>
+              <span className="font-mono text-xs text-plum-muted">
+                {row.count} · {row.percentage}%
+              </span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-rose-tint">
+              <div
+                className="h-full rounded-full bg-primary/80"
+                style={{ width: `${(row.count / max) * 100}%` }}
+              />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function PendingNote({ text }: { text: string }) {
+  return (
+    <p className="rounded-[10px] border border-dashed border-border bg-rose-tint/30 px-3 py-3 text-sm text-plum-muted">
+      Pending data — {text}
+    </p>
+  );
+}

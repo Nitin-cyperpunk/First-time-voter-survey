@@ -1,0 +1,2067 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enamor Panel — Admin Demo</title>
+  <style>
+    :root {
+      /* ── Pastel-pink palette (refined, not girly) ── */
+      --rose: #C97B8E;
+      /* primary brand accent - dusty rose */
+      --rose-dk: #A85A6E;
+      /* hover / pressed */
+      --rose-soft: #F3D9DF;
+      /* soft blush fill */
+      --rose-tint: #FBEEF1;
+      /* lightest blush - table stripe / panel */
+      --plum: #3A2A33;
+      /* deep plum - primary text */
+      --plum-2: #5E4A54;
+      /* secondary text */
+      --plum-faint: #94838C;
+      /* faint labels */
+      --bg: #FBF7F8;
+      /* warm off-white page bg */
+      --panel: #FFFFFF;
+      /* card bg */
+      --line: #ECDDE2;
+      /* hairline borders */
+      --sidebar: #2E2128;
+      /* deep plum sidebar */
+      --sidebar-2: #3D2E36;
+      /* sidebar hover */
+      --sidebar-ink: #E9D9DF;
+      /* sidebar text */
+      --sidebar-faint: #9C8791;
+      /* sidebar muted */
+
+      /* status (muted, same family) */
+      --st-lead: #8C7BA8;
+      /* lavender */
+      --st-elig: #3E8E7E;
+      /* teal-green */
+      --st-notelig: #9C8791;
+      /* grey */
+      --st-comp: #4A7BB5;
+      /* blue */
+      --st-review: #C99449;
+      /* amber */
+      --st-pass: #3E8E7E;
+      --st-fail: #C25B5B;
+      /* muted red */
+      --st-succ: #2F7D5B;
+      /* green */
+      --st-unsucc: #B5605F;
+      --st-soft-bg: #F6EEF1;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    html,
+    body {
+      height: 100%
+    }
+
+    body {
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--plum);
+      font-size: 14px;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .mono {
+      font-family: 'SF Mono', 'JetBrains Mono', ui-monospace, 'Cascadia Code', Consolas, monospace
+    }
+
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #E3CED5;
+      border-radius: 6px
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent
+    }
+
+    /* ── Layout shell ── */
+    .app {
+      display: flex;
+      min-height: 100vh
+    }
+
+    .sidebar {
+      width: 236px;
+      flex-shrink: 0;
+      background: var(--sidebar);
+      color: var(--sidebar-ink);
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+
+    .brand {
+      padding: 22px 22px 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, .07)
+    }
+
+    .brand .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px
+    }
+
+    .brand .mark {
+      width: 30px;
+      height: 30px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, var(--rose), #D9A0AC);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: #fff;
+      font-size: 15px
+    }
+
+    .brand .name {
+      font-weight: 650;
+      font-size: 15px;
+      letter-spacing: .2px
+    }
+
+    .brand .sub {
+      font-size: 11px;
+      color: var(--sidebar-faint);
+      margin-top: 3px;
+      letter-spacing: .3px
+    }
+
+    .nav {
+      padding: 12px 12px;
+      flex: 1;
+      overflow-y: auto
+    }
+
+    .nav-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: var(--sidebar-faint);
+      padding: 12px 12px 6px
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 9px 12px;
+      border-radius: 9px;
+      color: var(--sidebar-ink);
+      cursor: pointer;
+      font-size: 13.5px;
+      font-weight: 500;
+      margin-bottom: 2px;
+      border: 1px solid transparent;
+      transition: background .12s
+    }
+
+    .nav-item:hover {
+      background: var(--sidebar-2)
+    }
+
+    .nav-item.active {
+      background: linear-gradient(90deg, rgba(201, 123, 142, .28), rgba(201, 123, 142, .10));
+      border-color: rgba(201, 123, 142, .4)
+    }
+
+    .nav-item .ico {
+      width: 17px;
+      height: 17px;
+      flex-shrink: 0;
+      opacity: .92
+    }
+
+    .nav-item .badge {
+      margin-left: auto;
+      background: var(--rose);
+      color: #fff;
+      font-size: 10.5px;
+      font-weight: 600;
+      border-radius: 20px;
+      padding: 1px 7px;
+      font-family: inherit
+    }
+
+    .nav-item.active .badge {
+      background: #fff;
+      color: var(--rose-dk)
+    }
+
+    .nav-foot {
+      padding: 14px 18px;
+      border-top: 1px solid rgba(255, 255, 255, .07);
+      font-size: 11px;
+      color: var(--sidebar-faint)
+    }
+
+    .nav-foot .who {
+      color: var(--sidebar-ink);
+      font-weight: 500
+    }
+
+    /* ── Main ── */
+    .main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column
+    }
+
+    .topbar {
+      height: 60px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      padding: 0 26px;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 20
+    }
+
+    .topbar h1 {
+      font-size: 17px;
+      font-weight: 650;
+      letter-spacing: -.01em
+    }
+
+    .topbar .crumb {
+      color: var(--plum-faint);
+      font-size: 12.5px;
+      margin-top: 1px
+    }
+
+    .topbar .spacer {
+      flex: 1
+    }
+
+    .search {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      padding: 7px 12px;
+      width: 280px;
+      color: var(--plum-faint);
+      font-size: 13px
+    }
+
+    .search input {
+      border: none;
+      background: none;
+      outline: none;
+      flex: 1;
+      color: var(--plum);
+      font-size: 13px;
+      font-family: inherit
+    }
+
+    .pill-demo {
+      background: var(--rose-soft);
+      color: var(--rose-dk);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid #E9C2CC
+    }
+
+    .content {
+      padding: 24px 26px 60px;
+      max-width: 1240px;
+      width: 100%
+    }
+
+    .page {
+      display: none;
+      animation: fade .25s ease
+    }
+
+    .page.active {
+      display: block
+    }
+
+    @keyframes fade {
+      from {
+        opacity: 0;
+        transform: translateY(4px)
+      }
+
+      to {
+        opacity: 1;
+        transform: none
+      }
+    }
+
+    .page-intro {
+      margin-bottom: 20px
+    }
+
+    .page-intro h2 {
+      font-size: 20px;
+      font-weight: 680;
+      letter-spacing: -.015em
+    }
+
+    .page-intro p {
+      color: var(--plum-2);
+      font-size: 13.5px;
+      margin-top: 3px;
+      max-width: 680px
+    }
+
+    .post-tag {
+      display: inline-block;
+      background: #F0E6D6;
+      color: #9A7B3F;
+      font-size: 10.5px;
+      font-weight: 600;
+      padding: 2px 9px;
+      border-radius: 5px;
+      margin-left: 8px;
+      vertical-align: middle;
+      letter-spacing: .02em
+    }
+
+    /* ── Stat tiles ── */
+    .tiles {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 20px
+    }
+
+    .tile {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px 18px;
+      position: relative;
+      overflow: hidden
+    }
+
+    .tile::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: var(--rose);
+      opacity: .5
+    }
+
+    .tile .n {
+      font-size: 27px;
+      font-weight: 700;
+      letter-spacing: -.02em;
+      line-height: 1
+    }
+
+    .tile .l {
+      font-size: 11.5px;
+      color: var(--plum-faint);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-top: 7px;
+      font-weight: 600
+    }
+
+    .tile .d {
+      font-size: 11.5px;
+      color: var(--plum-2);
+      margin-top: 5px
+    }
+
+    .tile.accent::before {
+      background: var(--rose);
+      opacity: 1
+    }
+
+    .tile.warn::before {
+      background: var(--st-review)
+    }
+
+    /* ── Cards / panels ── */
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      margin-bottom: 18px;
+      overflow: hidden
+    }
+
+    .card-head {
+      padding: 15px 18px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      gap: 12px
+    }
+
+    .card-head h3 {
+      font-size: 14.5px;
+      font-weight: 650
+    }
+
+    .card-head .sub {
+      font-size: 12px;
+      color: var(--plum-faint)
+    }
+
+    .card-head .spacer {
+      flex: 1
+    }
+
+    .card-body {
+      padding: 4px 0
+    }
+
+    .card-pad {
+      padding: 18px
+    }
+
+    /* ── Tabs (inner) ── */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      padding: 4px;
+      background: var(--rose-tint);
+      border-radius: 11px;
+      margin-bottom: 18px;
+      width: fit-content
+    }
+
+    .tab {
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--plum-2);
+      cursor: pointer;
+      border: 1px solid transparent
+    }
+
+    .tab.active {
+      background: var(--panel);
+      color: var(--plum);
+      box-shadow: 0 1px 3px rgba(58, 42, 51, .08);
+      border-color: var(--line)
+    }
+
+    .subpage {
+      display: none
+    }
+
+    .subpage.active {
+      display: block
+    }
+
+    /* ── Tables ── */
+    table {
+      width: 100%;
+      border-collapse: collapse
+    }
+
+    thead th {
+      text-align: left;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--plum-faint);
+      font-weight: 650;
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--line);
+      background: var(--rose-tint);
+      white-space: nowrap
+    }
+
+    tbody td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
+      vertical-align: middle
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none
+    }
+
+    tbody tr.click {
+      cursor: pointer
+    }
+
+    tbody tr.click:hover {
+      background: var(--rose-tint)
+    }
+
+    .t-name {
+      font-weight: 600
+    }
+
+    .t-sub {
+      font-size: 11.5px;
+      color: var(--plum-faint)
+    }
+
+    /* ── Status pills (the signature element) ── */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 3px 10px 3px 8px;
+      border-radius: 20px;
+      white-space: nowrap;
+      line-height: 1.5
+    }
+
+    .pill .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%
+    }
+
+    .pill.lead {
+      background: #EFEBF5;
+      color: var(--st-lead)
+    }
+
+    .pill.lead .dot {
+      background: var(--st-lead)
+    }
+
+    .pill.elig {
+      background: #E2F0EC;
+      color: var(--st-elig)
+    }
+
+    .pill.elig .dot {
+      background: var(--st-elig)
+    }
+
+    .pill.notelig {
+      background: #EFEAEC;
+      color: var(--st-notelig)
+    }
+
+    .pill.notelig .dot {
+      background: var(--st-notelig)
+    }
+
+    .pill.comp {
+      background: #E3EDF7;
+      color: var(--st-comp)
+    }
+
+    .pill.comp .dot {
+      background: var(--st-comp)
+    }
+
+    .pill.review {
+      background: #F7EEDB;
+      color: #A6772F
+    }
+
+    .pill.review .dot {
+      background: var(--st-review)
+    }
+
+    .pill.pass {
+      background: #E2F0EC;
+      color: var(--st-pass)
+    }
+
+    .pill.pass .dot {
+      background: var(--st-pass)
+    }
+
+    .pill.fail {
+      background: #F6E3E3;
+      color: var(--st-fail)
+    }
+
+    .pill.fail .dot {
+      background: var(--st-fail)
+    }
+
+    .pill.succ {
+      background: #DEF0E6;
+      color: var(--st-succ)
+    }
+
+    .pill.succ .dot {
+      background: var(--st-succ)
+    }
+
+    .pill.unsucc {
+      background: #F4E2E2;
+      color: var(--st-unsucc)
+    }
+
+    .pill.unsucc .dot {
+      background: var(--st-unsucc)
+    }
+
+    .pill.pend {
+      background: #F0EAD8;
+      color: #9A7B3F
+    }
+
+    .pill.pend .dot {
+      background: #C99449
+    }
+
+    .flag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--st-fail);
+      background: #F6E3E3;
+      padding: 2px 8px;
+      border-radius: 6px
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12.5px;
+      font-weight: 600;
+      font-family: inherit;
+      padding: 7px 14px;
+      border-radius: 9px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--plum);
+      cursor: pointer;
+      transition: .12s
+    }
+
+    .btn:hover {
+      border-color: var(--rose);
+      color: var(--rose-dk)
+    }
+
+    .btn.primary {
+      background: var(--rose);
+      color: #fff;
+      border-color: var(--rose)
+    }
+
+    .btn.primary:hover {
+      background: var(--rose-dk);
+      color: #fff
+    }
+
+    .btn.sm {
+      padding: 5px 10px;
+      font-size: 12px;
+      border-radius: 8px
+    }
+
+    .btn.ghost {
+      background: transparent;
+      border-color: transparent;
+      color: var(--rose-dk)
+    }
+
+    .btn.ghost:hover {
+      background: var(--rose-tint)
+    }
+
+    .btn.wa {
+      background: #E2F0EC;
+      border-color: #CDE6DD;
+      color: #2F7D5B
+    }
+
+    .btn.wa:hover {
+      background: #D4ECE2;
+      color: #236046
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap
+    }
+
+    /* toggle */
+    .seg {
+      display: inline-flex;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden
+    }
+
+    .seg span {
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: default;
+      color: var(--plum-faint);
+      background: var(--panel)
+    }
+
+    .seg span.on.yes {
+      background: #E2F0EC;
+      color: var(--st-elig)
+    }
+
+    .seg span.on.no {
+      background: #EFEAEC;
+      color: var(--st-notelig)
+    }
+
+    /* ── Drawer ── */
+    .drawer-bg {
+      position: fixed;
+      inset: 0;
+      background: rgba(58, 42, 51, .34);
+      backdrop-filter: blur(2px);
+      opacity: 0;
+      pointer-events: none;
+      transition: .2s;
+      z-index: 50
+    }
+
+    .drawer-bg.open {
+      opacity: 1;
+      pointer-events: auto
+    }
+
+    .drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      height: 100vh;
+      width: 480px;
+      max-width: 92vw;
+      background: var(--bg);
+      box-shadow: -12px 0 40px rgba(58, 42, 51, .18);
+      transform: translateX(100%);
+      transition: transform .24s cubic-bezier(.4, 0, .2, 1);
+      z-index: 51;
+      display: flex;
+      flex-direction: column
+    }
+
+    .drawer.open {
+      transform: none
+    }
+
+    .drawer-head {
+      padding: 20px 22px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: flex-start;
+      gap: 12px
+    }
+
+    .drawer-head .x {
+      margin-left: auto;
+      cursor: pointer;
+      color: var(--plum-faint);
+      font-size: 22px;
+      line-height: 1;
+      background: none;
+      border: none
+    }
+
+    .drawer-body {
+      padding: 20px 22px;
+      overflow-y: auto;
+      flex: 1
+    }
+
+    .d-name {
+      font-size: 18px;
+      font-weight: 700
+    }
+
+    .d-meta {
+      font-size: 12.5px;
+      color: var(--plum-faint);
+      margin-top: 2px
+    }
+
+    .d-section {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--plum-faint);
+      font-weight: 650;
+      margin: 20px 0 9px
+    }
+
+    .d-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 8px 0;
+      border-bottom: 1px dashed var(--line);
+      font-size: 13px
+    }
+
+    .d-row .k {
+      color: var(--plum-2)
+    }
+
+    .d-row .v {
+      font-weight: 600;
+      text-align: right
+    }
+
+    /* timeline */
+    .timeline {
+      position: relative;
+      padding-left: 22px
+    }
+
+    .timeline::before {
+      content: "";
+      position: absolute;
+      left: 6px;
+      top: 4px;
+      bottom: 4px;
+      width: 2px;
+      background: var(--line)
+    }
+
+    .tl {
+      position: relative;
+      padding: 0 0 16px
+    }
+
+    .tl::before {
+      content: "";
+      position: absolute;
+      left: -19px;
+      top: 3px;
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: var(--panel);
+      border: 2px solid var(--rose)
+    }
+
+    .tl.done::before {
+      background: var(--rose)
+    }
+
+    .tl .tt {
+      font-size: 13px;
+      font-weight: 600
+    }
+
+    .tl .td {
+      font-size: 11.5px;
+      color: var(--plum-faint);
+      margin-top: 1px
+    }
+
+    /* config editor bits */
+    .field {
+      margin-bottom: 16px
+    }
+
+    .field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--plum-2);
+      margin-bottom: 6px
+    }
+
+    .field textarea,
+    .field input,
+    .field select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--plum);
+      background: var(--panel);
+      resize: vertical
+    }
+
+    .field textarea {
+      min-height: 90px;
+      line-height: 1.5
+    }
+
+    .token {
+      display: inline-block;
+      background: var(--rose-soft);
+      color: var(--rose-dk);
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 6px;
+      margin-right: 6px;
+      cursor: default
+    }
+
+    .token-row {
+      margin: 8px 0 4px;
+      font-size: 12px;
+      color: var(--plum-faint)
+    }
+
+    .ver-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      margin-bottom: 8px;
+      font-size: 13px
+    }
+
+    .ver-item.active {
+      border-color: var(--rose);
+      background: var(--rose-tint)
+    }
+
+    .preview {
+      background: #E7F0E9;
+      border: 1px solid #CDE6D6;
+      border-radius: 11px;
+      padding: 14px;
+      font-size: 13px;
+      color: #2c5e44;
+      max-width: 340px
+    }
+
+    .preview .ph {
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: #5a9077;
+      font-weight: 650;
+      margin-bottom: 6px
+    }
+
+    .note {
+      background: var(--rose-tint);
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--rose);
+      border-radius: 10px;
+      padding: 12px 15px;
+      font-size: 12.5px;
+      color: var(--plum-2);
+      margin-bottom: 16px
+    }
+
+    .note b {
+      color: var(--plum)
+    }
+
+    .empty {
+      padding: 34px;
+      text-align: center;
+      color: var(--plum-faint);
+      font-size: 13px
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px
+    }
+
+    @media(max-width:980px) {
+      .tiles {
+        grid-template-columns: repeat(2, 1fr)
+      }
+
+      .two-col {
+        grid-template-columns: 1fr
+      }
+
+      .sidebar {
+        width: 64px
+      }
+
+      .brand .name,
+      .brand .sub,
+      .nav-label,
+      .nav-item span:not(.badge):not(.ico),
+      .nav-foot {
+        display: none
+      }
+    }
+
+    .hl {
+      color: var(--rose-dk);
+      font-weight: 600
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <!-- ───────── Sidebar ───────── -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">
+          <div class="mark">e</div>
+          <div>
+            <div class="name">Enamor Panel</div>
+            <div class="sub">#YourLingerieYourSay</div>
+          </div>
+        </div>
+      </div>
+      <nav class="nav">
+        <div class="nav-label">Overview</div>
+        <div class="nav-item active" data-page="dashboard"><svg class="ico" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="9" />
+            <rect x="14" y="3" width="7" height="5" />
+            <rect x="14" y="12" width="7" height="9" />
+            <rect x="3" y="16" width="7" height="5" />
+          </svg><span>Dashboard</span></div>
+        <div class="nav-label">Pipeline</div>
+        <div class="nav-item" data-page="screener"><svg class="ico" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2">
+            <path d="M9 11l3 3L22 4" />
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+          </svg><span>Screener</span><span class="badge">214</span></div>
+        <div class="nav-item" data-page="survey"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <path d="M14 2v6h6" />
+            <path d="M8 13h8M8 17h5" />
+          </svg><span>Main Survey</span><span class="badge">96</span></div>
+        <div class="nav-item" data-page="referrals"><svg class="ico" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2">
+            <circle cx="18" cy="5" r="3" />
+            <circle cx="6" cy="12" r="3" />
+            <circle cx="18" cy="19" r="3" />
+            <path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" />
+          </svg><span>Referrals</span></div>
+        <div class="nav-item" data-page="payouts"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2">
+            <rect x="2" y="5" width="20" height="14" rx="2" />
+            <path d="M2 10h20" />
+          </svg><span>Payouts</span><span class="badge">₹</span></div>
+        <div class="nav-label">Manage</div>
+        <div class="nav-item" data-page="config"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2">
+            <circle cx="12" cy="12" r="3" />
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.82 1.17V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 14H4.5a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 6 8.6l-.06-.06a2 2 0 1 1 2.83-2.83" />
+          </svg><span>Configuration</span></div>
+        <div class="nav-item" data-page="master"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2">
+            <circle cx="11" cy="11" r="7" />
+            <path d="M21 21l-4.3-4.3" />
+          </svg><span>Participant Search</span></div>
+      </nav>
+      <div class="nav-foot">
+        <div class="who">miloni@concaveinsights.com</div>
+        <div>Admin · Concave Insights</div>
+      </div>
+    </aside>
+
+    <!-- ───────── Main ───────── -->
+    <div class="main">
+      <header class="topbar">
+        <div>
+          <h1 id="pg-title">Dashboard</h1>
+          <div class="crumb" id="pg-crumb">Enamor Study · live pipeline overview</div>
+        </div>
+        <div class="spacer"></div>
+        <div class="search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2">
+            <circle cx="11" cy="11" r="7" />
+            <path d="M21 21l-4.3-4.3" />
+          </svg><input placeholder="Search mobile, name, city…"></div>
+        <div class="pill-demo">DEMO · dummy data</div>
+      </header>
+
+      <div class="content">
+
+        <!-- ========== DASHBOARD ========== -->
+        <section class="page active" id="dashboard">
+          <div class="page-intro" style="display:flex;align-items:flex-start">
+            <div style="flex:1">
+              <h2>Pipeline at a glance</h2>
+              <p>Live counts across the participant lifecycle. This is the team's daily starting point before drilling
+                into a stage.</p>
+            </div>
+            <button class="btn sm">⤓ Export ▾</button>
+          </div>
+          <div class="tiles">
+            <div class="tile accent">
+              <div class="n">214</div>
+              <div class="l">Leads</div>
+              <div class="d">screener submitted</div>
+            </div>
+            <div class="tile">
+              <div class="n">96</div>
+              <div class="l">Eligible</div>
+              <div class="d">shortlisted for survey</div>
+            </div>
+            <div class="tile">
+              <div class="n">71</div>
+              <div class="l">Completed</div>
+              <div class="d">main survey submitted</div>
+            </div>
+            <div class="tile warn">
+              <div class="n">23</div>
+              <div class="l">In QC</div>
+              <div class="d">awaiting review</div>
+            </div>
+            <div class="tile">
+              <div class="n">42</div>
+              <div class="l">Successful</div>
+              <div class="d">passed · payout due</div>
+            </div>
+            <div class="tile">
+              <div class="n">6</div>
+              <div class="l">Unsuccessful</div>
+              <div class="d">failed QC</div>
+            </div>
+            <div class="tile warn">
+              <div class="n">9</div>
+              <div class="l">Fraud-flagged</div>
+              <div class="d">duplicate IP</div>
+            </div>
+            <div class="tile">
+              <div class="n">38</div>
+              <div class="l">Today's intake</div>
+              <div class="d">new screeners today</div>
+            </div>
+          </div>
+
+          <div class="two-col">
+            <div class="card">
+              <div class="card-head">
+                <h3>Needs attention</h3><span class="sub">action items</span>
+              </div>
+              <div class="card-body">
+                <table>
+                  <tbody>
+                    <tr>
+                      <td><span class="pill review"><span class="dot"></span>23 in QC</span></td>
+                      <td class="t-sub">Main surveys awaiting Pass/Fail review</td>
+                      <td style="text-align:right"><button class="btn sm" onclick="go('survey')">Review</button></td>
+                    </tr>
+                    <tr>
+                      <td><span class="pill succ"><span class="dot"></span>42 payable</span></td>
+                      <td class="t-sub">Cleared QC — incentives & referrals due</td>
+                      <td style="text-align:right"><button class="btn sm" onclick="go('payouts')">Pay out</button></td>
+                    </tr>
+                    <tr>
+                      <td><span class="flag">⚠ 9 flagged</span></td>
+                      <td class="t-sub">Duplicate-IP signups to verify before payout</td>
+                      <td style="text-align:right"><button class="btn sm" onclick="go('screener')">Inspect</button></td>
+                    </tr>
+                    <tr>
+                      <td><span class="pill pend"><span class="dot"></span>4 UPI pending</span></td>
+                      <td class="t-sub">Owed referrers who haven't added UPI yet</td>
+                      <td style="text-align:right"><button class="btn sm" onclick="go('payouts')">View</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-head">
+                <h3>Top referrers</h3><span class="sub">this study</span>
+              </div>
+              <div class="card-body">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Referrer</th>
+                      <th>Referred</th>
+                      <th>Earned</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><span class="t-name">Priya Sharma</span>
+                        <div class="t-sub mono">98201 44521</div>
+                      </td>
+                      <td>7 friends · 5 passed</td>
+                      <td class="mono hl">₹250</td>
+                    </tr>
+                    <tr>
+                      <td><span class="t-name">Anjali Mehta</span>
+                        <div class="t-sub mono">99300 18847</div>
+                      </td>
+                      <td>6 friends · 4 passed</td>
+                      <td class="mono hl">₹200</td>
+                    </tr>
+                    <tr>
+                      <td><span class="t-name">Ritu Kapoor</span>
+                        <div class="t-sub mono">98677 22910</div>
+                      </td>
+                      <td>5 friends · 3 passed</td>
+                      <td class="mono hl">₹150</td>
+                    </tr>
+                    <tr>
+                      <td><span class="t-name">Sneha Iyer</span>
+                        <div class="t-sub mono">90041 55238</div>
+                      </td>
+                      <td>4 friends · 3 passed</td>
+                      <td class="mono hl">₹150</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========== SCREENER ========== -->
+        <section class="page" id="screener">
+          <div class="page-intro">
+            <h2>Screener — intake queue</h2>
+            <p>Every registration lands here. Judge eligibility from the 6 study answers, then mark Eligible / Not
+              Eligible and send the survey invite over WhatsApp.</p>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <h3>Incoming registrations</h3><span class="sub">214 leads</span>
+              <div class="spacer"></div>
+              <button class="btn sm">Filter</button><button class="btn sm">⤓ Export ▾</button>
+            </div>
+            <div class="card-body">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Participant</th>
+                    <th>City</th>
+                    <th>Q1 Wears Enamor</th>
+                    <th>Q3 Buys online</th>
+                    <th>Age band</th>
+                    <th>Eligibility</th>
+                    <th>Invite</th>
+                  </tr>
+                </thead>
+                <tbody id="screener-rows"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========== MAIN SURVEY ========== -->
+        <section class="page" id="survey">
+          <div class="page-intro">
+            <h2>Main Survey & QC</h2>
+            <p>The eligible cohort. Track who was invited, who submitted, then run bulk quality-control Pass / Fail. QC
+              pass is what unlocks payouts.</p>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <h3>Eligible participants</h3><span class="sub">96 invited · 71 submitted · 23 in QC</span>
+              <div class="spacer"></div>
+              <button class="btn sm wa">✓ Bulk Pass</button><button class="btn sm">Bulk Fail</button><button
+                class="btn sm">⤓ Export ▾</button>
+            </div>
+            <div class="card-body">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Participant</th>
+                    <th>Invited</th>
+                    <th>Survey</th>
+                    <th>Time</th>
+                    <th>QC verdict</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="survey-rows"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========== REFERRALS ========== -->
+        <section class="page" id="referrals">
+          <div class="page-intro">
+            <h2>Referrals & attribution</h2>
+            <p>Each referrer with the friends they brought in, every friend's live status, and the reward state. Click a
+              referrer to expand their tree.</p>
+          </div>
+          <div class="note"><b>Reward rule:</b> a referrer earns the fixed reward only when a referred friend <span
+              class="hl">passes QC</span>. Owed referrers without a UPI on file show a <span class="pill pend"
+              style="vertical-align:middle"><span class="dot"></span>UPI pending</span> flag — including Not-Eligible
+            referrers, who are prompted for UPI on their own dashboard.</div>
+          <div class="card">
+            <div class="card-head">
+              <h3>Referrers</h3><span class="sub">sorted by earned</span>
+              <div class="spacer"></div><button class="btn sm">⤓ Export ▾</button>
+            </div>
+            <div class="card-body">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Referrer</th>
+                    <th>Own status</th>
+                    <th>Referred</th>
+                    <th>Passed QC</th>
+                    <th>Earned</th>
+                    <th>UPI</th>
+                  </tr>
+                </thead>
+                <tbody id="referral-rows"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========== PAYOUTS ========== -->
+        <section class="page" id="payouts">
+          <div class="page-intro">
+            <h2>Payouts</h2>
+            <p>Two streams, paid in sequence — incentives first, then referrals. Select rows, export a batch, pay in
+              bulk outside the system, then re-upload to reconcile statuses.</p>
+          </div>
+          <div class="tabs">
+            <div class="tab active" data-sub="pay-inc" data-parent="payouts">Incentives</div>
+            <div class="tab" data-sub="pay-ref" data-parent="payouts">Referrals</div>
+          </div>
+
+          <div class="subpage active" id="pay-inc">
+            <div class="card">
+              <div class="card-head">
+                <h3>Incentives due</h3><span class="sub">42 participants · ₹50 each</span>
+                <div class="spacer"></div>
+                <button class="btn sm">⤓ Export ▾</button>
+                <button class="btn sm">Select all earned</button>
+                <button class="btn sm primary">Export batch</button>
+                <button class="btn sm">Re-upload paid file</button>
+              </div>
+              <div class="card-body">
+                <table>
+                  <thead>
+                    <tr>
+                      <th style="width:34px"><input type="checkbox" disabled></th>
+                      <th>Participant</th>
+                      <th>UPI ID</th>
+                      <th>Amount</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="payinc-rows"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="subpage" id="pay-ref">
+            <div class="note"><b>One line per referrer.</b> Unpaid-earned rewards are summed (e.g. 4 passed referrals ×
+              ₹50 = ₹200) so each referrer is one combined payment. The owed amount is computed live — paid referrals
+              drop off, newly-passed ones appear in the next batch.</div>
+            <div class="card">
+              <div class="card-head">
+                <h3>Referral rewards due</h3><span class="sub">per referrer · ₹50 / referral</span>
+                <div class="spacer"></div>
+                <button class="btn sm">⤓ Export ▾</button>
+                <button class="btn sm">Select all earned</button>
+                <button class="btn sm primary">Export batch</button>
+                <button class="btn sm">Re-upload paid file</button>
+              </div>
+              <div class="card-body">
+                <table>
+                  <thead>
+                    <tr>
+                      <th style="width:34px"><input type="checkbox" disabled></th>
+                      <th>Referrer</th>
+                      <th>UPI ID</th>
+                      <th>Passed referrals</th>
+                      <th>Amount</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="payref-rows"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========== CONFIGURATION ========== -->
+        <section class="page" id="config">
+          <div class="page-intro">
+            <h2>Configuration</h2>
+            <p>Everything the team configures without a developer — so a new study is set up by editing settings, not
+              redeploying code. Three areas: WhatsApp message copy, the two form definitions, and study-level settings.
+            </p>
+          </div>
+          <div class="tabs">
+            <div class="tab active" data-sub="cfg-wa" data-parent="config">WhatsApp Templates</div>
+            <div class="tab" data-sub="cfg-form" data-parent="config">Form Settings</div>
+            <div class="tab" data-sub="cfg-study" data-parent="config">Study Settings</div>
+          </div>
+
+          <!-- ===== WhatsApp template editor (multi-stage) ===== -->
+          <div class="subpage active" id="cfg-wa">
+            <div class="note"><b>One template per lifecycle stage, versioned.</b> Each stage fires a WhatsApp message;
+              the team edits the copy and keeps multiple saved versions, with exactly <b>one active per stage</b>.
+              Dispatch is manual via <span class="mono">wa.me</span> — the admin presses Enter to send.</div>
+            <div style="display:grid;grid-template-columns:230px 1fr;gap:18px">
+              <!-- stage list -->
+              <div class="card" style="margin-bottom:0">
+                <div class="card-head">
+                  <h3>Stages</h3>
+                </div>
+                <div class="card-body">
+                  <div id="stage-list"></div>
+                </div>
+              </div>
+              <!-- editor + preview -->
+              <div>
+                <div class="card">
+                  <div class="card-head">
+                    <h3 id="wa-stage-title">Invite message</h3><span class="sub mono" id="wa-stage-key">stage:
+                      invite</span>
+                    <div class="spacer"></div><span class="pill elig"><span class="dot"></span>1 active · 3
+                      versions</span>
+                  </div>
+                  <div class="card-pad">
+                    <div class="field">
+                      <label>Message text (active version)</label>
+                      <textarea id="wa-text"
+                        readonly>Hi [FIRST_NAME], congratulations! You're eligible for our Enamor study. Tap here to complete the survey: [SURVEY_LINK]</textarea>
+                    </div>
+                    <div class="token-row">Insert token:</div>
+                    <div><span class="token">[FIRST_NAME]</span><span class="token">[SURVEY_LINK]</span></div>
+                    <div class="btn-row" style="margin-top:16px"><button class="btn primary sm">Save
+                        draft</button><button class="btn sm">Set as active</button><button class="btn sm ghost">+ New
+                        version</button></div>
+                  </div>
+                </div>
+                <div class="two-col">
+                  <div class="card">
+                    <div class="card-head">
+                      <h3>Versions</h3><span class="sub">one active per stage</span>
+                    </div>
+                    <div class="card-pad">
+                      <div class="ver-item active"><span class="pill elig"><span
+                            class="dot"></span>Active</span><span>v3 — shorter</span><span style="flex:1"></span><span
+                          class="t-sub mono">12 Jun</span></div>
+                      <div class="ver-item"><span class="t-sub">draft</span><span>v2 — with emoji</span><span
+                          style="flex:1"></span><span class="t-sub mono">08 Jun</span></div>
+                      <div class="ver-item"><span class="t-sub">draft</span><span>v1 — original</span><span
+                          style="flex:1"></span><span class="t-sub mono">02 Jun</span></div>
+                    </div>
+                  </div>
+                  <div class="card">
+                    <div class="card-head">
+                      <h3>Live preview</h3><span class="sub">sample data</span>
+                    </div>
+                    <div class="card-pad">
+                      <div class="preview">
+                        <div class="ph">WhatsApp · to Priya</div>
+                        Hi <b>Priya</b>, congratulations! You're eligible for our Enamor study. Tap here to complete the
+                        survey: <span class="hl">enamor.panel/s?id=9820144521</span>
+                      </div>
+                      <p class="t-sub" style="margin-top:12px">Tokens filled, text URL-encoded, opened as <span
+                          class="mono">wa.me/91…?text=…</span> on Send Invite.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== Form Settings: BOTH forms + eligibility rule ===== -->
+          <div class="subpage" id="cfg-form">
+            <div class="note"><b>Draft → Publish → Version.</b> Editing changes a <b>draft</b>. Clicking <b>Publish</b>
+              snapshots that draft into a new <span class="mono">form_versions</span> row and advances the
+              active-version pointer. Live forms only read the published version, and every response is stamped with the
+              version it answered — so editing never disturbs in-flight respondents.</div>
+
+            <!-- which form -->
+            <div class="tabs" style="margin-bottom:14px">
+              <div class="tab active" data-sub="form-screener" data-parent="cfg-form">Screener form</div>
+              <div class="tab" data-sub="form-survey" data-parent="cfg-form">Main Survey form</div>
+              <div class="tab" data-sub="form-elig" data-parent="cfg-form">Eligibility rule</div>
+            </div>
+
+            <!-- screener form -->
+            <div class="subpage active" id="form-screener">
+              <div class="card">
+                <div class="card-head">
+                  <h3>Screener questions</h3><span class="sub">draft v5 · 6 questions · active live: v4</span>
+                  <div class="spacer"></div>
+                  <button class="btn sm ghost">+ Add question</button>
+                  <button class="btn sm">Preview form</button>
+                  <button class="btn sm primary">Publish v5</button>
+                </div>
+                <div class="card-pad">
+                  <div class="field"><label>Intro copy (shown atop the registration form)</label><textarea
+                      readonly>Welcome! This 2-minute form helps us see if you're a fit for our Enamor innerwear study. Your answers are confidential.</textarea>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th style="width:46px">ID</th>
+                        <th>Question</th>
+                        <th>Type</th>
+                        <th>Options / rows</th>
+                        <th style="width:70px">Elig.</th>
+                        <th style="width:40px"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="mono">q1</td>
+                        <td>Do you currently wear Enamor?</td>
+                        <td class="t-sub">Single choice</td>
+                        <td class="t-sub">Yes / No</td>
+                        <td><span class="pill elig" style="padding:2px 7px"><span class="dot"></span>Y</span></td>
+                        <td class="t-sub">⋮</td>
+                      </tr>
+                      <tr>
+                        <td class="mono">q2</td>
+                        <td>Which categories do you buy?</td>
+                        <td class="t-sub">Multi-select</td>
+                        <td class="t-sub">Bra, Briefs, Camisole, Activewear</td>
+                        <td class="t-sub">—</td>
+                        <td class="t-sub">⋮</td>
+                      </tr>
+                      <tr>
+                        <td class="mono">q3</td>
+                        <td>Do you shop innerwear online?</td>
+                        <td class="t-sub">Single choice</td>
+                        <td class="t-sub">Yes / Sometimes / No</td>
+                        <td><span class="pill elig" style="padding:2px 7px"><span class="dot"></span>Y</span></td>
+                        <td class="t-sub">⋮</td>
+                      </tr>
+                      <tr>
+                        <td class="mono">q4</td>
+                        <td>How often do you purchase?</td>
+                        <td class="t-sub">Single choice</td>
+                        <td class="t-sub">Monthly … Yearly</td>
+                        <td class="t-sub">—</td>
+                        <td class="t-sub">⋮</td>
+                      </tr>
+                      <tr>
+                        <td class="mono">q5</td>
+                        <td>Rate these attributes</td>
+                        <td class="t-sub">Matrix</td>
+                        <td class="t-sub">Comfort, Fit, Price × 1–5</td>
+                        <td class="t-sub">—</td>
+                        <td class="t-sub">⋮</td>
+                      </tr>
+                      <tr>
+                        <td class="mono">q6</td>
+                        <td>Age band</td>
+                        <td class="t-sub">Single choice</td>
+                        <td class="t-sub">18-24 / 25-34 / 35-44 / 45+</td>
+                        <td><span class="pill elig" style="padding:2px 7px"><span class="dot"></span>Y</span></td>
+                        <td class="t-sub">⋮</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- survey form -->
+            <div class="subpage" id="form-survey">
+              <div class="card">
+                <div class="card-head">
+                  <h3>Main Survey questions</h3><span class="sub">draft v3 · 11 questions · active live: v3</span>
+                  <div class="spacer"></div>
+                  <button class="btn sm ghost">+ Add question</button>
+                  <button class="btn sm">Preview form</button>
+                  <button class="btn sm primary">Publish v3</button>
+                </div>
+                <div class="card-pad">
+                  <div class="field"><label>Intro copy (shown atop the main survey)</label><textarea
+                      readonly>Thanks for qualifying! This 8-minute survey goes deeper into your innerwear preferences. At the end we'll ask for your UPI ID to send your incentive.</textarea>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th style="width:46px">ID</th>
+                        <th>Question</th>
+                        <th>Type</th>
+                        <th>Options / rows</th>
+                        <th style="width:40px"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="mono">s1</td>
+                        <td>How many innerwear sets do you own?</td>
+                        <td class="t-sub">Single choice</td>
+                        <td class="t-sub">1-3 … 10+</td>
+                        <td class="t-sub">⋮</td>
+                      </tr>
+                      <tr>
+                        <td class="mono">s2</td>
+                        <td>Rank these brands by preference</td>
+                        <td class="t-sub">Ranking</td>
+                        <td class="t-sub">Enamor, Jockey, Zivame, …</td>
+                        <td class="t-sub">⋮</td>
+                      </tr>
+                      <tr>
+                        <td class="mono">s4</td>
+                        <td>Rate Enamor on each attribute</td>
+                        <td class="t-sub">Matrix</td>
+                        <td class="t-sub">Comfort, Fit, Style, Value × 1–5</td>
+                        <td class="t-sub">⋮</td>
+                      </tr>
+                      <tr>
+                        <td class="mono">s7</td>
+                        <td>What would make you buy more often?</td>
+                        <td class="t-sub">Open text</td>
+                        <td class="t-sub">—</td>
+                        <td class="t-sub">⋮</td>
+                      </tr>
+                      <tr>
+                        <td class="mono">s11</td>
+                        <td class="hl">Your UPI ID (for incentive)</td>
+                        <td class="t-sub">Short text</td>
+                        <td class="t-sub">final block · eligible payees</td>
+                        <td class="t-sub">⋮</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div class="note" style="margin:14px 18px"><b>Note:</b> UPI is captured here for Eligible respondents.
+                    Not-Eligible referrers who are owed money get a separate UPI prompt on their dashboard — both write
+                    to the same <span class="mono">participants.upi_id</span>.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- eligibility rule -->
+            <div class="subpage" id="form-elig">
+              <div class="two-col">
+                <div class="card">
+                  <div class="card-head">
+                    <h3>Eligibility criteria</h3><span class="sub">Eligible vs Not Eligible</span>
+                    <div class="spacer"></div><button class="btn sm primary">Save</button>
+                  </div>
+                  <div class="card-pad">
+                    <p class="t-sub" style="margin-bottom:14px">An editable rule the system applies (or surfaces as a
+                      hint for manual review) when deciding eligibility from the screener answers.</p>
+                    <div class="ver-item"><span class="mono">q1</span><span>Wears Enamor</span><span
+                        style="flex:1"></span><span class="t-sub">must be</span><span class="pill elig"
+                        style="margin-left:8px"><span class="dot"></span>Yes</span></div>
+                    <div class="ver-item"><span class="mono">q3</span><span>Shops online</span><span
+                        style="flex:1"></span><span class="t-sub">must be</span><span class="pill elig"
+                        style="margin-left:8px"><span class="dot"></span>Yes / Sometimes</span></div>
+                    <div class="ver-item"><span class="mono">q6</span><span>Age band</span><span
+                        style="flex:1"></span><span class="t-sub">in</span><span class="pill comp"
+                        style="margin-left:8px"><span class="dot"></span>18-24, 25-34, 35-44</span></div>
+                    <div class="btn-row" style="margin-top:14px"><button class="btn sm ghost">+ Add criterion</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="card-head">
+                    <h3>Decision mode</h3>
+                  </div>
+                  <div class="card-pad">
+                    <div class="field"><label>How eligibility is decided</label><select disabled>
+                        <option>Manual — rule shown as hint, admin decides</option>
+                      </select></div>
+                    <div class="note"><b>Auto vs manual:</b> in manual mode the rule highlights likely-eligible rows on
+                      the Screener grid, but the final Eligible / Not Eligible toggle is always the admin's call.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== Study Settings ===== -->
+          <div class="subpage" id="cfg-study">
+            <div class="two-col">
+              <div class="card">
+                <div class="card-head">
+                  <h3>Study</h3><span class="sub">label & versions</span>
+                  <div class="spacer"></div><button class="btn sm primary">Save</button>
+                </div>
+                <div class="card-pad">
+                  <div class="field"><label>Active study label</label><input value="Enamor — #YourLingerieYourSay"
+                      readonly></div>
+                  <div class="field"><label>Active screener version</label><select disabled>
+                      <option>v4 (published 12 Jun)</option>
+                    </select></div>
+                  <div class="field"><label>Active survey version</label><select disabled>
+                      <option>v3 (published 09 Jun)</option>
+                    </select></div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-head">
+                  <h3>Payout amounts</h3><span class="sub">fixed · snapshotted on each record</span>
+                  <div class="spacer"></div><button class="btn sm primary">Save</button>
+                </div>
+                <div class="card-pad">
+                  <div class="field"><label>Survey incentive — paid to participant on QC pass</label><input value="₹ 50"
+                      readonly></div>
+                  <div class="field"><label>Referral reward — per referred friend who passes QC</label><input
+                      value="₹ 50" readonly></div>
+                  <div class="note">Amounts are fixed and centralised here, then snapshotted onto each participant /
+                    referral when it becomes payable — so a later rate change never rewrites past dues.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========== PARTICIPANT SEARCH / MASTER ========== -->
+        <section class="page" id="master">
+          <div class="page-intro" style="display:flex;align-items:flex-start">
+            <div style="flex:1">
+              <h2>Participant search</h2>
+              <p>Look up anyone by mobile to see their full timeline — screener, eligibility, survey, QC, payout, and
+                the friends they referred.</p>
+            </div>
+            <button class="btn sm">⤓ Export record ▾</button>
+          </div>
+          <div class="card">
+            <div class="card-pad" style="display:flex;gap:10px;align-items:center">
+              <div class="search" style="width:340px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="M21 21l-4.3-4.3" />
+                </svg><input value="98201 44521" readonly></div>
+              <button class="btn primary sm">Search</button>
+              <span class="t-sub">Showing sample result →</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h3>Priya Sharma</h3>
+                <div class="t-sub mono">98201 44521 · Mumbai · DOB 14 Mar 1994</div>
+              </div>
+              <div class="spacer"></div><span class="pill succ"><span class="dot"></span>Successful</span>
+            </div>
+            <div class="card-pad two-col">
+              <div>
+                <div class="d-section" style="margin-top:0">Master record</div>
+                <div class="d-row"><span class="k">Lead ID (mobile)</span><span class="v mono">98201 44521</span></div>
+                <div class="d-row"><span class="k">Referred by</span><span class="v">— (direct signup)</span></div>
+                <div class="d-row"><span class="k">Eligibility</span><span class="v"><span class="pill elig"><span
+                        class="dot"></span>Eligible</span></span></div>
+                <div class="d-row"><span class="k">QC verdict</span><span class="v"><span class="pill pass"><span
+                        class="dot"></span>Pass</span></span></div>
+                <div class="d-row"><span class="k">UPI ID</span><span class="v mono">priya@okhdfc</span></div>
+                <div class="d-row"><span class="k">Incentive</span><span class="v mono hl">₹50 · paid</span></div>
+                <div class="d-row"><span class="k">Referral earned</span><span class="v mono hl">₹250 · pending</span>
+                </div>
+              </div>
+              <div>
+                <div class="d-section" style="margin-top:0">Lifecycle timeline</div>
+                <div class="timeline">
+                  <div class="tl done">
+                    <div class="tt">Screener submitted</div>
+                    <div class="td">02 Jun · 11:24 · IP 49.36.x.x</div>
+                  </div>
+                  <div class="tl done">
+                    <div class="tt">Marked Eligible</div>
+                    <div class="td">03 Jun · by miloni@</div>
+                  </div>
+                  <div class="tl done">
+                    <div class="tt">Invite sent (WhatsApp)</div>
+                    <div class="td">03 Jun · 16:02</div>
+                  </div>
+                  <div class="tl done">
+                    <div class="tt">Main survey submitted</div>
+                    <div class="td">04 Jun · 09:41 · 7m 12s</div>
+                  </div>
+                  <div class="tl done">
+                    <div class="tt">QC passed</div>
+                    <div class="td">06 Jun · by miloni@</div>
+                  </div>
+                  <div class="tl done">
+                    <div class="tt">Incentive paid</div>
+                    <div class="td">12 Jun · batch INC-2026-06-12-01</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="card-head" style="border-top:1px solid var(--line)">
+              <h3>Referred friends</h3><span class="sub">7 brought in · 5 passed QC</span>
+            </div>
+            <div class="card-body">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Friend</th>
+                    <th>Status</th>
+                    <th>Reward</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><span class="t-name">Kavya R.</span>
+                      <div class="t-sub mono">98••••3310</div>
+                    </td>
+                    <td><span class="pill succ"><span class="dot"></span>Successful</span></td>
+                    <td class="mono hl">₹50 earned</td>
+                  </tr>
+                  <tr>
+                    <td><span class="t-name">Divya N.</span>
+                      <div class="t-sub mono">99••••7782</div>
+                    </td>
+                    <td><span class="pill succ"><span class="dot"></span>Successful</span></td>
+                    <td class="mono hl">₹50 earned</td>
+                  </tr>
+                  <tr>
+                    <td><span class="t-name">Meera S.</span>
+                      <div class="t-sub mono">90••••1190</div>
+                    </td>
+                    <td><span class="pill pass"><span class="dot"></span>Review Pass</span></td>
+                    <td class="mono hl">₹50 earned</td>
+                  </tr>
+                  <tr>
+                    <td><span class="t-name">Pooja T.</span>
+                      <div class="t-sub mono">98••••4471</div>
+                    </td>
+                    <td><span class="pill succ"><span class="dot"></span>Successful</span></td>
+                    <td class="mono hl">₹50 earned</td>
+                  </tr>
+                  <tr>
+                    <td><span class="t-name">Nisha K.</span>
+                      <div class="t-sub mono">97••••2204</div>
+                    </td>
+                    <td><span class="pill succ"><span class="dot"></span>Successful</span></td>
+                    <td class="mono hl">₹50 earned</td>
+                  </tr>
+                  <tr>
+                    <td><span class="t-name">Aarti M.</span>
+                      <div class="t-sub mono">90••••8839</div>
+                    </td>
+                    <td><span class="pill comp"><span class="dot"></span>Completed</span></td>
+                    <td class="t-sub">in QC</td>
+                  </tr>
+                  <tr>
+                    <td><span class="t-name">Reena P.</span>
+                      <div class="t-sub mono">98••••5567</div>
+                    </td>
+                    <td><span class="pill fail"><span class="dot"></span>Review Fail</span></td>
+                    <td class="t-sub">no reward</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ───────── Drawer (screener detail) ───────── -->
+  <div class="drawer-bg" id="drawer-bg" onclick="closeDrawer()"></div>
+  <aside class="drawer" id="drawer">
+    <div class="drawer-head">
+      <div>
+        <div class="d-name" id="dr-name">—</div>
+        <div class="d-meta" id="dr-meta">—</div>
+      </div>
+      <button class="x" onclick="closeDrawer()">&times;</button>
+    </div>
+    <div class="drawer-body" id="dr-body"></div>
+  </aside>
+
+  <script>
+    // ───────── Dummy data ─────────
+    const CITIES = ["Mumbai", "Thane", "Navi Mumbai", "Pune", "Andheri", "Borivali"];
+    const F = ["Priya Sharma", "Anjali Mehta", "Ritu Kapoor", "Sneha Iyer", "Kavya Reddy", "Divya Nair", "Meera Singh", "Pooja Tandon", "Nisha Kulkarni", "Aarti More", "Reena Pillai", "Shruti Joshi", "Tanvi Desai", "Komal Rao", "Isha Verma", "Neha Bhat"];
+    const MOB = ["98201 44521", "99300 18847", "98677 22910", "90041 55238", "98330 11290", "99870 44128", "90112 87651", "98445 33019", "97720 11843", "90556 22047", "98119 77234", "99021 66510", "90334 88125", "98660 04471", "97781 55092", "90998 33820"];
+    function rnd(a) { return a[Math.floor(Math.random() * a.length)] }
+
+    // Screener rows
+    const screenerData = F.map((n, i) => ({
+      name: n, mob: MOB[i % MOB.length], city: CITIES[i % CITIES.length],
+      q1: i % 4 === 0 ? "No" : "Yes", q3: i % 3 === 0 ? "Sometimes" : "Yes", age: ["18-24", "25-34", "35-44"][i % 3],
+      elig: i < 6 ? "yes" : i < 9 ? "no" : "pending", flagged: i === 2 || i === 7 || i === 11
+    }));
+    const elPill = { yes: '<span class="pill elig"><span class="dot"></span>Eligible</span>', no: '<span class="pill notelig"><span class="dot"></span>Not Eligible</span>', pending: '<span class="pill lead"><span class="dot"></span>Lead</span>' };
+    function elseg(e) { return `<div class="seg"><span class="${e === 'yes' ? 'on yes' : ''}">Eligible</span><span class="${e === 'no' ? 'on no' : ''}">Not</span></div>` }
+    document.getElementById('screener-rows').innerHTML = screenerData.map((r, i) => `
+  <tr class="click" onclick='openScreener(${i})'>
+    <td><span class="t-name">${r.name}</span> ${r.flagged ? '<span class="flag" title="duplicate IP">⚠ dup</span>' : ''}<div class="t-sub mono">${r.mob}</div></td>
+    <td>${r.city}</td><td>${r.q1}</td><td>${r.q3}</td><td>${r.age}</td>
+    <td>${elseg(r.elig)}</td>
+    <td>${r.elig === 'yes' ? '<button class="btn sm wa" onclick="event.stopPropagation()">↗ Invite</button>' : '<span class="t-sub">—</span>'}</td>
+  </tr>`).join('');
+
+    // Survey rows
+    const surveyData = F.slice(0, 10).map((n, i) => ({
+      name: n, mob: MOB[i % MOB.length],
+      invited: "03 Jun", state: i < 7 ? "submitted" : "opened",
+      time: i < 7 ? ["6m 41s", "8m 02s", "5m 33s", "7m 12s", "9m 18s", "6m 55s", "7m 40s"][i] : "—",
+      qc: i < 4 ? "pass" : i === 4 ? "fail" : i < 7 ? "pending" : "—"
+    }));
+    const qcPill = { pass: '<span class="pill pass"><span class="dot"></span>Pass</span>', fail: '<span class="pill fail"><span class="dot"></span>Fail</span>', pending: '<span class="pill review"><span class="dot"></span>In QC</span>', '—': '<span class="t-sub">not submitted</span>' };
+    const stPill = { submitted: '<span class="pill comp"><span class="dot"></span>Submitted</span>', opened: '<span class="pill lead"><span class="dot"></span>Opened</span>' };
+    document.getElementById('survey-rows').innerHTML = surveyData.map(r => `
+  <tr>
+    <td><span class="t-name">${r.name}</span><div class="t-sub mono">${r.mob}</div></td>
+    <td class="t-sub">${r.invited}</td><td>${stPill[r.state]}</td><td class="mono t-sub">${r.time}</td>
+    <td>${qcPill[r.qc]}</td>
+    <td style="text-align:right">${r.qc === 'pending' ? '<button class="btn sm wa">Pass</button> <button class="btn sm">Fail</button>' : '<button class="btn sm ghost">View</button>'}</td>
+  </tr>`).join('');
+
+    // Referral rows
+    const refData = [
+      { n: "Priya Sharma", m: "98201 44521", own: "succ", ref: 7, pass: 5, earn: 250, upi: "priya@okhdfc" },
+      { n: "Anjali Mehta", m: "99300 18847", own: "succ", ref: 6, pass: 4, earn: 200, upi: "anjali@oksbi" },
+      { n: "Ritu Kapoor", m: "98677 22910", own: "notelig", ref: 5, pass: 3, earn: 150, upi: "pending" },
+      { n: "Sneha Iyer", m: "90041 55238", own: "succ", ref: 4, pass: 3, earn: 150, upi: "sneha@okaxis" },
+      { n: "Komal Rao", m: "90334 88125", own: "notelig", ref: 3, pass: 2, earn: 100, upi: "pending" },
+      { n: "Isha Verma", m: "97781 55092", own: "comp", ref: 3, pass: 1, earn: 50, upi: "isha@okhdfc" },
+    ];
+    const ownPill = { succ: '<span class="pill succ"><span class="dot"></span>Successful</span>', notelig: '<span class="pill notelig"><span class="dot"></span>Not Eligible</span>', comp: '<span class="pill comp"><span class="dot"></span>Completed</span>' };
+    document.getElementById('referral-rows').innerHTML = refData.map(r => `
+  <tr class="click" onclick="alert('Demo: this would expand '+${JSON.stringify(r.n)}+' referral tree showing each friend and their status.')">
+    <td><span class="t-name">${r.n}</span><div class="t-sub mono">${r.m}</div></td>
+    <td>${ownPill[r.own]}</td>
+    <td>${r.ref} friends</td>
+    <td><span class="hl">${r.pass}</span> passed</td>
+    <td class="mono hl">₹${r.earn}</td>
+    <td>${r.upi === 'pending' ? '<span class="pill pend"><span class="dot"></span>UPI pending</span>' : '<span class="mono t-sub">' + r.upi + '</span>'}</td>
+  </tr>`).join('');
+
+    // Payout incentive rows
+    const payIncData = F.slice(0, 8).map((n, i) => ({ n, m: MOB[i % MOB.length], upi: ["priya@okhdfc", "anjali@oksbi", "sneha@okaxis", "kavya@okicici", "divya@okhdfc", "meera@oksbi", "pooja@okaxis", "nisha@okhdfc"][i], amt: 50, st: i < 6 ? "earned" : "paid" }));
+    document.getElementById('payinc-rows').innerHTML = payIncData.map(r => `
+  <tr><td><input type="checkbox" ${r.st === 'earned' ? 'checked' : ''} disabled></td>
+  <td><span class="t-name">${r.n}</span><div class="t-sub mono">${r.m}</div></td>
+  <td class="mono">${r.upi}</td><td class="mono hl">₹${r.amt}</td>
+  <td>${r.st === 'earned' ? '<span class="pill review"><span class="dot"></span>Earned · unpaid</span>' : '<span class="pill succ"><span class="dot"></span>Paid</span>'}</td></tr>`).join('');
+
+    // Payout referral rows
+    const payRefData = [
+      { n: "Priya Sharma", m: "98201 44521", upi: "priya@okhdfc", p: 5, amt: 250, st: "earned" },
+      { n: "Anjali Mehta", m: "99300 18847", upi: "anjali@oksbi", p: 4, amt: 200, st: "earned" },
+      { n: "Ritu Kapoor", m: "98677 22910", upi: "pending", p: 3, amt: 150, st: "blocked" },
+      { n: "Sneha Iyer", m: "90041 55238", upi: "sneha@okaxis", p: 3, amt: 150, st: "earned" },
+      { n: "Komal Rao", m: "90334 88125", upi: "pending", p: 2, amt: 100, st: "blocked" },
+    ];
+    document.getElementById('payref-rows').innerHTML = payRefData.map(r => `
+  <tr><td><input type="checkbox" ${r.st === 'earned' ? 'checked' : ''} disabled></td>
+  <td><span class="t-name">${r.n}</span><div class="t-sub mono">${r.m}</div></td>
+  <td>${r.upi === 'pending' ? '<span class="pill pend"><span class="dot"></span>UPI pending</span>' : '<span class="mono">' + r.upi + '</span>'}</td>
+  <td><span class="hl">${r.p}</span> × ₹50</td><td class="mono hl">₹${r.amt}</td>
+  <td>${r.st === 'earned' ? '<span class="pill review"><span class="dot"></span>Earned · unpaid</span>' : '<span class="pill notelig"><span class="dot"></span>Blocked · no UPI</span>'}</td></tr>`).join('');
+
+    // ───────── Navigation ─────────
+    const titles = { dashboard: ["Dashboard", "live pipeline overview"], screener: ["Screener", "intake queue · eligibility review"], survey: ["Main Survey & QC", "eligible cohort · quality control"], referrals: ["Referrals", "attribution & referral tree"], payouts: ["Payouts", "incentives & referral rewards"], config: ["Configuration", "WhatsApp templates & form settings"], master: ["Participant Search", "master record lookup"] };
+    function go(page) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById(page).classList.add('active');
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === page));
+      document.getElementById('pg-title').textContent = titles[page][0];
+      document.getElementById('pg-crumb').textContent = "Enamor Study · " + titles[page][1];
+      window.scrollTo(0, 0);
+    }
+    document.querySelectorAll('.nav-item').forEach(n => n.addEventListener('click', () => go(n.dataset.page)));
+
+    // inner tabs (supports nesting: only toggles subpages that are direct descendants of the parent container)
+    document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+      const parent = t.dataset.parent;
+      document.querySelectorAll(`.tab[data-parent="${parent}"]`).forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      const container = document.getElementById(parent);
+      // only the subpages whose id is referenced by this tab-group's tabs
+      const ids = [...document.querySelectorAll(`.tab[data-parent="${parent}"]`)].map(x => x.dataset.sub);
+      ids.forEach(id => document.getElementById(id).classList.remove('active'));
+      document.getElementById(t.dataset.sub).classList.add('active');
+    }));
+
+    // WhatsApp stage list
+    const stages = [
+      { key: 'invite', label: 'Survey invite', sub: 'Eligible → main survey', active: true },
+      { key: 'reminder', label: 'Reminder', sub: 'invited, not submitted' },
+      { key: 'reward_earned', label: 'Reward earned', sub: 'referral passed QC' },
+      { key: 'upi_request', label: 'UPI request', sub: 'owed, no UPI on file' },
+      { key: 'not_eligible', label: 'Not eligible', sub: 'screener rejected' },
+    ];
+    document.getElementById('stage-list').innerHTML = stages.map((s, i) => `
+  <div class="ver-item ${s.active ? 'active' : ''}" style="cursor:pointer">
+    ${s.active ? '<span class="pill elig" style="padding:2px 7px"><span class="dot"></span>●</span>' : '<span class="t-sub" style="width:18px">●</span>'}
+    <div><div style="font-weight:600;font-size:13px">${s.label}</div><div class="t-sub mono">${s.key}</div></div>
+  </div>`).join('');
+
+    // ───────── Drawer ─────────
+    function openScreener(i) {
+      const r = screenerData[i];
+      document.getElementById('dr-name').textContent = r.name;
+      document.getElementById('dr-meta').innerHTML = `<span class="mono">${r.mob}</span> · ${r.city}`;
+      document.getElementById('dr-body').innerHTML = `
+    ${r.flagged ? '<div class="note" style="border-left-color:var(--st-fail);background:#F6E3E3"><b>⚠ Duplicate IP flag.</b> This signup shares an IP with an existing registration. Verify before any payout.</div>' : ''}
+    <div class="d-section" style="margin-top:0">Eligibility decision</div>
+    <div style="margin-bottom:6px">${elseg(r.elig)}</div>
+    <p class="t-sub">Set from the 6 screener answers below. ${r.elig === 'yes' ? 'Eligible — "Send Invite" is active.' : r.elig === 'no' ? 'Not Eligible — survey locked, but Refer with your friends and family stays active.' : 'Awaiting review.'}</p>
+    <div class="d-section">Screener answers</div>
+    <div class="d-row"><span class="k">Q1 · Wears Enamor</span><span class="v">${r.q1}</span></div>
+    <div class="d-row"><span class="k">Q2 · Categories</span><span class="v">Bra, Briefs</span></div>
+    <div class="d-row"><span class="k">Q3 · Shops online</span><span class="v">${r.q3}</span></div>
+    <div class="d-row"><span class="k">Q4 · Frequency</span><span class="v">Every 2-3 months</span></div>
+    <div class="d-row"><span class="k">Q5 · Fit rating</span><span class="v">Comfort 5 · Fit 4 · Price 3</span></div>
+    <div class="d-row"><span class="k">Q6 · Age band</span><span class="v">${r.age}</span></div>
+    <div class="d-section">Registration meta</div>
+    <div class="d-row"><span class="k">Referred by</span><span class="v">${i % 3 === 0 ? '— (direct)' : '<span class=mono>9930018847</span>'}</span></div>
+    <div class="d-row"><span class="k">Submitted</span><span class="v">02 Jun · 11:2${i}</span></div>
+    <div class="d-row"><span class="k">IP address</span><span class="v mono">49.36.${i}.${i * 3}</span></div>
+    <div class="btn-row" style="margin-top:20px">
+      <button class="btn primary sm">Mark Eligible</button>
+      <button class="btn sm">Mark Not Eligible</button>
+      <button class="btn sm wa">↗ Send Invite</button>
+    </div>`;
+      document.getElementById('drawer').classList.add('open');
+      document.getElementById('drawer-bg').classList.add('open');
+    }
+    function closeDrawer() { document.getElementById('drawer').classList.remove('open'); document.getElementById('drawer-bg').classList.remove('open'); }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+  </script>
+</body>
+
+</html>
