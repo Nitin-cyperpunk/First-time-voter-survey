@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { AGE_BAND_VALUES } from "@/lib/study-config/gates";
 import { validateDob } from "@/lib/dob-validation";
 
 const dobSchema = z
@@ -20,6 +21,23 @@ const phoneSchema = z
   .max(15, "Mobile number is too long")
   .regex(/^[\d\s+()-]+$/, "Enter a valid mobile number");
 
+const optionalPhoneSchema = z
+  .string()
+  .trim()
+  .max(15)
+  .refine(
+    (value) => value === "" || phoneSchema.safeParse(value).success,
+    "Enter a valid mobile number",
+  );
+
+const optionalDobSchema = z
+  .string()
+  .trim()
+  .refine(
+    (value) => value === "" || dobSchema.safeParse(value).success,
+    "Enter a valid date of birth (YYYY-MM-DD)",
+  );
+
 const terminationEventSchema = z.object({
   ruleKey: z.string().trim().min(1),
   ruleLabel: z.string().trim().optional(),
@@ -30,14 +48,13 @@ const terminationEventSchema = z.object({
 });
 
 export const launchRegistrationSchema = z.object({
-  fullName: z
-    .string()
-    .trim()
-    .min(2, "Full name is required")
-    .max(120, "Name is too long"),
-  mobile: phoneSchema,
-  dob: dobSchema,
-  city_id: z.string().uuid("Please select a city from the list.").optional(),
+  fullName: z.string().trim().max(120, "Name is too long").optional().default(""),
+  mobile: optionalPhoneSchema.optional().default(""),
+  dob: optionalDobSchema.optional().default(""),
+  age_band: z.enum(AGE_BAND_VALUES, {
+    message: "Please select your age.",
+  }),
+  city_id: z.string().uuid("Please select a city from the list."),
   city: z.string().trim().max(80).optional(),
   email: z
     .union([

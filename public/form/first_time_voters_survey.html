@@ -56,7 +56,10 @@ body{
 /* ---------- Shell ---------- */
 .shell{max-width:760px;margin:0 auto;padding:34px 22px 80px;}
 .screen{display:none;animation:rise .3s ease both;}
-.screen.on{display:block;}
+.screen.on,
+#s-thankyou:not(.hidden),
+#s-terminate:not(.hidden){display:block;}
+.hidden{display:none !important;}
 @keyframes rise{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
 
 /* ---------- Type ---------- */
@@ -413,6 +416,30 @@ pre{
 
 <div class="shell" id="shell"></div>
 
+<div id="bridge-fields" hidden>
+  <select name="city_id" id="city_id"><option value="">Select city</option></select>
+  <input type="hidden" name="age_band" id="age_band" value="">
+  <input type="hidden" name="email" id="email" value="">
+  <input type="hidden" name="area" id="area" value="">
+  <input type="hidden" name="zip" id="zip" value="">
+</div>
+
+<div class="shell screen hidden" id="s-thankyou">
+  <div class="end center">
+    <h1>Thank you for participating in this research.</h1>
+    <p>Your response has been recorded. Findings will be reported only in aggregate.</p>
+    <p>You are welcome to refer friends who were first-time voters in the 2024 Lok Sabha election.</p>
+  </div>
+</div>
+
+<div class="shell screen hidden" id="s-terminate">
+  <div class="end center">
+    <h1>Thank you for your interest</h1>
+    <p>Based on your responses, you do not qualify for this particular study.</p>
+    <p>We appreciate the time you have taken. You may now close this page.</p>
+  </div>
+</div>
+
 <div class="modal" id="tcModal" role="dialog" aria-modal="true" aria-labelledby="tcTitle" hidden>
   <div class="modal-back" data-close="1"></div>
   <div class="modal-card">
@@ -425,7 +452,7 @@ pre{
 
       <h3>1. Eligibility &amp; Participation</h3>
       <ul>
-        <li><strong>Age Requirement:</strong> You confirm you are between 18 and 75 years of age, responding on your own behalf, and using only one registered mobile number.</li>
+        <li><strong>Age Requirement:</strong> You confirm you are 18 or older, responding on your own behalf, and completing this form only once.</li>
         <li><strong>Voluntary Action:</strong> Participation is entirely voluntary. You may withdraw at any point by closing this page. Partial or incomplete responses will not be analyzed.</li>
         <li><strong>Honesty:</strong> There are no right or wrong answers. Please provide honest, accurate responses to the best of your ability.</li>
       </ul>
@@ -433,7 +460,7 @@ pre{
       <h3>2. Privacy &amp; Data Security</h3>
       <ul>
         <li><strong>Anonymized Reporting:</strong> Your responses will be used solely for research purposes and reported in aggregate. No individual response will be published, attributed to you, or shared with clients in a personally identifiable format.</li>
-        <li><strong>Strictly No Marketing:</strong> Contact details are collected strictly for verification, de-duplication, and incentive processing. They will not be used for marketing and will never be shared with any political party, candidate, or commercial third party.</li>
+        <li><strong>Strictly No Marketing:</strong> Optional contact details are collected only for study administration. They will not be used for marketing and will never be shared with any political party, candidate, or commercial third party.</li>
         <li><strong>Data Retention:</strong> Your data is stored securely and retained only for the duration of the research project and standard compliance audits.</li>
       </ul>
 
@@ -470,14 +497,8 @@ var SUPABASE_ANON_KEY = "";
 var SUPABASE_TABLE = "ftv_responses";
 var POST_URL = "";            // optional plain webhook, used only if SUPABASE_URL is blank
 
-/* --- Age gate (Option C): ECI qualifying-date logic ---------
-   On the 2024 roll  -> 18 by 01 Jan 2024 -> born on/before 01 Jan 2006
-   NOT on 2019 roll  -> under 18 on 01 Jan 2019 -> born after 01 Jan 2001
-   Eligible DOB window: 02 Jan 2001 .. 01 Jan 2006 (inclusive)      */
-var DOB_MIN = new Date(2001, 0, 2);
-var DOB_MAX = new Date(2006, 0, 1);
-var POLL_DATE = new Date(2024, 4, 20);   // 20 May 2024, midpoint of Apr-Jun 2024 poll
-var QUAL_DATE = new Date(2024, 0, 1);    // 01 Jan 2024 ECI qualifying date
+/* Age is self-reported as a band. 23+ overlaps study max when age_rule_on. */
+var AGE_BANDS = ["18","19","20","21","22","23+"];
 
 var STATES = ["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand","West Bengal"];
 var UTS = ["Andaman and Nicobar Islands","Chandigarh","Dadra and Nagar Haveli and Daman and Diu","Delhi (NCT of Delhi)","Jammu and Kashmir","Ladakh","Lakshadweep","Puducherry"];
@@ -804,86 +825,89 @@ S.push({ id:"intro", bare:true, html:function(){
   b.onclick = function(){ A.consent = "Agree"; A.terms_accepted = true; go(1); };
 }});
 
-/* --- S1 QA Basic Contact Details --- */
+/* --- S1 QA About you (anonymous: no name / phone / DOB) --- */
 S.push({ id:"QA", html:function(){
-  /* max caps the picker at today; no min is set, so out-of-scope dates can
-     still be entered and recorded as T04 screen-outs. */
-  var t = new Date();
-  var today = t.getFullYear() + "-" + pad(t.getMonth()+1) + "-" + pad(t.getDate());
   var opt = '<option value="">Select a state or union territory</option><optgroup label="States">';
   for(var i=0;i<STATES.length;i++) opt += '<option value="'+(i+1)+'">'+esc(STATES[i])+'</option>';
   opt += '</optgroup><optgroup label="Union Territories">';
   for(var j=0;j<UTS.length;j++) opt += '<option value="'+(29+j)+'">'+esc(UTS[j])+'</option>';
   opt += '</optgroup>';
-  /* Paired two per row: Name | Phone, Email | Area, City | State, Zip | DOB. */
+  var ageOpts = "";
+  for(var a=0;a<AGE_BANDS.length;a++){
+    var band = AGE_BANDS[a];
+    var on = A.profile && A.profile.age_band === band;
+    ageOpts += '<label class="opt'+(on?' sel':'')+'"><input type="radio" name="qa_age" value="'+band+'"'+(on?' checked':'')+'><span>'+esc(band === "23+" ? "23 or older" : band)+'</span></label>';
+  }
   var f = '<div class="fields">' +
-    '<div class="field"><label class="lbl" for="fName">Name</label><input type="text" id="fName" autocomplete="name"></div>' +
-    '<div class="field"><label class="lbl" for="fPhone">Phone Number</label><input type="tel" id="fPhone" inputmode="numeric" autocomplete="tel" maxlength="16" placeholder="10-digit mobile number"></div>' +
-    '<div class="field"><label class="lbl" for="fEmail">Email</label><input type="email" id="fEmail" autocomplete="email"></div>' +
+    '<div class="field wide"><label class="lbl" for="fCityId">Study city</label><select id="fCityId"><option value="">Select city</option></select></div>' +
+    '<div class="field wide"><label class="lbl">Age</label><div class="opts" data-single="qa_age">'+ageOpts+'</div></div>' +
+    '<div class="field"><label class="lbl" for="fEmail">Email (optional)</label><input type="email" id="fEmail" autocomplete="email"></div>' +
     '<div class="field"><label class="lbl" for="fArea">Area you reside</label><input type="text" id="fArea"></div>' +
-    '<div class="field"><label class="lbl" for="fCity">City</label><input type="text" id="fCity"></div>' +
-    '<div class="field"><label class="lbl" for="fState">State</label><select id="fState">'+opt+'</select></div>' +
-    '<div class="field"><label class="lbl" for="fZip">Zip</label><input type="text" id="fZip" inputmode="numeric" autocomplete="postal-code" maxlength="6" placeholder="6-digit PIN code"></div>' +
-    '<div class="field dobfield"><label class="lbl" for="dDOB">Date of Birth</label><input type="date" id="dDOB" max="'+today+'"></div>' +
+    '<div class="field"><label class="lbl" for="fState">State / UT</label><select id="fState">'+opt+'</select></div>' +
+    '<div class="field"><label class="lbl" for="fZip">PIN code</label><input type="text" id="fZip" inputmode="numeric" autocomplete="postal-code" maxlength="6" placeholder="6-digit PIN code"></div>' +
   '</div>';
-  return qBlock("QA","Basic Contact Details","", f, "");
+  return qBlock("QA","About you","", f, "");
 }, wire:function(){
   var p = A.profile || {};
-  set("fName",p.name); set("fEmail",p.email); set("fPhone",p.phone);
-  set("fArea",p.area); set("fCity",p.city); set("fZip",p.zip);
-  if(p.state) document.getElementById("fState").value = p.state.code;
-  if(p.dob) document.getElementById("dDOB").value = p.dob;
   function set(id,v){ if(v) document.getElementById(id).value = v; }
+  set("fEmail",p.email); set("fArea",p.area); set("fZip",p.zip);
+  if(p.state) document.getElementById("fState").value = p.state.code;
 
-  /* Live masking: digits only, prefixes peeled, hard-capped at 10 / 6. */
-  var ph = document.getElementById("fPhone");
-  ph.addEventListener("input", function(){ ph.value = normPhone(ph.value); clearErr(); });
-  ph.addEventListener("blur",  function(){ ph.value = normPhone(ph.value); });
+  var visibleCity = document.getElementById("fCityId");
+  var bridgeCity = document.getElementById("city_id");
+  if(typeof window.__concaveFillCitySelect === "function"){
+    window.__concaveFillCitySelect(bridgeCity);
+  } else if(!(window.__concaveSelectableCities && window.__concaveSelectableCities.length)){
+    fetch("/api/cities").then(function(r){ return r.json(); }).then(function(data){
+      window.__concaveSelectableCities = (data && data.cities) || [];
+      fillVisibleCitySelect(visibleCity, p.city_id);
+      if(bridgeCity) fillVisibleCitySelect(bridgeCity, p.city_id);
+    }).catch(function(){});
+  }
+  fillVisibleCitySelect(visibleCity, p.city_id);
+  if(bridgeCity && visibleCity){
+    visibleCity.addEventListener("change", function(){ bridgeCity.value = visibleCity.value; });
+  }
+
   var zp = document.getElementById("fZip");
   zp.addEventListener("input", function(){ zp.value = normZip(zp.value); clearErr(); });
 }, validate:function(){
   var g = function(id){ return document.getElementById(id).value.trim(); };
-  var name=g("fName"), email=g("fEmail"),
-      area=g("fArea"), city=g("fCity"), st=document.getElementById("fState").value;
-  var phone = normPhone(g("fPhone"));
-  var zip   = normZip(g("fZip"));
-  if(!name) return err("QA","Please enter your name.");
+  var email=g("fEmail"), area=g("fArea"), st=document.getElementById("fState").value;
+  var cityId = g("fCityId");
+  var zip = normZip(g("fZip"));
+  var ageEl = document.querySelector('input[name="qa_age"]:checked');
+  var ageBand = ageEl ? ageEl.value : "";
 
-  /* Phone: exactly 10 digits, Indian mobile series (starts 6-9). */
-  if(!phone) return err("QA","Please enter your phone number.");
-  if(phone.length < 10) return err("QA","Phone number is too short. Please enter all 10 digits.");
-  if(!/^[6-9]/.test(phone)) return err("QA","Please enter a valid 10-digit mobile number starting with 6, 7, 8 or 9.");
-  if(!/^[6-9]\d{9}$/.test(phone)) return err("QA","Please enter a valid 10-digit mobile number.");
-
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)) return err("QA","Please enter a valid email address.");
+  if(!cityId) return err("QA","Please select your study city.");
+  if(!ageBand) return err("QA","Please select your age.");
+  if(email && !/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)) return err("QA","Please enter a valid email address.");
   if(!area) return err("QA","Please enter the area you reside in.");
-  if(!city) return err("QA","Please enter your city.");
   if(!st) return err("QA","Please select your state or union territory.");
-
-  /* Zip: exactly 6 digits, Indian PIN codes never start with 0. */
   if(!zip) return err("QA","Please enter your PIN code.");
   if(zip.length < 6) return err("QA","PIN code is too short. Please enter all 6 digits.");
   if(!/^[1-9]\d{5}$/.test(zip)) return err("QA","Please enter a valid 6-digit PIN code.");
 
-  var raw = document.getElementById("dDOB").value;
-  if(!raw) return err("QA","Please enter your date of birth.");
-  var dp = raw.split("-"), y = +dp[0], mo = +dp[1], dy = +dp[2];
-  var dt = new Date(y, mo-1, dy);
-  if(dt.getFullYear()!==y || dt.getMonth()!==mo-1 || dt.getDate()!==dy) return err("QA","That date of birth does not exist. Please check the day and month.");
-  if(dt > new Date()) return err("QA","Date of birth cannot be in the future.");
-  if(y < 1900) return err("QA","Please check the year of birth.");
+  var cfg = window.__concaveStudyConfig;
+  if(cfg && cfg.age_rule_on){
+    var ageNum = ageBand === "23+" ? 23 : +ageBand;
+    if(!(ageNum <= cfg.age_max && (ageBand === "23+" ? cfg.age_max >= 23 : ageNum >= cfg.age_min))){
+      return stop("TERMINATE_AGE_OUT_OF_RANGE");
+    }
+  }
 
+  var citySel = document.getElementById("fCityId");
+  var cityLabel = citySel.options[citySel.selectedIndex] ? citySel.options[citySel.selectedIndex].text : "";
   A.profile = A.profile || {};
-  A.profile.name=name; A.profile.email=email; A.profile.phone=phone;
-  A.profile.area=area; A.profile.city=city; A.profile.zip=zip;
+  A.profile.email=email; A.profile.area=area; A.profile.zip=zip;
+  A.profile.city_id=cityId; A.profile.city=cityLabel;
   A.profile.state = { code:+st, label:stateLabel(+st) };
-  A.profile.dob = y + "-" + pad(mo) + "-" + pad(dy);
-  A.profile.age_at_poll = yrs(dt, POLL_DATE);
-  A.profile.age_at_qualifying_date = yrs(dt, QUAL_DATE);
-  A.profile.age_today = yrs(dt, new Date());
-
-  /* T04 age gate */
-  if(dt < DOB_MIN || dt > DOB_MAX) return stop("TERMINATE_AGE_OUT_OF_RANGE");
+  A.profile.age_band = ageBand;
+  document.getElementById("city_id").value = cityId;
+  document.getElementById("age_band").value = ageBand;
+  document.getElementById("email").value = email;
+  document.getElementById("area").value = area;
+  document.getElementById("zip").value = zip;
   return true;
 }});
 
@@ -1555,8 +1579,90 @@ function wireQ8(){
 var shell = document.getElementById("shell");
 var terminated = null;
 
+function fillVisibleCitySelect(sel, current){
+  if(!sel) return;
+  var cities = window.__concaveSelectableCities || [];
+  if(!cities.length && sel.options.length > 1) return;
+  var keep = current || sel.value || "";
+  sel.innerHTML = '<option value="">Select city</option>';
+  for(var i=0;i<cities.length;i++){
+    var c = cities[i];
+    var o = document.createElement("option");
+    o.value = c.id;
+    o.textContent = c.name + (c.state ? " (" + c.state + ")" : "");
+    sel.appendChild(o);
+  }
+  if(keep) sel.value = keep;
+}
+
+function setBridgeField(name, value){
+  var host = document.getElementById("bridge-fields");
+  if(!host) return;
+  var el = host.querySelector('[name="'+name+'"]');
+  if(!el){
+    el = document.createElement("input");
+    el.type = "hidden";
+    el.name = name;
+    host.appendChild(el);
+  }
+  el.value = value == null ? "" : String(value);
+}
+
+function syncBridgeFields(){
+  var p = A.profile || {};
+  var citySel = document.getElementById("city_id");
+  if(citySel && p.city_id) citySel.value = p.city_id;
+  setBridgeField("age_band", p.age_band || "");
+  setBridgeField("email", p.email || "");
+  setBridgeField("area", p.area || "");
+  setBridgeField("zip", p.zip || "");
+  function dumpSingle(key){
+    var v = A[key];
+    if(!v) return;
+    setBridgeField(key, v.label || String(v.code || ""));
+  }
+  ["QC","QD","Q1","Q2","Q3","Q4","Q5","Q9","Q10","Q11","Q12","Q13","Q15_1","Q15_2","Q15_3","Q16"].forEach(dumpSingle);
+  function dumpGrid(key, items){
+    var v = A[key] || {};
+    for(var i=1;i<=items.length;i++){
+      if(v["r"+i] != null) setBridgeField(key+"_"+i, String(v["r"+i]));
+    }
+  }
+  dumpGrid("Q6a", Q6A);
+  dumpGrid("Q6b", Q6B);
+  var ranks = A.Q7 || [];
+  for(var r=1;r<=3;r++){
+    var pick = null;
+    for(var j=0;j<ranks.length;j++) if(ranks[j].rank === r) pick = ranks[j];
+    if(pick) setBridgeField("Q7_rank"+r, pick.label || String(pick.code));
+  }
+  var m = A.Q8 || { codes:[], labels:[] };
+  if(m.labels && m.labels.length) setBridgeField("Q8", m.labels.join(" | "));
+  else if(m.codes && m.codes.length) setBridgeField("Q8", m.codes.join(","));
+  if(A.Q17) setBridgeField("Q17", A.Q17);
+  if(A.consent) setBridgeField("consent", A.consent);
+  if(p.state) setBridgeField("qa_state", p.state.label || String(p.state.code));
+}
+
+function showResult(id){
+  syncBridgeFields();
+  document.querySelectorAll(".screen").forEach(function(s){ s.classList.add("hidden"); });
+  var target = document.getElementById(id);
+  if(target) target.classList.remove("hidden");
+  if(shell) shell.style.display = "none";
+  var rail = document.getElementById("rail");
+  if(rail) rail.style.display = "block";
+  var fill = document.getElementById("railFill");
+  if(fill) fill.style.width = "100%";
+  var bar = document.getElementById("bar");
+  if(bar) bar.style.width = "100%";
+  window.scrollTo(0,0);
+}
+
 function go(n){
   idx = n;
+  if(shell) shell.style.display = "";
+  document.querySelectorAll(".screen").forEach(function(s){ s.classList.add("hidden"); });
   var s = S[idx];
   var body = s.html();
   var h = "";
@@ -1595,15 +1701,11 @@ function stop(status){
   terminated = status;
   A.status = status;
   A.terminated_at = new Date().toISOString();
-  document.getElementById("rail").style.display = "block";
-  document.getElementById("railFill").style.width = "100%";
-  shell.innerHTML = '<div class="end">' +
-    '<h1>Thank you for your interest</h1>' +
-    '<p>Based on your responses, you do not qualify for this particular study.</p>' +
-    '<p>We appreciate the time you have taken. You may now close this page.</p>' +
-    '</div>' + debugPanel();
-  wireDebug();
-  submit();
+  window.__terminated = true;
+  window.__termReasons = window.__termReasons || [];
+  if(window.__termReasons.indexOf(status) < 0) window.__termReasons.push(status);
+  showResult("s-terminate");
+  if(!window.ConcaveRegistrationBridge) submit();
   return false;
 }
 
@@ -1611,14 +1713,9 @@ function stop(status){
 function finish(){
   A.status = "COMPLETE";
   A.terminated_at = null;
-  document.getElementById("rail").style.display = "block";
-  document.getElementById("railFill").style.width = "100%";
-  shell.innerHTML = '<div class="end">' +
-    '<h1>Thank you for participating in this research.</h1>' +
-    '<p>Your response has been recorded. Findings will be reported only in aggregate.</p>' +
-    '</div>' + debugPanel();
-  wireDebug();
-  submit();
+  window.__terminated = false;
+  showResult("s-thankyou");
+  if(!window.ConcaveRegistrationBridge) submit();
   try{ localStorage.removeItem("ftv_draft"); }catch(e){}
 }
 
@@ -1633,8 +1730,8 @@ function finish(){
 /* Question wording, keyed by qid. Kept verbatim from the questionnaire so the
    stored answer always travels with the question that produced it. */
 var QTEXT = {
-  QA:  "Basic Contact Details",
-  QB:  "What is your Date of Birth?",
+  QA:  "About you",
+  QB:  "Age band",
   QC:  "What is your Gender?",
   QD:  "What is your Relationship Status?",
   Q1:  "Were you eligible to vote for the first time in the 2024 Lok Sabha election?",
@@ -1782,10 +1879,9 @@ function buildPayload(){
     display_order: order,
     state_match: (p.state && A.Q15_1) ? (p.state.code === A.Q15_1.code) : null,
     profile: {
-      name:p.name||null, email:p.email||null, phone:p.phone||null,
-      area:p.area||null, city:p.city||null, state:p.state||null, zip:p.zip||null,
-      dob:p.dob||null, age_today:p.age_today||null,
-      age_at_poll:p.age_at_poll||null, age_at_qualifying_date:p.age_at_qualifying_date||null,
+      email:p.email||null, area:p.area||null, city:p.city||null,
+      city_id:p.city_id||null, state:p.state||null, zip:p.zip||null,
+      age_band:p.age_band||null,
       gender:A.QC||null, relationship_status:A.QD||null
     },
     responses: buildLong()    /* qid + question + answer, one row per answer */

@@ -19,6 +19,11 @@ where study_config is null;
 alter table participants
   add column if not exists email text,
   add column if not exists area text,
-  add column if not exists pincode text;
+  add column if not exists pincode text,
+  add column if not exists age_band text;
+
+alter table participants alter column full_name set default 'Anonymous';
+alter table participants alter column mobile drop not null;
+alter table participants alter column dob drop not null;
 
 notify pgrst, 'reload schema';

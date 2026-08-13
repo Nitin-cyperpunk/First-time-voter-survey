@@ -36,9 +36,9 @@ export function injectSelectableCitiesScript(
   const script = `<script>
 window.__concaveSelectableCities=${payload};
 (function(){
-  function fillCitySelect(){
+  function fillCitySelect(target){
     var cities = window.__concaveSelectableCities || [];
-    var sel = document.querySelector('select[name="city_id"]');
+    var sel = target || document.querySelector('select[name="city_id"]');
     if (!sel) return;
     var current = sel.value;
     sel.innerHTML = '<option value="">Select city</option>';
@@ -50,8 +50,9 @@ window.__concaveSelectableCities=${payload};
     });
     if (current && cities.some(function(c){ return c.id === current; })) sel.value = current;
   }
+  window.__concaveFillCitySelect = fillCitySelect;
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', fillCitySelect);
+    document.addEventListener('DOMContentLoaded', function(){ fillCitySelect(); });
   } else {
     fillCitySelect();
   }

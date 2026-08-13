@@ -48,7 +48,7 @@ import { buildRegistrationThankYouMessages } from "@/server/services/participant
 import { syncIpDuplicateFlag } from "@/lib/eligibility";
 import {
   ageOutOfRangeMessage,
-  isAgeWithinStudyRule,
+  isAgeBandWithinStudyRule,
   isRegistrationAccepting,
 } from "@/lib/study-config/gates";
 import { getStudyConfig } from "@/server/repositories/form-settings.repository";
@@ -202,15 +202,17 @@ export async function registerParticipant(
     throw new CapacityError("form_closed");
   }
 
-  if (!isAgeWithinStudyRule(input.dob, studyConfig)) {
+  if (!isAgeBandWithinStudyRule(input.age_band, studyConfig)) {
     throw new Error(`AGE_OUT_OF_RANGE:${ageOutOfRangeMessage(studyConfig)}`);
   }
 
-  const mobile = normalizePhone(input.mobile);
+  const mobile = input.mobile?.trim() ? normalizePhone(input.mobile) : "";
 
-  const existing = await findByMobile(mobile);
-  if (existing) {
-    throw new Error("DUPLICATE_MOBILE");
+  if (mobile) {
+    const existing = await findByMobile(mobile);
+    if (existing) {
+      throw new Error("DUPLICATE_MOBILE");
+    }
   }
 
   const form = (await getActiveFormVersion()) ?? {
@@ -289,9 +291,10 @@ export async function registerParticipant(
 
   const participant = await createParticipant({
     referralCode,
-    fullName: input.fullName,
-    mobile,
-    dob: input.dob,
+    fullName: input.fullName?.trim() || "Anonymous",
+    mobile: mobile || null,
+    dob: input.dob?.trim() || null,
+    ageBand: input.age_band,
     city: city.name,
     cityId: city.id,
     email: input.email?.trim() || null,
@@ -344,7 +347,7 @@ export async function registerParticipant(
     try {
       await createResponse({
         leadId: participant.leadId,
-        mobile: participant.mobile,
+        mobile: participant.mobile || null,
         formVersion: form.version,
         answers: withTimingMetadata(storedAnswers, alignedResponseTimes, {
           currentScreen: input.currentScreen,

@@ -114,30 +114,35 @@ function hasFieldName(html: string, name: string) {
   return new RegExp(`name=["']${name}["']`, "i").test(html);
 }
 
-function validateRegistrationHtml(html: string) {
+/**
+ * Registration HTML contract (anonymous First-Time Voters study).
+ *
+ * Required:
+ *   - city_id  — FK to config cities (capacity / region). `city` free-text is not enough.
+ *   - age_band — 18 | 19 | 20 | 21 | 22 | 23+ (no DOB).
+ *   - showResult(id) — real navigation; bridge wraps this to POST /api/register.
+ *   - s-thankyou — qualified completion screen id.
+ *
+ * Not required (anonymous):
+ *   - name, phone, dob_date / dob_month+day+year.
+ *
+ * Terminate screens: validator does not require `s-terminate`, but
+ * ConcaveRegistrationBridge treats ids containing "terminate" as terminate
+ * (refer-and-earn, no qualified completion). Include `id="s-terminate"` for Q1/Q2.
+ *
+ * Phone is intentionally omitted: referral attribution is referral code → lead_id,
+ * not mobile. participants.mobile remains nullable unique; login still uses
+ * mobile+DOB and will not work for anonymous respondents.
+ */
+export function validateRegistrationHtml(html: string) {
   const errors: string[] = [];
-  const requiredNames = ["name", "phone"];
 
-  for (const name of requiredNames) {
-    if (!hasFieldName(html, name)) {
-      errors.push(`Missing required field: ${name}.`);
-    }
+  if (!hasFieldName(html, "city_id")) {
+    errors.push("Missing required field: city_id.");
   }
 
-  if (!hasFieldName(html, "city") && !hasFieldName(html, "city_id")) {
-    errors.push("Missing required field: city or city_id.");
-  }
-
-  const hasSingleDob = hasFieldName(html, "dob_date");
-  const hasSplitDob =
-    hasFieldName(html, "dob_month") &&
-    hasFieldName(html, "dob_day") &&
-    hasFieldName(html, "dob_year");
-
-  if (!hasSingleDob && !hasSplitDob) {
-    errors.push(
-      "Missing date of birth field. Provide either dob_date, or dob_month + dob_day + dob_year.",
-    );
+  if (!hasFieldName(html, "age_band")) {
+    errors.push("Missing required field: age_band.");
   }
 
   if (!/function\s+showResult\s*\(/.test(html)) {
