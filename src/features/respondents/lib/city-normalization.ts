@@ -1,6 +1,5 @@
 /**
  * Soft city spelling collapse for geography reporting (no quotas).
- * Port of RLG city_normalization patterns for common India variants.
  */
 const CITY_ALIASES: Record<string, string> = {
   bombay: "Mumbai",

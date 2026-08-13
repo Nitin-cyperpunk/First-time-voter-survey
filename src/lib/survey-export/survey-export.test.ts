@@ -88,7 +88,7 @@ describe("survey export", () => {
       schemaQuestions,
       responses: [
         {
-          leadId: "CI_EN_0030",
+          leadId: "CI_FTV_0030",
           respondentName: "Its Singh",
           mobile: "9975412366",
           gender: "Female",
@@ -116,7 +116,7 @@ describe("survey export", () => {
     assert.equal(rows.length, 1);
     const row = rows[0]!;
 
-    assert.equal(row[RESPONDENT_ID_HEADER], "CI_EN_0030");
+    assert.equal(row[RESPONDENT_ID_HEADER], "CI_FTV_0030");
     assert.equal(row["Respondent Name"], "Its Singh");
     assert.equal(row["Do you agree to take part?"], "Yes");
     assert.equal(row["Age Group"], "18-24");
@@ -135,7 +135,7 @@ describe("survey export", () => {
       schemaQuestions,
       responses: [
         {
-          leadId: "CI_EN_0031",
+          leadId: "CI_FTV_0031",
           respondentName: "Matrix User",
           mobile: "",
           gender: "",
@@ -168,7 +168,7 @@ describe("survey export", () => {
       schemaQuestions,
       responses: [
         {
-          leadId: "CI_EN_0032",
+          leadId: "CI_FTV_0032",
           respondentName: "Repeat User",
           mobile: "",
           gender: "",
@@ -204,7 +204,7 @@ describe("survey export", () => {
       schemaQuestions,
       responses: [
         {
-          leadId: "CI_EN_0033",
+          leadId: "CI_FTV_0033",
           respondentName: "Diag User",
           mobile: "",
           gender: "",
@@ -250,13 +250,13 @@ describe("survey export", () => {
           otherKey: "Q31",
         },
         {
-          id: "bq10_brands_used",
+          id: "q3_party",
           qKey: "Q42",
-          label: "Everyday bra brands used",
+          label: "Parties mentioned",
           type: "open_multi",
           boxes: [
-            { label: "Brand 1", fieldName: "bq10_brand_1", qKey: "Q42" },
-            { label: "Brand 2", fieldName: "bq10_brand_2", qKey: "Q43" },
+            { label: "Brand 1", fieldName: "q3_party_1", qKey: "Q42" },
+            { label: "Brand 2", fieldName: "q3_party_2", qKey: "Q43" },
           ],
         },
       ],
@@ -268,7 +268,7 @@ describe("survey export", () => {
       absorbedQKeys: new Set(["q31", "q43"]),
       responses: [
         {
-          leadId: "CI_EN_0100",
+          leadId: "CI_FTV_0100",
           respondentName: "Nested User",
           mobile: "",
           gender: "",
@@ -281,7 +281,7 @@ describe("survey export", () => {
           totalDuration: "",
           answers: {
             Q30: ["Exercise/Gym", "Sports", "Others - Kickboxing"],
-            Q42: ["Enamor", "Jockey"],
+            Q42: ["BJP", "Congress"],
           },
         },
       ],
@@ -294,7 +294,7 @@ describe("survey export", () => {
       rows[0]!["Fitness activities - Other Specify Text"],
       "Kickboxing",
     );
-    assert.equal(rows[0]!["Everyday bra brands used"], "Enamor, Jockey");
+    assert.equal(rows[0]!["Parties mentioned"], "BJP, Congress");
     assert.equal(rows[0]!["Question 31"], undefined);
     assert.equal(rows[0]!["Question 43"], undefined);
   });

@@ -26,13 +26,13 @@ test("razorpay headers are exactly 9 columns in template order", () => {
 
 test("maps a payable row to RazorpayX format", () => {
   const row = mapPayoutToRazorpayRow({
-    leadId: "CI_EN_0001",
+    leadId: "CI_FTV_0001",
     fullName: "Its Singh!",
     mobile: "+91 98765 43210",
     email: "its@example.com",
     upiId: "Its.Singh@okhdfc",
     amount: 50,
-    surveyName: "Enamor Bra Study 2026 — Wave 1",
+    surveyName: "First-Time Voters Study 2024 — FTV-v1",
     referralsName: "Priya Sharma, Ananya",
     payoutReferenceId: null,
   });
@@ -40,11 +40,11 @@ test("maps a payable row to RazorpayX format", () => {
   assert.equal(row["Beneficiary Name (Mandatory)"], "Its Singh");
   assert.equal(row["Beneficiary's UPI ID (Mandatory)"], "its.singh@okhdfc");
   assert.equal(row["Payout Amount (Mandatory)"], 50);
-  assert.equal(row["Payout Narration (Optional)"], "Enamor Bra Study 2026 Wave 1");
+  assert.equal(row["Payout Narration (Optional)"], "First-Time Voters Study 2024 FTV-v1");
   assert.equal(row["Notes (Optional)"], "Priya Sharma, Ananya");
   assert.equal(row["Phone Number (Optional)"], "+919876543210");
   assert.equal(row["Email ID (Optional)"], "its@example.com");
-  assert.equal(row["Contact Reference ID (Optional)"], "CI_EN_0001");
+  assert.equal(row["Contact Reference ID (Optional)"], "CI_FTV_0001");
   assert.equal(row["Payout Reference ID (Optional)"], "");
 });
 

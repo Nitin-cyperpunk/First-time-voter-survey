@@ -19,13 +19,13 @@ const SAMPLE_HTML = `
   <div class="q" data-key="bq2_decider">
     <input type="radio" name="bq2_decider" value="Myself">
   </div>
-  <div class="q" data-key="bq7_types">
-    <input type="checkbox" name="bq7_types" value="Everyday bra">
-    <input type="text" class="spec" name="bq7_types_other">
+  <div class="q" data-key="q3_party">
+    <input type="checkbox" name="q3_party" value="BJP">
+    <input type="text" class="spec" name="q3_party_other">
   </div>
-  <div class="q" data-key="bq10_brands_used">
-    <input type="text" name="bq10_brand_1">
-    <input type="text" name="bq10_brand_2">
+  <div class="q" data-key="q3_party">
+    <input type="text" name="q3_party_1">
+    <input type="text" name="q3_party_2">
   </div>
 `;
 

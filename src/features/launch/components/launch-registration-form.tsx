@@ -281,10 +281,11 @@ export function LaunchRegistrationForm() {
       <div className="w-full max-w-lg space-y-6">
         <div className="text-center">
           <h1 className="mt-4 text-2xl font-semibold text-foreground">
-            Join the consumer panel
+            First-Time Voters Study
           </h1>
           <p className="mt-2 text-sm text-plum-muted">
-            Complete the form below to register as a lead.
+            Independent research on first-time voters in the 2024 Lok Sabha
+            election.
           </p>
         </div>
 

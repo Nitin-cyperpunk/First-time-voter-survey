@@ -23,7 +23,7 @@ alter table participants
 comment on column participants.instagram_visibility is
   'Admin Send routing: public uses ig.me DM; private opens instagram.com/{handle} profile.';
 
--- Study-wide Enamor config on form_settings (registration row).
+-- Study-wide First-Time Voters config on form_settings (registration row).
 -- jsonb matches message_templates / call_dispositions pattern — one flexible object,
 -- no new table.
 

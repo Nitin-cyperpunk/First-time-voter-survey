@@ -3,7 +3,7 @@ import { test } from "node:test";
 
 import { formatExportDate } from "@/lib/survey-export/format-value";
 
-test("formatExportDate matches Enamor sample (IST d/m/yyyy, 12h am/pm)", () => {
+test("formatExportDate matches IST d/m/yyyy 12h am/pm", () => {
   // 28 Jul 2026 10:04:12 IST = 28 Jul 2026 04:34:12 UTC
   assert.equal(
     formatExportDate("2026-07-28T04:34:12.000Z"),

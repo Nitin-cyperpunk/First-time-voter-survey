@@ -1,5 +1,5 @@
 const DEFAULT_INSTAGRAM_USERNAME = "concave_insights";
-const DEFAULT_WHATSAPP_BUSINESS_NUMBER = "919137595485";
+const DEFAULT_WHATSAPP_BUSINESS_NUMBER = "";
 
 export function getInstagramUsername(): string {
   return (

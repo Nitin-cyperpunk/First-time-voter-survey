@@ -88,7 +88,7 @@ export function FormUploadCard({ formType }: { formType: FormType }) {
             className="mt-1 bg-card"
             value={name}
             onChange={(event) => setName(event.target.value)}
-            placeholder="Apparel Choice V3"
+            placeholder="FTV-v1"
             required
           />
         </div>

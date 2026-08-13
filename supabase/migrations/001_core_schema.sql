@@ -223,20 +223,20 @@ alter table form_versions add column if not exists html_file_path text;
 
 update form_versions
 set
-  name = coalesce(name, 'Innerwear Screener V1'),
-  html_file_path = coalesce(html_file_path, '/forms/innerwear_screener_v1.html')
+  name = coalesce(name, 'FTV-v1'),
+  html_file_path = coalesce(html_file_path, '/forms/ftv_screener_v1.html')
 where version = 1;
 
 insert into form_versions (version, name, html_file_path, schema, published)
 select
   2,
-  'Innerwear Screener V2',
-  '/forms/innerwear_screener_v2.html',
+  'FTV-v1',
+  '/forms/ftv_screener_v1.html',
   '{ "fields": [] }'::jsonb,
   true
 where not exists (select 1 from form_versions where version = 2);
 
-create or replace function generate_en_participant_code()
+create or replace function generate_ftv_participant_code()
 returns text
 language plpgsql
 as $$
@@ -255,7 +255,7 @@ begin
         1
       );
     end loop;
-    code := 'EN' || suffix;
+    code := 'FTV' || suffix;
 
     if not exists (
       select 1 from participants where participant_code = code
@@ -273,7 +273,7 @@ declare
 begin
   for participant_row in select id from participants order by created_at loop
     loop
-      new_code := generate_en_participant_code();
+      new_code := generate_ftv_participant_code();
       begin
         update participants
         set participant_code = new_code
@@ -288,14 +288,14 @@ begin
 end;
 $$;
 
-drop function generate_en_participant_code();
+drop function generate_ftv_participant_code();
 
 -- Store uploaded HTML forms directly in form_versions.
 
 alter table form_versions add column if not exists html_content text;
 alter table form_versions add column if not exists uploaded_file_name text;
 
--- T-09: Migrate internal identity from UUID to lead_id (CI_EN_0001)
+-- T-09: Migrate internal identity from UUID to lead_id (CI_FTV_0001)
 -- Idempotent — safe to re-run on partially migrated databases.
 
 -- ---------------------------------------------------------------------------
@@ -305,20 +305,20 @@ alter table form_versions add column if not exists uploaded_file_name text;
 do $$
 begin
   if to_regclass('public.participant_lead_id_seq') is not null
-    and to_regclass('public.lead_seq_en') is null
+    and to_regclass('public.lead_seq_ftv') is null
   then
-    alter sequence participant_lead_id_seq rename to lead_seq_en;
+    alter sequence participant_lead_id_seq rename to lead_seq_ftv;
   end if;
 end $$;
 
-create sequence if not exists lead_seq_en start with 1;
+create sequence if not exists lead_seq_ftv start with 1;
 
 create or replace function format_lead_id(seq_val bigint)
 returns text
 language sql
 immutable
 as $$
-  select 'CI_EN_' || lpad(seq_val::text, 4, '0');
+  select 'CI_FTV_' || lpad(seq_val::text, 4, '0');
 $$;
 
 create or replace function assign_participant_lead_id()
@@ -330,7 +330,7 @@ begin
     return new;
   end if;
 
-  new.lead_id := format_lead_id(nextval('lead_seq_en'));
+  new.lead_id := format_lead_id(nextval('lead_seq_ftv'));
   return new;
 end;
 $$;
@@ -378,11 +378,11 @@ from numbered n
 where p.id = n.id;
 
 select setval(
-  'lead_seq_en',
+  'lead_seq_ftv',
   greatest(
     1,
     coalesce(
-      (select max(substring(lead_id from 7)::int) from participants where lead_id ~ '^CI_EN_[0-9]+$'),
+      (select max(substring(lead_id from 8)::int) from participants where lead_id ~ '^CI_FTV_[0-9]+$'),
       0
     ) + 1
   ),

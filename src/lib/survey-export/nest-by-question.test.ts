@@ -21,7 +21,7 @@ const surveySchema: FormExportSchema = {
     {
       id: "bq6_types",
       qKey: "Q37",
-      label: "Bra types purchased",
+      label: "Parties mentioned",
       type: "multiple_select",
       fieldName: "bq6_types",
       otherOption: "Other",
@@ -29,24 +29,24 @@ const surveySchema: FormExportSchema = {
       otherSpecifyField: "bq6_types_other",
     },
     {
-      id: "bq10_brands_used",
+      id: "q3_party",
       qKey: "Q42",
-      label: "Everyday bra brands used",
+      label: "Parties mentioned",
       type: "open_multi",
-      fieldName: "bq10_brand_1",
+      fieldName: "q3_party_1",
       boxes: [
-        { label: "Brand 1", fieldName: "bq10_brand_1", qKey: "Q42" },
-        { label: "Brand 2", fieldName: "bq10_brand_2", qKey: "Q43" },
-        { label: "Brand 3", fieldName: "bq10_brand_3", qKey: "Q44" },
-        { label: "Brand 4", fieldName: "bq10_brand_4", qKey: "Q45" },
+        { label: "Brand 1", fieldName: "q3_party_1", qKey: "Q42" },
+        { label: "Brand 2", fieldName: "q3_party_2", qKey: "Q43" },
+        { label: "Brand 3", fieldName: "q3_party_3", qKey: "Q44" },
+        { label: "Brand 4", fieldName: "q3_party_4", qKey: "Q45" },
       ],
     },
     {
-      id: "bq11_recent_brand",
+      id: "q3_party",
       qKey: "Q46",
-      label: "Most recent brand",
+      label: "Party voted for",
       type: "single_select",
-      fieldName: "bq11_recent_brand",
+      fieldName: "q3_party",
     },
   ],
 };
@@ -69,18 +69,18 @@ test("nestAnswersByQuestion merges other-specify fields into parent multi-select
   assert.equal(nested.Q31, undefined);
 });
 
-test("nestAnswersByQuestion merges bra-type other specify into Q37", () => {
+test("nestAnswersByQuestion merges other specify into Q37", () => {
   const nested = nestAnswersByQuestion(
     {
-      Q37: ["Everyday bra", "Other"],
-      Q38: "Wireless Lounge Bra",
+      Q37: ["BJP", "Other"],
+      Q38: "Independent",
     },
     surveySchema,
   );
 
   assert.deepEqual(nested.Q37, [
-    "Everyday bra",
-    "Others - Wireless Lounge Bra",
+    "BJP",
+    "Others - Independent",
   ]);
   assert.equal(nested.Q38, undefined);
 });
@@ -88,15 +88,15 @@ test("nestAnswersByQuestion merges bra-type other specify into Q37", () => {
 test("nestAnswersByQuestion collapses open-multi textboxes into one array", () => {
   const nested = nestAnswersByQuestion(
     {
-      Q42: "Enamor",
-      Q43: "Jockey",
-      Q44: "Vermon",
-      Q45: "Rocky",
+      Q42: "BJP",
+      Q43: "Congress",
+      Q44: "SP",
+      Q45: "DMK",
     },
     surveySchema,
   );
 
-  assert.deepEqual(nested.Q42, ["Enamor", "Jockey", "Vermon", "Rocky"]);
+  assert.deepEqual(nested.Q42, ["BJP", "Congress", "SP", "DMK"]);
   assert.equal(nested.Q43, undefined);
   assert.equal(nested.Q44, undefined);
   assert.equal(nested.Q45, undefined);
@@ -105,28 +105,28 @@ test("nestAnswersByQuestion collapses open-multi textboxes into one array", () =
 test("nestAnswersByQuestion skips empty open-multi boxes", () => {
   const nested = nestAnswersByQuestion(
     {
-      Q42: "Enamor",
-      Q43: "Jockey",
-      Q44: "Vermon",
+      Q42: "BJP",
+      Q43: "Congress",
+      Q44: "SP",
       Q45: "",
     },
     surveySchema,
   );
 
-  assert.deepEqual(nested.Q42, ["Enamor", "Jockey", "Vermon"]);
+  assert.deepEqual(nested.Q42, ["BJP", "Congress", "SP"]);
 });
 
 test("nestAnswersByQuestion keeps independent single-select questions separate", () => {
   const nested = nestAnswersByQuestion(
     {
-      Q42: "Enamor",
-      Q43: "Jockey",
-      Q46: "Vermon",
+      Q42: "BJP",
+      Q43: "Congress",
+      Q46: "SP",
     },
     surveySchema,
   );
 
-  assert.equal(nested.Q46, "Vermon");
+  assert.equal(nested.Q46, "SP");
 });
 
 test("nestAnswersByQuestion produces the full expected survey shape", () => {
@@ -134,22 +134,22 @@ test("nestAnswersByQuestion produces the full expected survey shape", () => {
     {
       Q30: ["Exercise/Gym", "Sports", "Yoga", "Other"],
       Q31: "Kickboxing",
-      Q37: ["Everyday bra", "T-shirt bra", "Other"],
-      Q38: "Wireless Lounge Bra",
-      Q42: "Enamor",
-      Q43: "Jockey",
-      Q44: "Vermon",
-      Q45: "Rocky",
-      Q46: "Vermon",
+      Q37: ["BJP", "Congress", "Other"],
+      Q38: "Independent",
+      Q42: "BJP",
+      Q43: "Congress",
+      Q44: "SP",
+      Q45: "DMK",
+      Q46: "SP",
     },
     surveySchema,
   );
 
   assert.deepEqual(nested, {
     Q30: ["Exercise/Gym", "Sports", "Yoga", "Others - Kickboxing"],
-    Q37: ["Everyday bra", "T-shirt bra", "Others - Wireless Lounge Bra"],
-    Q42: ["Enamor", "Jockey", "Vermon", "Rocky"],
-    Q46: "Vermon",
+    Q37: ["BJP", "Congress", "Others - Independent"],
+    Q42: ["BJP", "Congress", "SP", "DMK"],
+    Q46: "SP",
   });
 });
 
@@ -163,8 +163,8 @@ test("nestAnswersByQuestion consolidates matrix row keys under parent", () => {
         label: "Rate the following",
         type: "matrix",
         rows: [
-          { label: "Comfort", fieldName: "rate_comfort", qKey: "Q22" },
-          { label: "Fit", fieldName: "rate_fit", qKey: "Q23" },
+          { label: "Inflation", fieldName: "rate_inflation", qKey: "Q22" },
+          { label: "Jobs", fieldName: "rate_jobs", qKey: "Q23" },
         ],
       },
     ],
@@ -179,8 +179,8 @@ test("nestAnswersByQuestion consolidates matrix row keys under parent", () => {
   );
 
   assert.deepEqual(nested.Q22, {
-    Comfort: "Very Important",
-    Fit: "Important",
+    Inflation: "Very Important",
+    Jobs: "Important",
   });
   assert.equal(nested.Q23, undefined);
 });

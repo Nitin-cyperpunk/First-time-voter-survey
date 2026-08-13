@@ -25,10 +25,10 @@ const schema: FormExportSchema = {
     {
       id: "brands",
       qKey: "Q2",
-      label: "Which brands have you purchased?",
+      label: "Which party did you vote for?",
       type: "multiple_select",
       fieldName: "brands",
-      options: ["Enamor", "Jockey", "Zivame", "Triumph", "Other"],
+      options: ["BJP", "Congress", "AAP", "TMC", "Other"],
       otherOption: "Other",
       otherSpecifyField: "brands_other",
       otherKey: "Q3",
@@ -40,9 +40,9 @@ const schema: FormExportSchema = {
       type: "matrix",
       fieldName: "importance",
       rows: [
-        { label: "Comfort", fieldName: "rate_comfort", qKey: "Q4" },
-        { label: "Fit", fieldName: "rate_fit", qKey: "Q5" },
-        { label: "Design", fieldName: "rate_design", qKey: "Q7" },
+        { label: "Inflation", fieldName: "rate_inflation", qKey: "Q4" },
+        { label: "Jobs", fieldName: "rate_jobs", qKey: "Q5" },
+        { label: "Security", fieldName: "rate_security", qKey: "Q7" },
       ],
     },
   ],
@@ -61,26 +61,26 @@ test("single select exports one question column", () => {
 test("multiple select exports one column per option", () => {
   const normalized = buildNormalizedExport({
     schema,
-    answers: { Q2: ["Enamor", "Jockey", "Triumph"] },
+    answers: { Q2: ["BJP", "Congress", "TMC"] },
     fieldAnswers: {},
   });
 
   assert.equal(
-    normalized["Which brands have you purchased? - Enamor"],
-    "Enamor",
+    normalized["Which party did you vote for? - BJP"],
+    "BJP",
   );
   assert.equal(
-    normalized["Which brands have you purchased? - Jockey"],
-    "Jockey",
+    normalized["Which party did you vote for? - Congress"],
+    "Congress",
   );
-  assert.equal(normalized["Which brands have you purchased? - Zivame"], "");
+  assert.equal(normalized["Which party did you vote for? - AAP"], "");
   assert.equal(
-    normalized["Which brands have you purchased? - Triumph"],
-    "Triumph",
+    normalized["Which party did you vote for? - TMC"],
+    "TMC",
   );
-  assert.equal(normalized["Which brands have you purchased? - Other"], "");
+  assert.equal(normalized["Which party did you vote for? - Other"], "");
   assert.equal(
-    normalized["Which brands have you purchased? - Other Specify Text"],
+    normalized["Which party did you vote for? - Other Specify Text"],
     "",
   );
 });
@@ -88,21 +88,21 @@ test("multiple select exports one column per option", () => {
 test("other specify uses Variant A: Other column + Other Specify Text", () => {
   const normalized = buildNormalizedExport({
     schema,
-    answers: { Q2: ["Enamor", "Other"], Q3: "Custom brand" },
-    fieldAnswers: { brands_other: "Custom brand" },
+    answers: { Q2: ["BJP", "Other"], Q3: "Custom party" },
+    fieldAnswers: { brands_other: "Custom party" },
   });
 
   assert.equal(
-    normalized["Which brands have you purchased? - Enamor"],
-    "Enamor",
+    normalized["Which party did you vote for? - BJP"],
+    "BJP",
   );
   assert.equal(
-    normalized["Which brands have you purchased? - Other"],
+    normalized["Which party did you vote for? - Other"],
     "Other",
   );
   assert.equal(
-    normalized["Which brands have you purchased? - Other Specify Text"],
-    "Custom brand",
+    normalized["Which party did you vote for? - Other Specify Text"],
+    "Custom party",
   );
 });
 
@@ -117,9 +117,9 @@ test("matrix exports one column per row with rating", () => {
     fieldAnswers: {},
   });
 
-  assert.equal(normalized["Rate the following - Comfort"], "Very Important");
-  assert.equal(normalized["Rate the following - Fit"], "Important");
-  assert.equal(normalized["Rate the following - Design"], "Neutral");
+  assert.equal(normalized["Rate the following - Inflation"], "Very Important");
+  assert.equal(normalized["Rate the following - Jobs"], "Important");
+  assert.equal(normalized["Rate the following - Security"], "Neutral");
 });
 
 test("export row starts with Respondent ID and expands all types", () => {
@@ -127,7 +127,7 @@ test("export row starts with Respondent ID and expands all types", () => {
     schema,
     answers: {
       Q1: "18-25",
-      Q2: ["Enamor", "Others - Acme"],
+      Q2: ["BJP", "Others - Acme"],
       Q4: "Very Important",
       Q5: "Important",
       Q7: "Neutral",
@@ -136,20 +136,20 @@ test("export row starts with Respondent ID and expands all types", () => {
   });
 
   const row = buildExportRow({
-    leadId: "CI_EN_0001",
+    leadId: "CI_FTV_0001",
     schema,
     normalized,
   });
 
-  assert.equal(row[RESPONDENT_ID_HEADER], "CI_EN_0001");
+  assert.equal(row[RESPONDENT_ID_HEADER], "CI_FTV_0001");
   assert.equal(row["What is your age?"], "18-25");
-  assert.equal(row["Which brands have you purchased? - Enamor"], "Enamor");
-  assert.equal(row["Which brands have you purchased? - Other"], "Other");
+  assert.equal(row["Which party did you vote for? - BJP"], "BJP");
+  assert.equal(row["Which party did you vote for? - Other"], "Other");
   assert.equal(
-    row["Which brands have you purchased? - Other Specify Text"],
+    row["Which party did you vote for? - Other Specify Text"],
     "Acme",
   );
-  assert.equal(row["Rate the following - Comfort"], "Very Important");
+  assert.equal(row["Rate the following - Inflation"], "Very Important");
 });
 
 test("open-multi exports one comma-separated column", () => {
@@ -157,14 +157,14 @@ test("open-multi exports one comma-separated column", () => {
     version: 1,
     fields: [
       {
-        id: "bq10_brands_used",
+        id: "q3_party",
         qKey: "Q42",
-        label: "Write the names of everyday bra brands you personally use.",
+        label: "Which party did you vote for?",
         type: "open_multi",
-        fieldName: "bq10_brand_1",
+        fieldName: "q3_party_1",
         boxes: [
-          { label: "Brand 1", fieldName: "bq10_brand_1", qKey: "Q42" },
-          { label: "Brand 2 (optional)", fieldName: "bq10_brand_2", qKey: "Q43" },
+          { label: "Brand 1", fieldName: "q3_party_1", qKey: "Q42" },
+          { label: "Brand 2 (optional)", fieldName: "q3_party_2", qKey: "Q43" },
         ],
       },
     ],
@@ -173,17 +173,17 @@ test("open-multi exports one comma-separated column", () => {
   const normalized = buildNormalizedExport({
     schema: openMultiSchema,
     answers: {
-      Q42: "Enamor",
-      Q43: "Jockey",
+      Q42: "BJP",
+      Q43: "Congress",
     },
     fieldAnswers: {},
   });
 
   assert.equal(
     normalized[
-      "Write the names of everyday bra brands you personally use."
+      "Which party did you vote for?"
     ],
-    "Enamor, Jockey",
+    "BJP, Congress",
   );
 });
 
@@ -225,7 +225,7 @@ test("parse-html-schema reads data-other-inline into otherInline", () => {
     <div class="q" data-key="brands" data-other-inline="false">
       <label class="q-label">Brands</label>
       <div class="opts" data-multi="brands" data-other="Other">
-        <input type="checkbox" name="brands" value="Enamor">
+        <input type="checkbox" name="brands" value="BJP">
         <input type="checkbox" name="brands" value="Other">
         <input type="text" class="spec" name="brands_other">
       </div>
@@ -282,7 +282,7 @@ test("cross-form_version export merges columns and maps each row to its schema",
     schema: mergedSchema,
     responses: [
       {
-        leadId: "CI_EN_0001",
+        leadId: "CI_FTV_0001",
         normalized: buildNormalizedExport({
           schema: schemaV1,
           answers: { Q1: "18-25" },
@@ -290,7 +290,7 @@ test("cross-form_version export merges columns and maps each row to its schema",
         }),
       },
       {
-        leadId: "CI_EN_0002",
+        leadId: "CI_FTV_0002",
         normalized: buildNormalizedExport({
           schema: schemaV2,
           answers: { Q1: "Yes", Q2: "26-35" },

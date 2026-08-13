@@ -1,9 +1,9 @@
 import type { StudyConfig } from "@/lib/study-config/types";
 
 /**
- * Defaults: all gates open. Age rule off until admin enables 18–35.
+ * Defaults: all gates open. Age rule off until admin enables it.
  * target=150, buffer=30 → closesAt = target + buffer (180).
- * Part 2 metrics must read these live — never hardcode 150/180.
+ * Hard qualified-completion cap is total_capacity (200).
  */
 export const DEFAULT_STUDY_CONFIG: StudyConfig = {
   target: 150,
@@ -16,13 +16,11 @@ export const DEFAULT_STUDY_CONFIG: StudyConfig = {
   screener_open: true,
   project_open: true,
   age_min: 18,
-  age_max: 35,
+  age_max: 30,
   age_rule_on: false,
   term_consent_no: true,
-  term_gender_male: true,
-  term_decider_other: true,
-  term_occupation_sensitive: true,
-  term_last_buy_12mo: true,
+  term_q1_not_first_time: true,
+  term_q2_did_not_vote: true,
   survey_reward_amount: 50,
   referral_reward_amount: 0,
 };

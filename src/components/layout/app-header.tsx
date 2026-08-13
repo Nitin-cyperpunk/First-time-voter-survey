@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 
+import { ADMIN_LOGIN_PATH } from "@/lib/admin-paths";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -35,7 +36,7 @@ export function AppHeader({ onMenuClick, title, description }: AppHeaderProps) {
       await fetch("/api/admin/logout", { method: "POST" });
       dismissToast(loadingId);
       toastSuccess("👋 Logged Out Successfully");
-      router.push("/admin/login");
+      router.push(ADMIN_LOGIN_PATH);
       router.refresh();
     } catch {
       dismissToast(loadingId);
@@ -62,7 +63,7 @@ export function AppHeader({ onMenuClick, title, description }: AppHeaderProps) {
             </h1>
             {description ? (
               <p className="truncate text-xs text-muted-foreground">
-                Enamor Study · {description}
+                Voters Study · {description}
               </p>
             ) : null}
           </div>

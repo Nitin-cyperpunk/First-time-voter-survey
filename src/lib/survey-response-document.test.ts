@@ -111,8 +111,8 @@ test("buildSurveyResponseDocument populates comparison from schema field names",
     leadId: "LD1002",
     participant: { fullName: "John", city: "Bareilly" },
     answers: {
-      Q10: "Enamor",
-      Q11: "Everyday bra",
+      Q10: "BJP",
+      Q11: "BJP",
       Q12: "2-3 months",
     },
     surveySchema: {
@@ -121,16 +121,16 @@ test("buildSurveyResponseDocument populates comparison from schema field names",
         {
           id: "recent_brand",
           qKey: "Q10",
-          label: "Recent brand",
+          label: "Party voted for",
           type: "text",
           fieldName: "recent_brand",
         },
         {
-          id: "bra_type",
+          id: "party",
           qKey: "Q11",
-          label: "Bra type",
+          label: "Party",
           type: "text",
-          fieldName: "bra_type",
+          fieldName: "party",
         },
         {
           id: "last_purchase",
@@ -143,7 +143,7 @@ test("buildSurveyResponseDocument populates comparison from schema field names",
     },
   });
 
-  assert.equal(document.comparison.brand, "Enamor");
-  assert.equal(document.comparison.type, "Everyday bra");
+  assert.equal(document.comparison.brand, "BJP");
+  assert.equal(document.comparison.type, "BJP");
   assert.equal(document.comparison.when, "2-3 months");
 });

@@ -47,7 +47,7 @@ export async function middleware(request: NextRequest) {
 
   if (!user) {
     const loginUrl = request.nextUrl.clone();
-    loginUrl.pathname = "/admin/login";
+    loginUrl.pathname = "/admin-ftv/login";
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
   }
@@ -57,17 +57,8 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/metrics/:path*",
-    "/respondents/:path*",
-    "/dm-verify/:path*",
-    "/terminations/:path*",
-    "/referrals/:path*",
-    "/forms",
-    "/message-templates/:path*",
-    "/payouts/:path*",
-    "/settings/:path*",
-    "/admin/users/:path*",
-    "/admin",
+    "/admin-ftv",
+    "/admin-ftv/:path*",
     "/api/admin/:path*",
   ],
 };

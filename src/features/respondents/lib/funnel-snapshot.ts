@@ -100,7 +100,7 @@ function resolveStatus(
 }
 
 /**
- * Port of RLG funnelSnapshot math — Registered → Eligible → Verified → Completed.
+ * Funnel math — Registered → Eligible → Verified → Completed.
  * Eligible stage uses “reached eligible” (includes verification rejects) so
  * drop-off after screener is attributed to Eligible → Verified (not verified).
  */

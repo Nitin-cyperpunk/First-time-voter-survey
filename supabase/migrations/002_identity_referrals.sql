@@ -16,7 +16,7 @@ end $$;
 
 -- T-15: Enforce referral_code NOT NULL and full UNIQUE constraint.
 
-create or replace function generate_en_referral_code()
+create or replace function generate_ftv_referral_code()
 returns text
 language plpgsql
 as $$
@@ -35,7 +35,7 @@ begin
         1
       );
     end loop;
-    code := 'EN' || suffix;
+    code := 'FTV' || suffix;
 
     if not exists (
       select 1 from participants where referral_code = code
@@ -55,7 +55,7 @@ begin
     select lead_id from participants where referral_code is null
   loop
     loop
-      new_code := generate_en_referral_code();
+      new_code := generate_ftv_referral_code();
       begin
         update participants
         set referral_code = new_code
@@ -69,7 +69,7 @@ begin
   end loop;
 end $$;
 
-drop function generate_en_referral_code();
+drop function generate_ftv_referral_code();
 
 drop index if exists idx_participants_referral_code;
 create unique index if not exists idx_participants_referral_code

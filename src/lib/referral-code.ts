@@ -1,7 +1,7 @@
 import { getAppUrl } from "@/lib/app-url";
 
-export const REFERRAL_CODE_PREFIX = "EN";
-const REFERRAL_CODE_PATTERN = /^EN[23456789A-HJ-NP-Z]{6}$/;
+export const REFERRAL_CODE_PREFIX = "FTV";
+const REFERRAL_CODE_PATTERN = /^FTV[23456789A-HJ-NP-Z]{6}$/;
 
 export function isValidReferralCodeFormat(code: string): boolean {
   return REFERRAL_CODE_PATTERN.test(normalizeReferralCode(code));
