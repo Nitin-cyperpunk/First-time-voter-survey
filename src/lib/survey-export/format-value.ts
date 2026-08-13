@@ -135,9 +135,8 @@ export function isMatrixObject(
 }
 
 /**
- * Format timestamps for Everyday Bra client export.
- * Matches Enamor_SAMPLE_filled_responses: `28/7/2026, 10:04:12 am`
- * (IST / Asia/Kolkata, d/m/yyyy, 12-hour clock, lowercase am/pm).
+ * Format timestamps for FTV export.
+ * IST / Asia/Kolkata, d/m/yyyy, 12-hour clock, lowercase am/pm.
  */
 export function formatExportDate(
   value: string | null | undefined,

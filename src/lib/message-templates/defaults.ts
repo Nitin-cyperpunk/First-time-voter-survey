@@ -6,14 +6,14 @@ export const DEFAULT_MESSAGE_TEMPLATES: MessageTemplatesRecord = {
     channel: "whatsapp",
     enabled: true,
     template:
-      "Hi 👋\n\nI'm participating in the Apparel Choices Study by Concave Insights.\n\nRegister here:\n\n{{referral_link}}",
+      "Hi 👋\n\nI'm participating in the First-Time Voters Study by Concave Insights.\n\nRegister here:\n\n{{referral_link}}",
   },
   instagram_referral: {
     title: "Referral Instagram",
     channel: "instagram",
     enabled: true,
     template:
-      "Hi 👋\n\nJoin me in the Apparel Choices Study.\n\n{{referral_link}}",
+      "Hi 👋\n\nJoin me in the First-Time Voters Study.\n\n{{referral_link}}",
   },
   instagram_verification: {
     title: "Instagram Verification",
@@ -27,7 +27,7 @@ export const DEFAULT_MESSAGE_TEMPLATES: MessageTemplatesRecord = {
     channel: "instagram",
     enabled: true,
     template:
-      "Hi {{participant_name}},\n\nYour survey is ready.\n\n{{survey_link}}",
+      "Hi {{participant_name}},\n\nThank you for completing the First-Time Voters Study.\n\n{{referral_link}}",
   },
   refill_request: {
     title: "Refill Request",

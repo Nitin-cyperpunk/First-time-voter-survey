@@ -90,7 +90,7 @@ function surveyClosedPageHtml() {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Survey closed</title>
+  <title>First-Time Voters Study | Concave Insights</title>
   <style>
     :root {
       --bg:#F8F9FA; --surface:#FFFFFF; --text-primary:#1E3A8A; --text-body:#334155;
@@ -112,8 +112,8 @@ function surveyClosedPageHtml() {
 <body>
   <div class="card">
     <div class="badge"><span class="dot"></span> Closed — Not Accepting Responses</div>
-    <h1>This survey is no longer accepting responses</h1>
-    <p>Please contact the admin if you believe this is an error.</p>
+    <h1>The First-Time Voters Study is no longer accepting responses</h1>
+    <p>Please contact Concave Insights if you believe this is an error.</p>
   </div>
 </body>
 </html>`;

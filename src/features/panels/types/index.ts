@@ -1,1 +1,1 @@
-// Consumer panel domain types will be defined here.
+// First-Time Voters study domain types will be defined here.

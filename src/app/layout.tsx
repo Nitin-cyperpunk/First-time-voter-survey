@@ -5,9 +5,14 @@ import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Consumer Panel Referral Tracking System",
+  title: "First-Time Voters Study | Concave Insights",
   description:
-    "Technical assessment application for tracking consumer panel referrals.",
+    "Independent academic research on factors shaping first-time voter behaviour in the 2024 Lok Sabha election. Run by Concave Insights.",
+  openGraph: {
+    title: "First-Time Voters Study | Concave Insights",
+    description:
+      "Independent academic research on factors shaping first-time voter behaviour in the 2024 Lok Sabha election.",
+  },
 };
 
 export default function RootLayout({

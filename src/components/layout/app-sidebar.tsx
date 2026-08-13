@@ -29,16 +29,16 @@ import {
 } from "@/components/ui/tooltip";
 
 const NAV_ICON_BY_HREF: Record<string, LucideIcon> = {
-  "/metrics": LayoutDashboard,
-  "/respondents": Users,
-  "/dm-verify": MessageCircle,
-  "/terminations": ShieldAlert,
-  "/referrals": Share2,
-  "/forms": FileText,
-  "/message-templates": MessageSquareText,
-  "/payouts": Wallet,
-  "/settings": Settings,
-  "/admin/users": UserCog,
+  "/admin-ftv/metrics": LayoutDashboard,
+  "/admin-ftv/respondents": Users,
+  "/admin-ftv/dm-verify": MessageCircle,
+  "/admin-ftv/terminations": ShieldAlert,
+  "/admin-ftv/referrals": Share2,
+  "/admin-ftv/forms": FileText,
+  "/admin-ftv/message-templates": MessageSquareText,
+  "/admin-ftv/payouts": Wallet,
+  "/admin-ftv/settings": Settings,
+  "/admin-ftv/users": UserCog,
 };
 
 function navIconForHref(href: string): LucideIcon {
@@ -80,10 +80,10 @@ export function AppSidebar({
         </div>
         <div className={cn("min-w-0", collapsed && "md:hidden xl:block")}>
           <p className="truncate text-sm font-semibold tracking-tight">
-            Enamor Panel
+            Voters Study
           </p>
           <p className="mt-0.5 truncate text-[11px] tracking-[0.03em] text-sidebar-foreground/55">
-            #YourLingerieYourSay
+            First-Time Voters · FTV-v1
           </p>
         </div>
       </div>

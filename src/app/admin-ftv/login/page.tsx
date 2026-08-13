@@ -40,7 +40,7 @@ export default function AdminLoginPage() {
         return;
       }
 
-      router.push("/metrics");
+      router.push("/admin-ftv/metrics");
       router.refresh();
     } catch {
       dismissToast(loadingId);
@@ -60,9 +60,11 @@ export default function AdminLoginPage() {
           <div className="mx-auto mb-4 flex size-10 items-center justify-center rounded-[10px] bg-primary text-sm font-bold text-white">
             C
           </div>
-          <h1 className="text-xl font-semibold text-foreground">Admin login</h1>
+          <h1 className="text-xl font-semibold text-foreground">
+            Voters Study admin
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Sign in with your admin email and password.
+            First-Time Voters Study · Concave Insights
           </p>
         </div>
 

@@ -72,10 +72,8 @@ const OPEN_SWITCHES: Array<{
 
 const TERM_SWITCHES: Array<{ key: BoolKey; label: string }> = [
   { key: "term_consent_no", label: "Consent = No" },
-  { key: "term_gender_male", label: "Gender = Male" },
-  { key: "term_decider_other", label: "Decider = Other" },
-  { key: "term_occupation_sensitive", label: "Occupation (sensitive)" },
-  { key: "term_last_buy_12mo", label: "Last buy > 12 months" },
+  { key: "term_q1_not_first_time", label: "Q1 = not a first-time voter" },
+  { key: "term_q2_did_not_vote", label: "Q2 = did not vote" },
 ];
 
 type PendingOpenToggle = {

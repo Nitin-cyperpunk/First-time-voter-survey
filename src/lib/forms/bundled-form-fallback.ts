@@ -18,8 +18,8 @@ type BundledFormConfig = {
 const BUNDLED_FORMS: Record<FormType, BundledFormConfig> = {
   registration: {
     version: 2,
-    name: "Innerwear Screener V2",
-    publicPath: "/forms/innerwear_screener_v2.html",
+    name: "FTV-v1",
+    publicPath: "/forms/ftv_screener_v1.html",
   },
 };
 

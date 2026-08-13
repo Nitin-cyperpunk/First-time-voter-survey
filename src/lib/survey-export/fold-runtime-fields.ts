@@ -17,7 +17,7 @@ function fieldIdentity(field: FormExportQuestion): string {
 
 /**
  * Map schema question ids / field names → runtime answer-key patterns
- * used by dynamically built Everyday Bra (and similar) survey HTML.
+ * used by dynamically built screener HTML.
  */
 export function runtimeFoldRulesForField(field: FormExportQuestion): FoldRule[] {
   const id = fieldIdentity(field);

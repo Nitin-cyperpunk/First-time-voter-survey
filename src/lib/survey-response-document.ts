@@ -72,7 +72,7 @@ function isInternalDocumentAnswerKey(key: string): boolean {
 
 const COMPARISON_FIELD_PATTERNS: Record<keyof SurveyComparison, string[]> = {
   brand: ["brand"],
-  type: ["type", "bra_type", "product_type"],
+  type: ["type", "party", "product_type"],
   when: ["when", "lastbuy", "last_purchase", "purchase_when"],
 };
 

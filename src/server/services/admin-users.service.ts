@@ -131,7 +131,7 @@ export async function resetAdminPassword(adminId: string) {
   }
 
   const supabase = getSupabaseAdmin();
-  const redirectTo = `${getAppUrl()}/admin/login`;
+  const redirectTo = `${getAppUrl()}/admin-ftv/login`;
   const { error } = await supabase.auth.resetPasswordForEmail(admin.email, {
     redirectTo,
   });

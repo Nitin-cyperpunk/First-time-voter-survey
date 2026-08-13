@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 
+import { ADMIN_DEFAULT_HOME, ADMIN_LOGIN_PATH } from "@/lib/admin-paths";
+
 import { createClient } from "@/lib/supabase/server";
 import {
   ROLE_SUPER_ADMIN,
@@ -42,13 +44,13 @@ export async function getCurrentAdmin(): Promise<AdminUser | null> {
 export async function requireAdmin(): Promise<AdminUser> {
   const user = await getSupabaseAuthUser();
   if (!user) {
-    redirect("/admin/login");
+    redirect(ADMIN_LOGIN_PATH);
   }
 
   const admin = await findActiveAdminByAuthUserId(user.id);
   if (!admin) {
     await signOutAdmin();
-    redirect("/admin/login");
+    redirect(ADMIN_LOGIN_PATH);
   }
 
   return admin;
@@ -59,7 +61,7 @@ export async function requireRole(
 ): Promise<AdminUser> {
   const admin = await requireAdmin();
   if (!rolesInclude(admin.role, allowed)) {
-    redirect("/metrics");
+    redirect(ADMIN_DEFAULT_HOME);
   }
   return admin;
 }
@@ -69,7 +71,7 @@ export async function requireCapability(
 ): Promise<AdminUser> {
   const admin = await requireAdmin();
   if (!canAccess(admin.role, capability)) {
-    redirect("/metrics");
+    redirect(ADMIN_DEFAULT_HOME);
   }
   return admin;
 }

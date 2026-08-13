@@ -157,7 +157,14 @@ export async function updateCity(
     actorId: string;
   },
 ): Promise<CityRecord> {
-  const patch: Record<string, unknown> = { updated_by: input.actorId };
+  const patch: {
+    updated_by: string;
+    name?: string;
+    state?: string;
+    area_type?: CityAreaType;
+    capacity?: number;
+    is_active?: boolean;
+  } = { updated_by: input.actorId };
   if (input.name !== undefined) patch.name = input.name.trim();
   if (input.state !== undefined) patch.state = input.state.trim();
   if (input.areaType !== undefined) patch.area_type = input.areaType;

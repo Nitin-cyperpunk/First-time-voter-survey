@@ -1,3 +1,5 @@
+import { adminPath } from "@/lib/admin-paths";
+
 export const ROLE_SUPER_ADMIN = "SUPER_ADMIN" as const;
 export const ROLE_ADMIN = "ADMIN" as const;
 
@@ -31,61 +33,61 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   {
     capability: "dashboard",
     title: "Metrics",
-    href: "/metrics",
-    description: "Overview of panel activity and referral metrics",
+    href: adminPath("/metrics"),
+    description: "Overview of study activity and referral metrics",
   },
   {
     capability: "respondents",
     title: "Respondents",
-    href: "/respondents",
+    href: adminPath("/respondents"),
     description: "Registered participants and leads",
   },
   {
     capability: "dm",
     title: "DM & Verify",
-    href: "/dm-verify",
+    href: adminPath("/dm-verify"),
     description: "Instagram DM verification workflow",
   },
   {
     capability: "screener",
     title: "Terminations",
-    href: "/terminations",
+    href: adminPath("/terminations"),
     description: "Form rule terminations and matched response details",
   },
   {
     capability: "referrals",
     title: "Referrals",
-    href: "/referrals",
+    href: adminPath("/referrals"),
     description: "Referral attribution and reward status",
   },
   {
     capability: "screener",
     title: "Forms",
-    href: "/forms",
-    description: "Registration / screener form versions",
+    href: adminPath("/forms"),
+    description: "FTV-v1 screener form versions",
   },
   {
     capability: "dm",
     title: "Message Templates",
-    href: "/message-templates",
+    href: adminPath("/message-templates"),
     description: "WhatsApp and Instagram message templates with placeholders",
   },
   {
     capability: "export",
     title: "Payouts",
-    href: "/payouts",
+    href: adminPath("/payouts"),
     description: "Referral earnings with payment status",
   },
   {
     capability: "settings",
     title: "Config",
-    href: "/settings",
+    href: adminPath("/settings"),
     description: "Form open/close, city capacity, and study configuration",
   },
   {
     capability: "admin_management",
     title: "Admin Management",
-    href: "/admin/users",
+    href: adminPath("/users"),
     description: "Create and manage admin accounts",
   },
 ];

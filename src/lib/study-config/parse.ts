@@ -46,18 +46,13 @@ export function parseStudyConfig(raw: unknown): StudyConfig {
     age_max: ageMax,
     age_rule_on: asBool(record.age_rule_on, base.age_rule_on),
     term_consent_no: asBool(record.term_consent_no, base.term_consent_no),
-    term_gender_male: asBool(record.term_gender_male, base.term_gender_male),
-    term_decider_other: asBool(
-      record.term_decider_other,
-      base.term_decider_other,
+    term_q1_not_first_time: asBool(
+      record.term_q1_not_first_time,
+      base.term_q1_not_first_time,
     ),
-    term_occupation_sensitive: asBool(
-      record.term_occupation_sensitive,
-      base.term_occupation_sensitive,
-    ),
-    term_last_buy_12mo: asBool(
-      record.term_last_buy_12mo,
-      base.term_last_buy_12mo,
+    term_q2_did_not_vote: asBool(
+      record.term_q2_did_not_vote,
+      base.term_q2_did_not_vote,
     ),
     survey_reward_amount: asInt(
       record.survey_reward_amount,

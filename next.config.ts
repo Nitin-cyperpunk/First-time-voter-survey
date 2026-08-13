@@ -13,12 +13,17 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
-        source: "/forms/innerwear_screener_v1.html",
-        destination: "/register",
+        source: "/admin",
+        destination: "/admin-ftv",
         permanent: false,
       },
       {
-        source: "/forms/innerwear_screener_v2.html",
+        source: "/admin/login",
+        destination: "/admin-ftv/login",
+        permanent: false,
+      },
+      {
+        source: "/forms/ftv_screener_v1.html",
         destination: "/register",
         permanent: false,
       },

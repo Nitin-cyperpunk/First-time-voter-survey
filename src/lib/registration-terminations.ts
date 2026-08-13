@@ -34,12 +34,14 @@ export function resolveScreenerCompletionTracking(input: {
     return { completionStatus: "Completed", terminationReason: null };
   }
 
-  const first = input.terminations?.[0];
+  const labels = (input.terminations ?? [])
+    .map(formatRegistrationTerminationLabel)
+    .filter(Boolean);
   return {
     completionStatus: "Terminated",
-    terminationReason: first
-      ? formatRegistrationTerminationLabel(first)
-      : buildRegistrationTerminationNotes(input.terminations),
+    terminationReason: labels.length
+      ? labels.join("|")
+      : "terminated",
   };
 }
 
@@ -47,9 +49,8 @@ export function buildRegistrationTerminationNotes(
   terminations: TerminationLike[] | undefined,
 ): string {
   if (!terminations?.length) {
-    return "Registration form termination rule matched";
+    return "terminated";
   }
 
-  const labels = terminations.map(formatRegistrationTerminationLabel);
-  return `Registration terminated: ${labels.join("; ")}`;
+  return terminations.map(formatRegistrationTerminationLabel).join("|");
 }

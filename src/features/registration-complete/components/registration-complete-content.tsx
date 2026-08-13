@@ -26,22 +26,15 @@ import { toastUnexpectedError, toastWhatsAppShareInitiated } from "@/lib/toast";
 function QualifiedThankYouCopy() {
   return (
     <div className="center space-y-3 text-center text-[15px] leading-relaxed text-text-primary">
-      <div className="text-[22px] font-bold">Thank you! 🌸</div>
+      <div className="text-[22px] font-bold">Thank you</div>
       <p>
-        Thank you for your responses. This screening exercise is only a
-        registration step to identify suitable participants for the study.
-      </p>
-      <p>If selected, we will share a detailed survey link with you.</p>
-      <p>
-        The survey will include some personal but non-sensitive questions
-        related to innerwear preferences, such as your bust size, the types of
-        bras you purchase, why you prefer certain products, and when you
-        typically buy them.
+        Thank you for completing the First-Time Voters Study. Your responses
+        will be used only for academic research and reported in aggregate.
       </p>
       <p>
-        Participation in the main survey will also be completely voluntary, and
-        all information shared will remain confidential and will be used only
-        for research purposes.
+        This is a single-form study — there is no follow-up main survey.
+        You can still share your referral link with friends who were first-time
+        voters in 2024.
       </p>
     </div>
   );
@@ -50,16 +43,16 @@ function QualifiedThankYouCopy() {
 function TerminatedThankYouCopy() {
   return (
     <div className="center space-y-3 text-center text-[15px] leading-relaxed text-text-primary">
-      <div className="text-[22px] font-bold">Thank you for your interest!</div>
+      <div className="text-[22px] font-bold">Thank you for your time</div>
       <p>
-        This particular study is open only to women, so it isn&apos;t a fit for
-        you right now — but we truly appreciate you stopping by.
+        This study is intended for people who were eligible to vote for the
+        first time in the 2024 Lok Sabha election and who voted. We completely
+        respect your decision.
       </p>
       <p>
-        You can still refer a woman who fits the study and share with your
-        friends and family.
+        You can still refer a first-time voter who may be eligible to take
+        part.
       </p>
-      <p>We&apos;d also love to have you in our future research. 🌸</p>
     </div>
   );
 }
