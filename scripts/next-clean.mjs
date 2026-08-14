@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import net from "node:net";
+import path from "node:path";
 
 const DEV_PORTS = [3000, 3001];
 const guard = process.argv.includes("--guard");
@@ -38,6 +39,21 @@ async function assertDevServerStopped() {
 
 function cleanNextDir() {
   if (!fs.existsSync(".next")) return;
+
+  for (const subdir of ["cache", "export"]) {
+    const target = path.join(".next", subdir);
+    if (!fs.existsSync(target)) continue;
+    try {
+      fs.rmSync(target, {
+        recursive: true,
+        force: true,
+        maxRetries: 8,
+        retryDelay: 250,
+      });
+    } catch {
+      // Fall through — full .next removal below will surface a clear error.
+    }
+  }
 
   try {
     fs.rmSync(".next", {
