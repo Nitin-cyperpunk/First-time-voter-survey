@@ -6,8 +6,9 @@ export function isRegistrationAccepting(config: StudyConfig): boolean {
 }
 
 /**
- * Single switch for city/cell/state/study quota enforcement.
- * Counting always runs. When false, submit never rejects for being over a reference.
+ * Per-city qualified-complete limit when study_config.enforce_capacity is true.
+ * Counting always runs. Cell/state/study rejects stay in the RPC behind
+ * enforce_quota_cascade (default false).
  */
 export function isCapacityEnforced(config: StudyConfig): boolean {
   return config.enforce_capacity === true;

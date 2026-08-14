@@ -33,6 +33,7 @@ import {
   resolveScreenerCompletionTracking,
 } from "@/lib/registration-terminations";
 import { CapacityError } from "@/lib/capacity";
+import { CITY_FULL_INLINE_MESSAGE } from "@/lib/city-resolve";
 import {
   checkCityAvailability,
   resolveCityText,
@@ -121,6 +122,54 @@ function alignResponseTimes(
     aligned[key] = responseTimes[key] ?? 0;
   }
   return aligned;
+}
+
+function flattenFtvPayloadToAnswers(
+  answerJson: Record<string, unknown> | null | undefined,
+): Record<string, StoredAnswerValue> {
+  if (!answerJson || typeof answerJson !== "object") return {};
+  const out: Record<string, StoredAnswerValue> = {};
+  const responses = answerJson.responses;
+  if (!Array.isArray(responses)) return out;
+
+  for (const row of responses) {
+    if (!row || typeof row !== "object" || Array.isArray(row)) continue;
+    const rec = row as Record<string, unknown>;
+    const qid = String(rec.qid ?? "").trim();
+    if (!qid) continue;
+    const answer =
+      rec.answer !== undefined && rec.answer !== null && rec.answer !== ""
+        ? rec.answer
+        : rec.answer_code;
+    if (answer === undefined || answer === null || answer === "") continue;
+    const current = out[qid];
+    if (current === undefined) {
+      out[qid] = answer as StoredAnswerValue;
+    } else if (Array.isArray(current)) {
+      (current as unknown[]).push(answer);
+    } else {
+      out[qid] = [current, answer] as StoredAnswerValue;
+    }
+  }
+  return out;
+}
+
+function mergeStoredAnswers(
+  fromFields: Record<string, StoredAnswerValue>,
+  fromPayload: Record<string, StoredAnswerValue>,
+): Record<string, StoredAnswerValue> {
+  return { ...fromPayload, ...fromFields };
+}
+
+async function rollbackParticipant(leadId: string, reason: string) {
+  try {
+    await deleteParticipantByLeadId(leadId);
+  } catch (cleanupError) {
+    console.error(
+      `[registerParticipant] failed to roll back participant after ${reason}:`,
+      cleanupError,
+    );
+  }
 }
 
 function withFtvPayloadAnalytics(
@@ -338,7 +387,11 @@ export async function registerParticipant(
   };
 
   const normalizedAnswers = normalizeStoredAnswers(input.answers);
-  const storedAnswers = resolveStoredAnswers(normalizedAnswers, form.schema);
+  const fromFields = resolveStoredAnswers(normalizedAnswers, form.schema);
+  const storedAnswers = mergeStoredAnswers(
+    fromFields,
+    flattenFtvPayloadToAnswers(input.answerJson),
+  );
   const storedResponseTimes = resolveStoredResponseTimes(
     input.responseTimes,
     form.schema,
@@ -346,7 +399,7 @@ export async function registerParticipant(
   );
   const alignedResponseTimes = alignResponseTimes(
     storedAnswers,
-    storedResponseTimes,
+    storedResponseTimes ?? (usesQKeyFormat(storedAnswers) ? {} : null),
   );
 
   if (!registrationTerminated) {
@@ -406,10 +459,7 @@ export async function registerParticipant(
         stateLabel,
       });
       if (!availability.ok) {
-        throw new CapacityError(
-          availability.code === "study_full" ? "study_full" : "city_full",
-          availability.message,
-        );
+        throw new CapacityError("city_full", availability.message);
       }
     }
   }
@@ -436,7 +486,10 @@ export async function registerParticipant(
     fresh.cityId &&
     (fresh.isFull || !fresh.isOpen || !fresh.isActive)
   ) {
-    throw new CapacityError("city_full");
+    throw new CapacityError(
+      "city_full",
+      CITY_FULL_INLINE_MESSAGE(fresh.name ?? cityRaw),
+    );
   }
 
   const referralCode = await generateUniqueReferralCode();
@@ -504,65 +557,42 @@ export async function registerParticipant(
       : null;
 
   let screenerInserted = false;
-  const hasScreenerPayload =
-    Object.keys(storedAnswers).length > 0 ||
-    (registrationTerminated && Boolean(input.answerJson));
+  assertScreenerNotSubmitted(await hasScreenerResponse(participant.leadId));
 
-  if (hasScreenerPayload) {
-    assertScreenerNotSubmitted(await hasScreenerResponse(participant.leadId));
-
-    try {
-      await createResponse({
-        leadId: participant.leadId,
-        mobile: participant.mobile || null,
-        formVersion: form.version,
-        answers: withTimingMetadata(storedAnswers, alignedResponseTimes, {
-          currentScreen: input.currentScreen,
-          lastScreen: input.lastScreen,
-        }) as Json,
-        completionStatus: screenerTracking.completionStatus,
-        terminationReason: screenerTracking.terminationReason,
+  try {
+    await createResponse({
+      leadId: participant.leadId,
+      mobile: participant.mobile || null,
+      formVersion: form.version,
+      answers: withTimingMetadata(storedAnswers, alignedResponseTimes, {
+        currentScreen: input.currentScreen,
+        lastScreen: input.lastScreen,
+      }) as Json,
+      completionStatus: screenerTracking.completionStatus,
+      terminationReason: screenerTracking.terminationReason,
+      responseTimes: alignedResponseTimes,
+      analytics: withFtvPayloadAnalytics(input.analytics, input.answerJson),
+      csvRow: resolveScreenerCsvRow({
+        input,
+        form,
+        storedAnswers,
         responseTimes: alignedResponseTimes,
-        analytics: withFtvPayloadAnalytics(input.analytics, input.answerJson),
-        csvRow: resolveScreenerCsvRow({
-          input,
-          form,
-          storedAnswers,
-          responseTimes: alignedResponseTimes,
-          leadId: participant.leadId,
-          participant,
-          totalDurationSec,
-        }),
-        startedAt,
-        submittedAt,
+        leadId: participant.leadId,
+        participant,
         totalDurationSec,
-        ipAddress: options.ipAddress ?? null,
-        cityId: fresh.cityId,
-        cityRaw,
-        cityMatchType: fresh.matchType,
-      });
-      screenerInserted = true;
-    } catch (error) {
-      if (error instanceof CapacityError && !registrationTerminated) {
-        try {
-          await deleteParticipantByLeadId(participant.leadId);
-        } catch (cleanupError) {
-          console.error(
-            "[registerParticipant] failed to roll back participant after capacity reject:",
-            cleanupError,
-          );
-        }
-        throw error;
-      }
-      if (registrationTerminated) {
-        console.error(
-          "[registerParticipant] terminated screener insert failed open:",
-          error,
-        );
-      } else {
-        throw error;
-      }
-    }
+      }),
+      startedAt,
+      submittedAt,
+      totalDurationSec,
+      ipAddress: options.ipAddress ?? null,
+      cityId: fresh.cityId,
+      cityRaw,
+      cityMatchType: fresh.matchType,
+    });
+    screenerInserted = true;
+  } catch (error) {
+    await rollbackParticipant(participant.leadId, "screener insert failure");
+    throw error;
   }
 
   try {

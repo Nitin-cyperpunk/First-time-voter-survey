@@ -7,6 +7,7 @@ import {
   type AreaType,
 } from "@/lib/india-states";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getStudyConfig } from "@/server/repositories/form-settings.repository";
 import {
   findCityByNameAndState,
   listCities,
@@ -190,6 +191,7 @@ export async function commitCityImport(input: {
   fileName?: string | null;
 }): Promise<{ added: number; updated: number; rejected: number }> {
   const admin = getSupabaseAdmin();
+  const defaultCapacity = (await getStudyConfig()).default_city_capacity;
   let added = 0;
   let updated = 0;
 
@@ -209,7 +211,8 @@ export async function commitCityImport(input: {
         name: row.city,
         state: row.state,
         area_type: row.areaType,
-        capacity: row.capacity ?? 0,
+        capacity: row.capacity ?? defaultCapacity,
+        buffer: 0,
         match_key,
         is_active: true,
         is_open: true,

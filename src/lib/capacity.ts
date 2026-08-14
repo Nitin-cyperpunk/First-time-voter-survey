@@ -1,14 +1,16 @@
+import { CITY_FULL_INLINE_MESSAGE } from "@/lib/city-resolve";
+
 /**
  * Qualified-completion capacity.
  *
  * WHAT COUNTS: screener_responses.completion_status = 'Completed' only.
  * Terminated, partial, and NULL rows never consume a slot.
  *
- * Counting always runs. Four-level ENFORCEMENT (city / cell / state / study)
- * is gated by study_config.enforce_capacity (default false). When false,
- * city_full / cell_full / state_full / study_full are not reachable.
- * Set the flag true to restore rejects inside insert_screener_response_with_capacity
- * without new development. Keep the advisory lock + INSERT transaction.
+ * Counting always runs. When study_config.enforce_capacity is true, submit
+ * rejects city_full at cities.capacity (per-city, stored on the row).
+ * Unmatched (city_id null) bypass the city limit. Cell/state/study rejects
+ * remain in the RPC behind enforce_quota_cascade (default false).
+ * Keep the advisory lock + INSERT transaction.
  */
 
 export type CapacityRejectCode =
@@ -25,8 +27,7 @@ export type CapacityRejectCode =
 export const CAPACITY_REJECT_MESSAGES: Record<CapacityRejectCode, string> = {
   form_closed:
     "This survey is no longer accepting responses. Please contact the admin if you believe this is an error.",
-  city_full:
-    "This city is no longer accepting responses. Please choose another city if one is available.",
+  city_full: CITY_FULL_INLINE_MESSAGE("this city"),
   cell_full:
     "This area group is no longer accepting responses. Please choose another city if one is available.",
   state_full:

@@ -5,6 +5,7 @@ import { getCurrentAdmin } from "@/lib/auth/admin-session";
 import { INDIA_REGIONS } from "@/lib/india-states";
 import { canAccess } from "@/lib/roles";
 import { logConfigChange } from "@/server/repositories/config-audit.repository";
+import { getStudyConfig } from "@/server/repositories/form-settings.repository";
 import { createCity } from "@/server/repositories/cities.repository";
 import {
   countActiveUnmatchedCompletes,
@@ -15,7 +16,6 @@ import {
   buildQuotaSnapshot,
   ensureStateAllocation,
   normalizeCityInput,
-  validateCityClosesAt,
 } from "@/server/services/quota.service";
 
 export const dynamic = "force-dynamic";
@@ -79,6 +79,7 @@ export async function GET() {
       unmatchedCities,
       unmatchedGlobalCompletes,
       ignoredUnmatched,
+      defaultCityCapacity: (await getStudyConfig()).default_city_capacity,
     });
   } catch (error) {
     console.error("GET /api/admin/cities failed:", error);
@@ -133,22 +134,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const snapshot = await buildQuotaSnapshot();
-    const closesAt = parsed.data.capacity ?? 0;
-    try {
-      validateCityClosesAt(
-        snapshot,
-        normalized.state,
-        normalized.areaType,
-        null,
-        closesAt,
-      );
-    } catch (error) {
-      return NextResponse.json(
-        { error: error instanceof Error ? error.message : "Closes At exceeds cell." },
-        { status: 400 },
-      );
-    }
+    const config = await getStudyConfig();
+    const closesAt = parsed.data.capacity ?? config.default_city_capacity;
 
     await ensureStateAllocation(normalized.state, admin.id);
 

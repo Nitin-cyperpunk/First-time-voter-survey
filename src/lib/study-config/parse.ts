@@ -37,6 +37,16 @@ export function parseStudyConfig(raw: unknown): StudyConfig {
     buffer,
     total_capacity: asInt(record.total_capacity, base.total_capacity, 1, 10_000),
     enforce_capacity: asBool(record.enforce_capacity, base.enforce_capacity),
+    enforce_quota_cascade: asBool(
+      record.enforce_quota_cascade,
+      base.enforce_quota_cascade,
+    ),
+    default_city_capacity: asInt(
+      record.default_city_capacity,
+      base.default_city_capacity,
+      0,
+      10_000,
+    ),
     form_status,
     auto_close_on_full: asBool(record.auto_close_on_full, base.auto_close_on_full),
     survey_active: asBool(record.survey_active, base.survey_active),

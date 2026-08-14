@@ -3,13 +3,17 @@ import type { StudyConfig } from "@/lib/study-config/types";
 /**
  * Defaults: all gates open. Age rule off until admin enables it.
  * target=150, buffer=30 → closesAt = target + buffer (180).
- * total_capacity (200) is a reference N. Enforcement is off unless enforce_capacity.
+ * total_capacity (200) is a reference N, not a hard cap.
+ * Per-city enforcement is on in live study_config (migration 021).
+ * Code default stays false so a missing key cannot close cities at capacity 0.
  */
 export const DEFAULT_STUDY_CONFIG: StudyConfig = {
   target: 150,
   buffer: 30,
   total_capacity: 200,
   enforce_capacity: false,
+  enforce_quota_cascade: false,
+  default_city_capacity: 12,
   form_status: "open",
   auto_close_on_full: false,
   survey_active: true,

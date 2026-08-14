@@ -1,6 +1,7 @@
 import { cityMatchKey } from "@/lib/city-resolve";
 import { parseAreaType, type AreaType } from "@/lib/india-states";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getStudyConfig } from "@/server/repositories/form-settings.repository";
 
 export type CityAreaType = AreaType;
 
@@ -168,13 +169,15 @@ export async function createCity(input: {
   isActive?: boolean;
   actorId: string;
 }): Promise<CityRecord> {
+  const capacity =
+    input.capacity ?? (await getStudyConfig()).default_city_capacity;
   const { data, error } = await getSupabaseAdmin()
     .from("cities")
     .insert({
       name: input.name.trim(),
       state: input.state.trim(),
       area_type: input.areaType,
-      capacity: input.capacity ?? 0,
+      capacity,
       buffer: input.buffer ?? 0,
       match_key: cityMatchKey(input.name),
       is_open: input.isOpen ?? true,

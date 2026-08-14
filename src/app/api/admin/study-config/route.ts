@@ -46,20 +46,6 @@ export async function PUT(request: Request) {
     const body = await request.json();
     const previous = await getStudyConfig();
     const config = mergeStudyConfig(body?.config ?? body);
-    const { data: allocRows } = await getSupabaseAdmin()
-      .from("study_state_allocations")
-      .select("allocation");
-    const stateSum = (
-      (allocRows ?? []) as Array<{ allocation?: number | null }>
-    ).reduce((sum, row) => sum + Number(row.allocation ?? 0), 0);
-    if (stateSum > config.total_capacity) {
-      return NextResponse.json(
-        {
-          error: `Sum of state allocations (${stateSum}) exceeds total capacity (${config.total_capacity}). Unallocated would be ${config.total_capacity - stateSum}.`,
-        },
-        { status: 400 },
-      );
-    }
 
     const saved = await updateStudyConfig(config);
 
@@ -103,6 +89,24 @@ export async function PUT(request: Request) {
         newValue: saved.auto_close_on_full,
       });
     }
+
+    if (previous.default_city_capacity !== saved.default_city_capacity) {
+      await logConfigChange({
+        actorId: admin.id,
+        actorEmail: admin.email,
+        entityType: "study_config",
+        field: "default_city_capacity",
+        oldValue: previous.default_city_capacity,
+        newValue: saved.default_city_capacity,
+      });
+    }
+
+    const { data: allocRows } = await getSupabaseAdmin()
+      .from("study_state_allocations")
+      .select("allocation");
+    const stateSum = (
+      (allocRows ?? []) as Array<{ allocation?: number | null }>
+    ).reduce((sum, row) => sum + Number(row.allocation ?? 0), 0);
 
     return NextResponse.json({
       success: true,

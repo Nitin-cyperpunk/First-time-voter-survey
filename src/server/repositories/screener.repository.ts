@@ -3,6 +3,7 @@ import {
   extractSelfReportedAreaType,
   isCapacityRejectCode,
 } from "@/lib/capacity";
+import { CITY_FULL_INLINE_MESSAGE } from "@/lib/city-resolve";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { Json } from "@/lib/supabase/types";
 import { getActivePublishedForm } from "@/server/repositories/forms.repository";
@@ -46,8 +47,8 @@ export async function createResponse(input: {
   /**
    * Capacity check + INSERT run inside insert_screener_response_with_capacity.
    * Postgres holds pg_advisory_xact_lock('concave_screener_capacity') until
-   * commit, so concurrent submits at count 199 cannot both pass the cap.
-   * Do not replace this RPC with a JS select-count-then-insert.
+   * commit, so concurrent completes at count 11 cannot both pass a city cap
+   * of 12. Do not replace this RPC with a JS select-count-then-insert.
    */
   const answersRecord =
     input.answers && typeof input.answers === "object" && !Array.isArray(input.answers)
@@ -89,7 +90,15 @@ export async function createResponse(input: {
   const payload = data as { ok?: boolean; code?: string; row?: unknown } | null;
   if (!payload?.ok) {
     const code = payload?.code;
-    if (isCapacityRejectCode(code)) throw new CapacityError(code);
+    if (isCapacityRejectCode(code)) {
+      if (code === "city_full") {
+        throw new CapacityError(
+          code,
+          CITY_FULL_INLINE_MESSAGE(input.cityRaw?.trim() || "this city"),
+        );
+      }
+      throw new CapacityError(code);
+    }
     throw new Error(code ? `CAPACITY_REJECT:${code}` : "CAPACITY_REJECT");
   }
 
