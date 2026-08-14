@@ -106,7 +106,19 @@ async function directInsertFtv(input: {
     return { ok: false, code: "direct_insert_failed", error: first.error.message };
   }
 
-  const { referral_code: _ignored, ...withoutReferral } = row;
+  // Drop referral_code when the column is not yet migrated.
+  const withoutReferral = {
+    respondent_id: row.respondent_id,
+    lead_id: row.lead_id,
+    city_id: row.city_id,
+    survey_version: row.survey_version,
+    status: row.status,
+    started_at: row.started_at,
+    completed_at: row.completed_at,
+    terminated_at: row.terminated_at,
+    duration_seconds: row.duration_seconds,
+    payload: row.payload,
+  };
   const second = await getSupabaseAdmin().from("ftv_responses").insert(withoutReferral);
   if (second.error) {
     return { ok: false, code: "direct_insert_failed", error: second.error.message };

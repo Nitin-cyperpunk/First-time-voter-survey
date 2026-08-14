@@ -1,5 +1,3 @@
-import { redirect } from "next/navigation";
-
 import { requireAdmin } from "@/lib/auth/admin-session";
 import { navItemsForRole } from "@/config/navigation";
 import { AppShell } from "@/components/layout/app-shell";
