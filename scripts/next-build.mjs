@@ -1,21 +1,26 @@
 import { spawn } from "node:child_process";
+import { createRequire } from "node:module";
 import fs from "node:fs";
 import path from "node:path";
 
+const require = createRequire(import.meta.url);
+const nextBin = require.resolve("next/dist/bin/next");
+
 const exportDir = path.join(".next", "export");
+const cacheDir = path.join(".next", "cache");
 const buildIdPath = path.join(".next", "BUILD_ID");
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function removeExportDir(maxAttempts = 12) {
-  if (!fs.existsSync(exportDir)) return;
+async function removeDir(target, maxAttempts = 12) {
+  if (!fs.existsSync(target)) return;
 
   let lastError;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      fs.rmSync(exportDir, {
+      fs.rmSync(target, {
         recursive: true,
         force: true,
         maxRetries: 8,
@@ -45,9 +50,8 @@ function buildLooksComplete() {
 
 function runNextBuild() {
   return new Promise((resolve) => {
-    const child = spawn("next", ["build"], {
+    const child = spawn(process.execPath, [nextBin, "build"], {
       stdio: "inherit",
-      shell: process.platform === "win32",
       env: process.env,
     });
 
@@ -59,20 +63,23 @@ function runNextBuild() {
   });
 }
 
-const exitCode = await runNextBuild();
+async function cleanFlakyArtifacts() {
+  await removeDir(exportDir).catch(() => {});
+  await removeDir(cacheDir).catch(() => {});
+}
 
-if (exitCode === 0) {
+async function finishSuccessfulBuild() {
   try {
-    await removeExportDir();
+    await removeDir(exportDir);
   } catch {
     // Non-fatal — Next already finished successfully.
   }
   process.exit(0);
 }
 
-if (buildLooksComplete()) {
+async function recoverFromLateExportCleanupFailure() {
   try {
-    await removeExportDir();
+    await removeDir(exportDir);
     console.warn(
       "\nBuild succeeded but Next.js failed cleaning .next/export (Windows file lock).",
     );
@@ -88,6 +95,25 @@ if (buildLooksComplete()) {
     );
     process.exit(0);
   }
+}
+
+let exitCode = await runNextBuild();
+
+if (exitCode !== 0 && !buildLooksComplete()) {
+  console.warn(
+    "\nBuild failed (often a Windows race on pages-manifest/_document).",
+  );
+  console.warn("Clearing .next/cache and .next/export, then retrying once...\n");
+  await cleanFlakyArtifacts();
+  exitCode = await runNextBuild();
+}
+
+if (exitCode === 0) {
+  await finishSuccessfulBuild();
+}
+
+if (buildLooksComplete()) {
+  await recoverFromLateExportCleanupFailure();
 }
 
 process.exit(exitCode);
