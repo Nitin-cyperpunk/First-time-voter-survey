@@ -48,7 +48,10 @@ export async function createResponse(input: {
    * Capacity check + INSERT run inside insert_screener_response_with_capacity.
    * Postgres holds pg_advisory_xact_lock('concave_screener_capacity') until
    * commit, so concurrent completes at count 11 cannot both pass a city cap
-   * of 12. Do not replace this RPC with a JS select-count-then-insert.
+   * of 12. The same lock covers a just-freed slot: count_qualified_completions
+   * is a live COUNT of Completed AND deleted_at IS NULL, so two submits into
+   * one deleted slot still yield exactly one INSERT. Do not replace this RPC
+   * with a JS select-count-then-insert.
    */
   const answersRecord =
     input.answers && typeof input.answers === "object" && !Array.isArray(input.answers)

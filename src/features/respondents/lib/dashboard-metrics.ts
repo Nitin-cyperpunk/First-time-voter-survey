@@ -68,26 +68,34 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     terminationsRes,
     timingRes,
   ] = await Promise.all([
-    db.from("participants").select("*", { count: "exact", head: true }),
     db
       .from("participants")
       .select("*", { count: "exact", head: true })
+      .is("deleted_at", null),
+    db
+      .from("participants")
+      .select("*", { count: "exact", head: true })
+      .is("deleted_at", null)
       .in("status", [...QUALIFIED_COMPLETION_STATUSES]),
     db
       .from("participants")
       .select("*", { count: "exact", head: true })
+      .is("deleted_at", null)
       .eq("status", "terminated"),
     db
       .from("participants")
       .select("*", { count: "exact", head: true })
+      .is("deleted_at", null)
       .eq("status", "paid"),
     db
       .from("participants")
       .select("*", { count: "exact", head: true })
+      .is("deleted_at", null)
       .eq("duplicate_flag", true),
     db
       .from("participants")
       .select("*", { count: "exact", head: true })
+      .is("deleted_at", null)
       .eq("is_flagged_duplicate", true),
     db.from("referrals").select("*", { count: "exact", head: true }),
     db
@@ -100,13 +108,18 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
       .in("reward_status", ["earned", "paid"]),
     db
       .from("participants")
-      .select("acquisition_source, acquisition_type, referral_platform"),
-    db.from("participants").select("city, status"),
+      .select("acquisition_source, acquisition_type, referral_platform")
+      .is("deleted_at", null),
+    db.from("participants").select("city, status").is("deleted_at", null),
     db
       .from("form_terminations")
       .select("rule_key, rule_label, reason_text")
       .eq("form_type", "registration"),
-    db.from("screener_responses").select("total_duration_sec").limit(2000),
+    db
+      .from("screener_responses")
+      .select("total_duration_sec")
+      .is("deleted_at", null)
+      .limit(2000),
   ]);
 
   for (const result of [

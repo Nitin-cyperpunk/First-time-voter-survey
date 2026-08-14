@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 
 import { DuplicateStatusBadge } from "@/components/admin/duplicate-status-badge";
 import { RespondentDrawerTimeline } from "@/components/admin/respondent-drawer-timeline";
+import { RespondentDeleteDialog } from "@/components/admin/respondent-delete-dialog";
 import { Button } from "@/components/ui/button";
 import {
   SurveyCompletionStatusBadge,
@@ -90,6 +91,7 @@ export type RespondentTableRow = {
 
 type RespondentsTableProps = {
   participants: RespondentTableRow[];
+  canDelete?: boolean;
 };
 
 type StatusFilter =
@@ -175,7 +177,10 @@ function displaySource(row: RespondentTableRow): string {
   return row.acquisitionSource;
 }
 
-export function RespondentsTable({ participants }: RespondentsTableProps) {
+export function RespondentsTable({
+  participants,
+  canDelete = false,
+}: RespondentsTableProps) {
   const router = useRouter();
   const [rows, setRows] = useState(participants);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -189,6 +194,10 @@ export function RespondentsTable({ participants }: RespondentsTableProps) {
     useState<DuplicateFilter>("all");
   const [selected, setSelected] = useState<RespondentTableRow | null>(null);
   const [qcUpdating, setQcUpdating] = useState<"pass" | "fail" | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<RespondentTableRow | null>(
+    null,
+  );
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     setRows(participants);
@@ -341,6 +350,47 @@ export function RespondentsTable({ participants }: RespondentsTableProps) {
       );
     } finally {
       setQcUpdating(null);
+    }
+  }
+
+  async function handleDeleteRespondent(reason: string) {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const response = await fetch(
+        `/api/admin/respondents/${encodeURIComponent(deleteTarget.leadId)}`,
+        {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason }),
+        },
+      );
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Failed to delete respondent.");
+      }
+      const slot = payload.slot as
+        | {
+            cityName?: string | null;
+            newCount?: number;
+            capacity?: number | null;
+          }
+        | undefined;
+      setRows((current) =>
+        current.filter((row) => row.leadId !== deleteTarget.leadId),
+      );
+      setSelected(null);
+      setDeleteTarget(null);
+      toastSuccess(
+        slot?.cityName
+          ? `Deleted. ${slot.cityName} is now ${slot.newCount}/${slot.capacity ?? "—"}.`
+          : "Respondent deleted.",
+      );
+      router.refresh();
+    } catch (error) {
+      toastError(error instanceof Error ? error.message : "Delete failed.");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -792,6 +842,17 @@ export function RespondentsTable({ participants }: RespondentsTableProps) {
                     View full record
                   </Link>
                 </Button>
+                {canDelete ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="destructive"
+                    className="mt-2 w-full"
+                    onClick={() => setDeleteTarget(selected)}
+                  >
+                    Delete respondent
+                  </Button>
+                ) : null}
 
                 <SectionTitle>Quality control</SectionTitle>
                 <div className="space-y-3">
@@ -829,6 +890,27 @@ export function RespondentsTable({ participants }: RespondentsTableProps) {
           ) : null}
         </SheetContent>
       </Sheet>
+
+      {canDelete ? (
+        <RespondentDeleteDialog
+          target={
+            deleteTarget
+              ? {
+                  leadId: deleteTarget.leadId,
+                  fullName: deleteTarget.fullName,
+                  city: deleteTarget.city,
+                  status: deleteTarget.status,
+                  createdAt: deleteTarget.createdAt,
+                }
+              : null
+          }
+          busy={deleting}
+          onOpenChange={(open) => {
+            if (!open) setDeleteTarget(null);
+          }}
+          onConfirm={(reason) => void handleDeleteRespondent(reason)}
+        />
+      ) : null}
     </div>
   );
 }

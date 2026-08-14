@@ -86,8 +86,9 @@ export async function listFormTerminations(
   let query = getSupabaseAdmin()
     .from("form_terminations")
     .select(
-      "id, lead_id, form_type, form_version, rule_key, rule_label, question_key, question_label, answer_value, reason_text, participant_status, submitted_at, participants(full_name, mobile, status)",
+      "id, lead_id, form_type, form_version, rule_key, rule_label, question_key, question_label, answer_value, reason_text, participant_status, submitted_at, participants!inner(full_name, mobile, status, deleted_at)",
     )
+    .is("participants.deleted_at", null)
     .order("submitted_at", { ascending: false });
 
   if (filters.formType && filters.formType !== "all") {

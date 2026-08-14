@@ -257,6 +257,7 @@ async function fetchAllScreenerBackfillRows() {
       .select(
         "lead_id, city_id, answers, analytics, started_at, submitted_at, total_duration_sec, completion_status, termination_reason",
       )
+      .is("deleted_at", null)
       .order("submitted_at", { ascending: false })
       .range(from, from + pageSize - 1);
     if (error) throw error;
@@ -278,7 +279,8 @@ export async function backfillMissingFtvFromScreener(): Promise<{
 
   const { data: existing, error: existingError } = await supabase
     .from("ftv_responses")
-    .select("lead_id, respondent_id");
+    .select("lead_id, respondent_id")
+    .is("deleted_at", null);
   if (existingError) throw existingError;
 
   const have = new Set<string>();

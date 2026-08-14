@@ -11,6 +11,12 @@ import { CITY_FULL_INLINE_MESSAGE } from "@/lib/city-resolve";
  * Unmatched (city_id null) bypass the city limit. Cell/state/study rejects
  * remain in the RPC behind enforce_quota_cascade (default false).
  * Keep the advisory lock + INSERT transaction.
+ *
+ * Soft-delete sets screener_responses.deleted_at. count_qualified_completions
+ * is a live COUNT of Completed AND deleted_at IS NULL — no stored counter —
+ * so a delete frees the slot in the same transaction. Concurrent submits into
+ * that one freed slot still serialize on pg_advisory_xact_lock
+ * ('concave_screener_capacity'); exactly one INSERT succeeds.
  */
 
 export type CapacityRejectCode =

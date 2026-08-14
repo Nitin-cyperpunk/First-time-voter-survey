@@ -64,6 +64,7 @@ async function loadMissingCompletedForExport(
         "lead_id, city_id, city_raw, city_match_type, answers, analytics, started_at, submitted_at, total_duration_sec",
       )
       .eq("completion_status", "Completed")
+      .is("deleted_at", null)
       .order("submitted_at", { ascending: false })
       .range(from, to);
     if (error) throw error;
@@ -85,6 +86,7 @@ async function loadMissingCompletedForExport(
         "lead_id, full_name, email, mobile, city, city_id, area, pincode, dob, created_at",
       )
       .in("lead_id", missingIds)
+      .is("deleted_at", null)
       .range(from, to);
     if (error) throw error;
     return (data ?? []) as RecoveredParticipant[];
@@ -110,6 +112,7 @@ async function loadMissingCompletedForExport(
 
 export async function listFtvExportBundle(
   leadIdsFilter?: string[],
+  options?: { includeDeleted?: boolean },
 ): Promise<FtvExportBundle> {
   try {
     const recovered = await backfillMissingFtvFromScreener();
@@ -122,8 +125,13 @@ export async function listFtvExportBundle(
 
   const supabase = getSupabaseAdmin();
 
+  const includeDeleted = options?.includeDeleted === true;
+  const respondentTable = includeDeleted
+    ? "ftv_respondents_all"
+    : "ftv_respondents";
+
   let respondentQuery = supabase
-    .from("ftv_respondents")
+    .from(respondentTable)
     .select("*")
     .order("created_at", { ascending: false });
 
@@ -210,7 +218,7 @@ export async function listFtvExportBundle(
   for (const chunk of idChunks) {
     const page = await fetchAll(async (from, to) => {
       const { data, error } = await supabase
-        .from("ftv_answers")
+        .from(includeDeleted ? "ftv_answers_all" : "ftv_answers")
         .select("*")
         .in("respondent_id", chunk)
         .order("answer_order", { ascending: true })
@@ -234,9 +242,31 @@ export async function listFtvExportBundle(
     "avg completion minutes": row.avg_minutes ?? "",
   }));
 
+  const wide = pivotFtvWideRows(respondentsWithCity, answers);
+  const headers = includeDeleted
+    ? [...FTV_EXPORT_HEADERS, "deleted_at"]
+    : [...FTV_EXPORT_HEADERS];
+  const deletedAtByLead = new Map<string, string>();
+  if (includeDeleted) {
+    for (const row of respondentsWithCity) {
+      if (row.lead_id && row.deleted_at) {
+        deletedAtByLead.set(row.lead_id, row.deleted_at);
+      }
+    }
+  }
+  const rows = includeDeleted
+    ? wide.map((row) => {
+        const leadId = String(row.lead_id ?? row.respondent_id ?? "");
+        return {
+          ...row,
+          deleted_at: deletedAtByLead.get(leadId) ?? "",
+        };
+      })
+    : wide;
+
   return {
-    headers: [...FTV_EXPORT_HEADERS],
-    rows: pivotFtvWideRows(respondentsWithCity, answers),
+    headers,
+    rows,
     codebook: buildFtvCodebook(),
     fieldSummary,
   };

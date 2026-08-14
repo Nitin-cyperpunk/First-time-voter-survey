@@ -25,6 +25,7 @@ export async function listParticipants(limit = 200) {
   const { data, error } = await getSupabaseAdmin()
     .from("participants")
     .select("*")
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(limit);
 
