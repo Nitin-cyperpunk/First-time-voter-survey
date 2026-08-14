@@ -50,6 +50,7 @@ export function UnmatchedCitiesPanel({
   regions,
   cities,
   enforceCapacity = false,
+  defaultCityCapacity = 12,
   onRefresh,
 }: {
   unmatched: UnmatchedCityRow[];
@@ -58,6 +59,7 @@ export function UnmatchedCitiesPanel({
   regions: string[];
   cities: CityOption[];
   enforceCapacity?: boolean;
+  defaultCityCapacity?: number;
   onRefresh: () => Promise<void>;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -98,7 +100,7 @@ export function UnmatchedCitiesPanel({
         name: normalizeCityDisplayName(row.raw),
         state: current[row.matchKey]?.state ?? "",
         areaType: current[row.matchKey]?.areaType ?? "urban",
-        capacity: current[row.matchKey]?.capacity ?? "0",
+        capacity: current[row.matchKey]?.capacity ?? String(defaultCityCapacity),
       },
     }));
     setExpandedKey(`${row.matchKey}:add`);
@@ -314,9 +316,11 @@ export function UnmatchedCitiesPanel({
         <div>
           <h4 className="text-sm font-semibold text-foreground">Unmatched cities</h4>
           <p className="mt-1 text-xs leading-relaxed text-plum-muted">
-            Completes that typed a city not in config. They still count toward the{" "}
-            <strong>study total</strong> ({unmatchedGlobal} unmatched completes).
-            Resolve inline to recount into the correct cell.
+            Completes that typed a city not in config. They attribute to no city,
+            bypass the per-city limit, and still count toward the{" "}
+            <strong>study total</strong>. Running unmatched total:{" "}
+            <strong className="font-mono tabular-nums">{unmatchedGlobal}</strong>.
+            Do not block them — that would turn typos into lost respondents.
           </p>
         </div>
         <Button
@@ -459,7 +463,7 @@ export function UnmatchedCitiesPanel({
                             name: e.target.value,
                             state: current[row.matchKey]?.state ?? "",
                             areaType: current[row.matchKey]?.areaType ?? "urban",
-                            capacity: current[row.matchKey]?.capacity ?? "0",
+                            capacity: current[row.matchKey]?.capacity ?? String(defaultCityCapacity),
                           },
                         }))
                       }
@@ -477,7 +481,7 @@ export function UnmatchedCitiesPanel({
                             name: current[row.matchKey]?.name ?? row.raw,
                             state: e.target.value,
                             areaType: current[row.matchKey]?.areaType ?? "urban",
-                            capacity: current[row.matchKey]?.capacity ?? "0",
+                            capacity: current[row.matchKey]?.capacity ?? String(defaultCityCapacity),
                           },
                         }))
                       }
@@ -502,7 +506,7 @@ export function UnmatchedCitiesPanel({
                             name: current[row.matchKey]?.name ?? row.raw,
                             state: current[row.matchKey]?.state ?? "",
                             areaType: e.target.value as AreaType,
-                            capacity: current[row.matchKey]?.capacity ?? "0",
+                            capacity: current[row.matchKey]?.capacity ?? String(defaultCityCapacity),
                           },
                         }))
                       }
@@ -516,7 +520,7 @@ export function UnmatchedCitiesPanel({
                     <Input
                       type="number"
                       min={0}
-                      value={addForms[row.matchKey]?.capacity ?? "0"}
+                      value={addForms[row.matchKey]?.capacity ?? String(defaultCityCapacity)}
                       onChange={(e) =>
                         setAddForms((current) => ({
                           ...current,

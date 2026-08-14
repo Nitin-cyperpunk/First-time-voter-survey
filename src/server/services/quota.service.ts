@@ -392,7 +392,7 @@ async function listReallocationAudit(): Promise<QuotaSnapshot["reallocations"]> 
   }));
 }
 
-/** Dropdown: active cities. Full cities are hidden only when enforce_capacity is on. */
+/** Dropdown: active cities. Cities at or over cities.capacity are hidden when enforce_capacity is on. */
 export async function listSelectableCities(): Promise<
   Array<{ id: string; name: string; state: string }>
 > {
@@ -409,16 +409,12 @@ export async function listSelectableCities(): Promise<
       .map(({ id, name, state }) => ({ id, name, state }))
       .sort((a, b) => a.name.localeCompare(b.name, "en"));
   }
-  if (enforce && snapshot.achievedGlobal >= snapshot.totalCapacity) return [];
-
   const out: Array<{ id: string; name: string; state: string }> = [];
   for (const state of snapshot.states) {
-    if (enforce && state.remaining <= 0) continue;
     for (const cell of [state.urban, state.rural]) {
-      if (enforce && cell.remaining <= 0) continue;
       for (const city of cell.cities) {
         if (!city.isActive) continue;
-        if (enforce && (!city.isOpen || city.remaining <= 0)) continue;
+        if (enforce && (city.remaining <= 0 || !city.isOpen)) continue;
         out.push({ id: city.id, name: city.name, state: city.state });
       }
     }

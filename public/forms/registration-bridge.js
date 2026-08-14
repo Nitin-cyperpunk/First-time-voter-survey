@@ -288,16 +288,38 @@
     return answers;
   }
 
-  function collectScreenerAnswers() {
-    const raw = collectRawScreenerAnswers();
+  function collectAnswersFromFtvPayload() {
     const answers = {};
+    try {
+      if (typeof window.buildPayload !== "function") return answers;
+      const payload = window.buildPayload();
+      const rows = payload && Array.isArray(payload.responses) ? payload.responses : [];
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || !row.qid) continue;
+        const value =
+          row.answer !== undefined && row.answer !== null && row.answer !== ""
+            ? row.answer
+            : row.answer_code;
+        if (value === undefined || value === null || value === "") continue;
+        const key = String(row.qid);
+        if (answers[key] === undefined) answers[key] = value;
+        else if (Array.isArray(answers[key])) answers[key].push(value);
+        else answers[key] = [answers[key], value];
+      }
+    } catch (error) {
+      console.warn("[ConcaveRegistrationBridge] FTV payload answers unavailable:", error);
+    }
+    return answers;
+  }
+
+  function collectScreenerAnswers() {
+    const fromPayload = collectAnswersFromFtvPayload();
+    const raw = collectRawScreenerAnswers();
+    const answers = Object.assign({}, fromPayload);
     for (const [name, value] of Object.entries(raw)) {
       const qKey = fieldToQ(name);
-      if (qKey) answers[qKey] = value;
-    }
-    // When the Q-key map is missing, send raw field names so the server can map them.
-    if (Object.keys(answers).length === 0 && Object.keys(raw).length > 0) {
-      return raw;
+      answers[qKey || name] = value;
     }
     return answers;
   }
@@ -2934,7 +2956,7 @@
   }
 
   async function submitRegistration(referrerRef, submitOptions) {
-    if (submitRegistration.submitted) return;
+    if (submitRegistration.submitted) return false;
 
     const visibleScreen = document.querySelector(".screen:not(.hidden)");
     if (visibleScreen) recordScreenFieldTimes(visibleScreen);
@@ -2972,7 +2994,7 @@
       showRegistrationError(
         "Please complete your city and age before submitting.",
       );
-      return;
+      return false;
     }
 
     submitRegistration.submitted = true;
@@ -3041,7 +3063,7 @@
         }
         if (data.code === "DUPLICATE_MOBILE") {
           showAlreadyRegisteredDialog(mobile);
-          return;
+          return false;
         }
         if (
           !submitOptions?.retriedAsTerminated &&
@@ -3058,12 +3080,19 @@
             "[ConcaveRegistrationBridge] terminated registration failed:",
             data.error || response.status,
           );
-          return;
+          showRegistrationError(
+            data.error || "Could not save this response. Please try again.",
+          );
+          return false;
         }
         showRegistrationError(
           data.error || "Registration failed. Please try again.",
         );
-        return;
+        return false;
+      }
+
+      if (submitOptions && typeof submitOptions.revealResult === "function") {
+        submitOptions.revealResult();
       }
 
       clearRegistrationDraft(mobile);
@@ -3071,6 +3100,7 @@
       // Registration does not create a session; user stays on thank-you with
       // pre-rendered messages from the response for login + share CTAs.
       await completeRegistrationOnForm(data, submitOptions);
+      return true;
     } catch (err) {
       submitRegistration.submitted = false;
       const referEarn = getReferEarnContainer(getVisibleScreen());
@@ -3083,6 +3113,7 @@
         "Could not reach the server. Please try again." + detail,
       );
       console.error("Registration submit failed:", err);
+      return false;
     }
   }
 
@@ -3329,21 +3360,31 @@
           return;
         }
 
-        showResultFn(id);
-
-        if (window.__concaveRefillMode) return;
-        if (!isResultScreen(id)) return;
-        if (window.__concaveConsentReferrerOnly) return;
-
-        const screen = getResultScreenById(id);
-        if (screen) {
-          ensureResultMountPoints(getResultHost(screen));
-          if (isTerminateScreen(screen)) {
-            applyTerminatedResultPresentation(screen);
-          }
+        if (window.__concaveRefillMode) {
+          showResultFn(id);
+          return;
+        }
+        if (!isResultScreen(id)) {
+          showResultFn(id);
+          return;
+        }
+        if (window.__concaveConsentReferrerOnly) {
+          showResultFn(id);
+          return;
         }
 
-        void submitRegistration(referrerRef);
+        void submitRegistration(referrerRef, {
+          revealResult: function () {
+            showResultFn(id);
+            const screen = getResultScreenById(id);
+            if (screen) {
+              ensureResultMountPoints(getResultHost(screen));
+              if (isTerminateScreen(screen)) {
+                applyTerminatedResultPresentation(screen);
+              }
+            }
+          },
+        });
       };
     },
   };

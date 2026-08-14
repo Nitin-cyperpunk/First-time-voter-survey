@@ -53,10 +53,14 @@ test("isAgeBandWithinStudyRule overlaps [age_min, age_max]", () => {
   assert.equal(isAgeBandWithinStudyRule("17", off), true);
 });
 
-test("enforce_capacity defaults false and isCapacityEnforced is opt-in", () => {
+test("enforce_capacity is opt-in; new cities default to 12 from config", () => {
   assert.equal(DEFAULT_STUDY_CONFIG.enforce_capacity, false);
+  assert.equal(DEFAULT_STUDY_CONFIG.enforce_quota_cascade, false);
+  assert.equal(DEFAULT_STUDY_CONFIG.default_city_capacity, 12);
+  assert.equal(DEFAULT_STUDY_CONFIG.auto_close_on_full, false);
   assert.equal(isCapacityEnforced(DEFAULT_STUDY_CONFIG), false);
   assert.equal(parseStudyConfig({}).enforce_capacity, false);
+  assert.equal(parseStudyConfig({}).default_city_capacity, 12);
   assert.equal(parseStudyConfig({ enforce_capacity: true }).enforce_capacity, true);
   assert.equal(
     isCapacityEnforced(parseStudyConfig({ enforce_capacity: true })),

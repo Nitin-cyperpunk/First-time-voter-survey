@@ -24,7 +24,6 @@ import {
   buildQuotaSnapshot,
   ensureStateAllocation,
   normalizeCityInput,
-  validateCityClosesAt,
 } from "@/server/services/quota.service";
 import type { AreaType } from "@/lib/india-states";
 import { isCapacityEnforced } from "@/lib/study-config/gates";
@@ -457,8 +456,7 @@ export async function commitUnmatchedResolve(input: {
           newValue: `${existing.name} / ${existing.state} / ${existing.areaType}`,
         });
       } else {
-        const snapshot = await buildQuotaSnapshot();
-        let closesAt = resolution.capacity ?? 0;
+        let closesAt = resolution.capacity ?? config.default_city_capacity;
         const previewCity = preview.cities.find(
           (c) => c.cityId === `new:${resolution.matchKey}`,
         );
@@ -469,13 +467,6 @@ export async function commitUnmatchedResolve(input: {
         ) {
           closesAt = previewCity.afterAchieved;
         }
-        validateCityClosesAt(
-          snapshot,
-          normalized.state,
-          normalized.areaType,
-          null,
-          closesAt,
-        );
 
         let created;
         try {

@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * Kept for admin/legacy. Respondent form no longer uses a city dropdown.
- * Cities at or over a reference target are listed unless enforce_capacity is on.
+ * Cities at or over cities.capacity are omitted when enforce_capacity is on.
  */
 export async function GET() {
   try {

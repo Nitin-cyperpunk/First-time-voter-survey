@@ -10,10 +10,8 @@ import {
   updateCity,
 } from "@/server/repositories/cities.repository";
 import {
-  buildQuotaSnapshot,
   ensureStateAllocation,
   normalizeCityInput,
-  validateCityClosesAt,
 } from "@/server/services/quota.service";
 
 export const dynamic = "force-dynamic";
@@ -72,17 +70,6 @@ export async function PATCH(
           { status: 400 },
         );
       }
-    }
-
-    const nextClosesAt = parsed.data.capacity ?? existing.capacity;
-    const snapshot = await buildQuotaSnapshot();
-    try {
-      validateCityClosesAt(snapshot, nextState, nextArea, id, nextClosesAt);
-    } catch (error) {
-      return NextResponse.json(
-        { error: error instanceof Error ? error.message : "Closes At exceeds cell." },
-        { status: 400 },
-      );
     }
 
     if (nextState !== existing.state) {

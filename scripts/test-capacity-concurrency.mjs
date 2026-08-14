@@ -1,9 +1,10 @@
 /**
- * Capacity RPC checks after migration 020:
- *   - enforce_capacity false: over-reference completes succeed, no auto-close,
- *     terminates increment nothing.
- *   - enforce_capacity true: original city/cell/state/study rejects + auto-close.
- *   - form_status closed: reject without started_at; allow mid-survey finish.
+ * Per-city cap of 12 after migration 021:
+ *   - 11 then 12th succeed; 13th is city_full
+ *   - 10 concurrent submits at count 11 → exactly 12
+ *   - city already at 20 keeps all 20; new completes are city_full
+ *   - terminate on a full city records and increments nothing
+ *   - no study_full / auto-close when global is past the reference N
  *
  * Does not apply migrations. Restores study_config afterwards.
  *
@@ -23,8 +24,7 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
-const TAG = `captest_${Date.now()}`;
-const TEST_CITY_NAME = `ZZ Capacity Test ${TAG}`;
+const TAG = `cap12_${Date.now()}`;
 const TEST_CITY_STATE = "ZZ-TEST";
 
 function fail(message) {
@@ -52,8 +52,10 @@ async function rpcInsert(input) {
       p_submitted_at: new Date().toISOString(),
       p_total_duration_sec: 1,
       p_ip_address: "127.0.0.1",
-      p_city_id: input.cityId,
+      p_city_id: input.cityId ?? null,
       p_self_reported_area_type: null,
+      p_city_raw: input.cityRaw ?? "Test City",
+      p_city_match_type: input.matchType ?? (input.cityId ? "exact" : "unmatched"),
     },
   );
   if (error) return { ok: false, code: error.message, error };
@@ -63,6 +65,8 @@ async function rpcInsert(input) {
 async function countQualified(cityId = null) {
   const { data, error } = await supabase.rpc("count_qualified_completions", {
     p_city_id: cityId,
+    p_state: null,
+    p_area_type: null,
   });
   if (error) throw error;
   return Number(data ?? 0);
@@ -76,34 +80,58 @@ async function writeConfig(config) {
   if (error) throw error;
 }
 
-async function readFormStatus() {
+async function insertCity(name, capacity) {
   const { data, error } = await supabase
-    .from("form_settings")
-    .select("study_config")
-    .eq("form_type", "registration")
-    .maybeSingle();
+    .from("cities")
+    .insert({
+      name,
+      state: TEST_CITY_STATE,
+      area_type: "urban",
+      capacity,
+      buffer: 0,
+      is_active: true,
+      is_open: true,
+    })
+    .select("id")
+    .single();
   if (error) throw error;
-  return data?.study_config?.form_status ?? null;
+  return data.id;
+}
+
+async function insertParticipants(count, cityId, cityName) {
+  const rows = Array.from({ length: count }, (_, index) => {
+    const row = {
+      full_name: `Capacity 12 Test ${index + 1}`,
+      mobile: `91${String(Date.now()).slice(-8)}${String(index).padStart(3, "0")}`.slice(
+        0,
+        15,
+      ),
+      dob: "1995-01-15",
+      city: cityName,
+      referral_code: `C12${TAG.slice(-6)}${String(index).padStart(3, "0")}`.slice(0, 20),
+      status: "lead",
+    };
+    if (cityId) row.city_id = cityId;
+    return row;
+  });
+  const { data, error } = await supabase
+    .from("participants")
+    .insert(rows)
+    .select("lead_id, mobile");
+  if (error) throw error;
+  return data;
 }
 
 async function main() {
-  const testStartedAt = new Date().toISOString();
-  console.log("Capacity RPC test:", TAG);
+  console.log("City capacity 12 RPC test:", TAG);
 
-  const { data: rpcProbe, error: rpcError } = await supabase.rpc(
-    "count_qualified_completions",
-    { p_city_id: null },
-  );
+  const { error: rpcError } = await supabase.rpc("count_qualified_completions", {
+    p_city_id: null,
+  });
   if (rpcError) {
-    console.error(
-      "Migration 008 is not applied (count_qualified_completions missing).",
-      rpcError.message,
-    );
+    console.error("count_qualified_completions missing.", rpcError.message);
     process.exit(2);
   }
-
-  const baselineQualified = Number(rpcProbe ?? 0);
-  console.log("Baseline qualified completions:", baselineQualified);
 
   const { data: settingsRow, error: settingsError } = await supabase
     .from("form_settings")
@@ -118,244 +146,219 @@ async function main() {
 
   const originalConfig = settingsRow.study_config ?? {};
   const leadIds = [];
-  let cityId = null;
+  const cityIds = [];
 
   try {
-    const { data: city, error: cityError } = await supabase
-      .from("cities")
-      .insert({
-        name: TEST_CITY_NAME,
-        state: TEST_CITY_STATE,
-        area_type: "urban",
-        capacity: 1,
-        is_active: true,
-        is_open: true,
-      })
-      .select("id")
-      .single();
-    if (cityError) throw cityError;
-    cityId = city.id;
-
-    const participantRows = Array.from({ length: 18 }, (_, index) => ({
-      full_name: `Capacity Test ${index + 1}`,
-      mobile: `90000${String(Date.now()).slice(-5)}${String(index).padStart(2, "0")}`.slice(
-        0,
-        15,
-      ),
-      dob: "1995-01-15",
-      city: TEST_CITY_NAME,
-      city_id: cityId,
-      referral_code: `CT${TAG.slice(-8)}${String(index).padStart(2, "0")}`.slice(
-        0,
-        20,
-      ),
-      status: "lead",
-    }));
-
-    const { data: participants, error: participantError } = await supabase
-      .from("participants")
-      .insert(participantRows)
-      .select("lead_id, mobile");
-    if (participantError) throw participantError;
-    leadIds.push(...participants.map((row) => row.lead_id));
-
-    const terminated = participants[0];
-    const overReference = participants.slice(1, 6);
-    const closedFresh = participants[6];
-    const closedMid = participants[7];
-    const concurrent = participants.slice(8, 18);
-
-    await writeConfig({
-      ...originalConfig,
-      form_status: "open",
-      enforce_capacity: false,
-      auto_close_on_full: true,
-      survey_active: true,
-      screener_open: true,
-      project_open: true,
-      total_capacity: baselineQualified + 1,
-    });
-
-    const terminatedResult = await rpcInsert({
-      leadId: terminated.lead_id,
-      mobile: terminated.mobile,
-      cityId,
-      completionStatus: "Terminated",
-    });
-    if (!terminatedResult.ok) {
-      fail(`Terminated insert should succeed, got ${JSON.stringify(terminatedResult)}`);
-    }
-    const afterTerminated = await countQualified();
-    if (afterTerminated !== baselineQualified) {
-      fail(
-        `Terminated must not consume capacity: expected ${baselineQualified}, got ${afterTerminated}`,
-      );
-    } else {
-      console.log("OK: Terminated does not increment counts");
-    }
-
-    const offResults = [];
-    for (const row of overReference) {
-      offResults.push(
-        await rpcInsert({
-          leadId: row.lead_id,
-          mobile: row.mobile,
-          cityId,
-          completionStatus: "Completed",
-        }),
-      );
-    }
-    const offOk = offResults.filter((row) => row.ok === true);
-    const offRejects = offResults.filter((row) => row.ok !== true);
-    const cityCount = await countQualified(cityId);
-    const afterOff = await countQualified();
-    const statusAfterOff = await readFormStatus();
-
-    console.log(
-      `enforce_capacity=false: ${offOk.length}/5 completes, city achieved ${cityCount} vs reference 1, study ${afterOff} vs reference ${baselineQualified + 1}`,
-    );
-    if (offOk.length !== 5) {
-      fail(`Expected 5 over-reference completes to succeed, got ${offOk.length}`);
-    }
-    if (offRejects.length > 0) {
-      fail(`Unexpected rejects while enforcement is off: ${JSON.stringify(offRejects)}`);
-    }
-    if (cityCount !== 5) {
-      fail(`Expected city count 5 against reference 1, got ${cityCount}`);
-    }
-    if (afterOff !== baselineQualified + 5) {
-      fail(`Expected study total ${baselineQualified + 5}, got ${afterOff}`);
-    }
-    if (statusAfterOff !== "open") {
-      fail(`Auto-close must stay off when enforce_capacity is false, got ${statusAfterOff}`);
-    } else {
-      console.log("OK: over-reference completes succeed and form does not auto-close");
-    }
-
-    await writeConfig({
-      ...originalConfig,
-      form_status: "closed",
-      enforce_capacity: false,
-      auto_close_on_full: false,
-      survey_active: true,
-      screener_open: true,
-      project_open: true,
-      total_capacity: baselineQualified + 200,
-    });
-
-    const freshClosed = await rpcInsert({
-      leadId: closedFresh.lead_id,
-      mobile: closedFresh.mobile,
-      cityId,
-      completionStatus: "Completed",
-      startedAt: null,
-    });
-    if (freshClosed.ok || freshClosed.code !== "form_closed") {
-      fail(
-        `Fresh submit while closed should be form_closed, got ${JSON.stringify(freshClosed)}`,
-      );
-    } else {
-      console.log("OK: closed form rejects new submit with form_closed");
-    }
-
-    const midClosed = await rpcInsert({
-      leadId: closedMid.lead_id,
-      mobile: closedMid.mobile,
-      cityId,
-      completionStatus: "Completed",
-      startedAt: new Date().toISOString(),
-    });
-    if (!midClosed.ok) {
-      fail(`Mid-survey submit while closed should succeed, got ${JSON.stringify(midClosed)}`);
-    } else {
-      console.log("OK: mid-survey (started_at set) may finish after close");
-    }
-
-    await supabase.from("screener_responses").delete().in("lead_id", leadIds);
-    const resetQualified = await countQualified();
-    if (resetQualified !== baselineQualified) {
-      fail(
-        `Cleanup before enforce-on phase expected ${baselineQualified}, got ${resetQualified}`,
-      );
-    }
-
-    const { error: raiseCityError } = await supabase
-      .from("cities")
-      .update({ capacity: 100 })
-      .eq("id", cityId);
-    if (raiseCityError) throw raiseCityError;
-
     await writeConfig({
       ...originalConfig,
       form_status: "open",
       enforce_capacity: true,
-      auto_close_on_full: true,
-      survey_active: true,
-      screener_open: true,
-      project_open: true,
-      total_capacity: baselineQualified + 1,
+      enforce_quota_cascade: false,
+      auto_close_on_full: false,
+      default_city_capacity: 12,
+      total_capacity: 1,
     });
 
+    const seqCityName = `ZZ Cap12 Seq ${TAG}`;
+    const seqCityId = await insertCity(seqCityName, 12);
+    cityIds.push(seqCityId);
+    const seqPeople = await insertParticipants(14, seqCityId, seqCityName);
+    leadIds.push(...seqPeople.map((row) => row.lead_id));
+
+    for (let i = 0; i < 12; i += 1) {
+      const result = await rpcInsert({
+        leadId: seqPeople[i].lead_id,
+        mobile: seqPeople[i].mobile,
+        cityId: seqCityId,
+        completionStatus: "Completed",
+      });
+      if (!result.ok) {
+        fail(`Complete ${i + 1}/12 should succeed, got ${JSON.stringify(result)}`);
+      }
+    }
+    const after12 = await countQualified(seqCityId);
+    if (after12 !== 12) fail(`Expected 12 after sequential fills, got ${after12}`);
+    else console.log("OK: 12 sequential completes accepted");
+
+    const thirteenth = await rpcInsert({
+      leadId: seqPeople[12].lead_id,
+      mobile: seqPeople[12].mobile,
+      cityId: seqCityId,
+      completionStatus: "Completed",
+    });
+    if (thirteenth.ok || thirteenth.code !== "city_full") {
+      fail(`13th should be city_full, got ${JSON.stringify(thirteenth)}`);
+    } else {
+      console.log("OK: 13th rejected with city_full");
+    }
+    if ((await countQualified(seqCityId)) !== 12) {
+      fail("13th reject must not increment the city count");
+    }
+
+    const terminated = await rpcInsert({
+      leadId: seqPeople[13].lead_id,
+      mobile: seqPeople[13].mobile,
+      cityId: seqCityId,
+      completionStatus: "Terminated",
+    });
+    if (!terminated.ok) {
+      fail(`Terminate on a full city should record, got ${JSON.stringify(terminated)}`);
+    }
+    if ((await countQualified(seqCityId)) !== 12) {
+      fail("Terminate must not increment qualified count");
+    } else {
+      console.log("OK: terminate on a full city records and increments nothing");
+    }
+
+    const concCityName = `ZZ Cap12 Conc ${TAG}`;
+    const concCityId = await insertCity(concCityName, 12);
+    cityIds.push(concCityId);
+    const concPeople = await insertParticipants(21, concCityId, concCityName);
+    leadIds.push(...concPeople.map((row) => row.lead_id));
+
+    for (let i = 0; i < 11; i += 1) {
+      const result = await rpcInsert({
+        leadId: concPeople[i].lead_id,
+        mobile: concPeople[i].mobile,
+        cityId: concCityId,
+        completionStatus: "Completed",
+      });
+      if (!result.ok) {
+        fail(`Pre-fill ${i + 1}/11 should succeed, got ${JSON.stringify(result)}`);
+      }
+    }
+
+    const concurrent = concPeople.slice(11, 21);
     const results = await Promise.all(
       concurrent.map((row) =>
         rpcInsert({
           leadId: row.lead_id,
           mobile: row.mobile,
-          cityId,
+          cityId: concCityId,
           completionStatus: "Completed",
         }),
       ),
     );
-
     const successes = results.filter((row) => row.ok === true);
-    const globalFull = results.filter(
-      (row) => row.code === "global_full" || row.code === "study_full",
-    );
-    const finalCount = await countQualified();
-    const closedStatus = await readFormStatus();
-
+    const cityFull = results.filter((row) => row.code === "city_full");
+    const concFinal = await countQualified(concCityId);
     console.log(
-      `enforce_capacity=true: ${successes.length} ok, ${globalFull.length} study_full, final ${finalCount}`,
+      `CONCURRENCY at count 11: ${successes.length} ok, ${cityFull.length} city_full, final ${concFinal}`,
     );
-
     if (successes.length !== 1) {
-      fail(`Expected exactly 1 success at cap-1, got ${successes.length}`);
+      fail(`Expected exactly 1 concurrent success, got ${successes.length}`);
     }
-    if (globalFull.length !== 9) {
-      fail(`Expected 9 study_full rejects, got ${globalFull.length}`);
+    if (cityFull.length !== 9) {
+      fail(`Expected 9 city_full rejects, got ${cityFull.length}`);
     }
-    if (finalCount !== baselineQualified + 1) {
-      fail(
-        `Expected qualified count ${baselineQualified + 1}, got ${finalCount}`,
-      );
-    }
-    if (closedStatus !== "closed") {
-      fail(`Expected auto-close form_status=closed, got ${closedStatus}`);
+    if (concFinal !== 12) {
+      fail(`Expected final city count 12, got ${concFinal}`);
     } else {
-      console.log("OK: flipping enforce_capacity true restores rejects and auto-close");
+      console.log("OK: 10 simultaneous submits at 11 produced exactly 12");
+    }
+
+    const overCityName = `ZZ Cap12 Over ${TAG}`;
+    const overCityId = await insertCity(overCityName, 12);
+    cityIds.push(overCityId);
+    const overPeople = await insertParticipants(21, overCityId, overCityName);
+    leadIds.push(...overPeople.map((row) => row.lead_id));
+
+    await writeConfig({
+      ...originalConfig,
+      form_status: "open",
+      enforce_capacity: false,
+      enforce_quota_cascade: false,
+      auto_close_on_full: false,
+      default_city_capacity: 12,
+      total_capacity: 1,
+    });
+    for (let i = 0; i < 20; i += 1) {
+      const result = await rpcInsert({
+        leadId: overPeople[i].lead_id,
+        mobile: overPeople[i].mobile,
+        cityId: overCityId,
+        completionStatus: "Completed",
+      });
+      if (!result.ok) {
+        fail(`Over-limit seed ${i + 1}/20 should succeed, got ${JSON.stringify(result)}`);
+      }
+    }
+    const seeded20 = await countQualified(overCityId);
+    if (seeded20 !== 20) fail(`Expected 20 seeded completes, got ${seeded20}`);
+
+    await writeConfig({
+      ...originalConfig,
+      form_status: "open",
+      enforce_capacity: true,
+      enforce_quota_cascade: false,
+      auto_close_on_full: false,
+      default_city_capacity: 12,
+      total_capacity: 1,
+    });
+    const twentyFirst = await rpcInsert({
+      leadId: overPeople[20].lead_id,
+      mobile: overPeople[20].mobile,
+      cityId: overCityId,
+      completionStatus: "Completed",
+    });
+    if (twentyFirst.ok || twentyFirst.code !== "city_full") {
+      fail(`City at 20 must reject new completes, got ${JSON.stringify(twentyFirst)}`);
+    }
+    if ((await countQualified(overCityId)) !== 20) {
+      fail("Existing 20 completes must stay intact");
+    } else {
+      console.log("OK: city at 20 keeps all 20 and accepts nothing new");
+    }
+
+    const globalBefore = await countQualified();
+    const unmatchedPerson = await insertParticipants(1, null, "Typo City");
+    leadIds.push(unmatchedPerson[0].lead_id);
+    const unmatched = await rpcInsert({
+      leadId: unmatchedPerson[0].lead_id,
+      mobile: unmatchedPerson[0].mobile,
+      cityId: null,
+      cityRaw: "Typo City XYZ",
+      matchType: "unmatched",
+      completionStatus: "Completed",
+    });
+    if (!unmatched.ok) {
+      fail(`Unmatched complete should bypass city cap, got ${JSON.stringify(unmatched)}`);
+    } else {
+      console.log("OK: unmatched complete bypasses per-city limit");
+    }
+
+    const globalAfter = await countQualified();
+    if (globalAfter !== globalBefore + 1) {
+      fail(`Unmatched should add 1 to study total: ${globalBefore} → ${globalAfter}`);
+    }
+
+    const { data: formRow } = await supabase
+      .from("form_settings")
+      .select("study_config")
+      .eq("form_type", "registration")
+      .maybeSingle();
+    const status = formRow?.study_config?.form_status;
+    if (status !== "open") {
+      fail(`Form must stay open with no auto-close, got ${status}`);
+    } else {
+      console.log("OK: submissions continue with no auto-close (form still open)");
     }
 
     if (process.exitCode !== 1) {
-      console.log("OK: enforcement off keeps counting; enforcement on restores cascade");
+      console.log("OK: city cap 12, unmatched open, no global auto-close");
     }
   } finally {
     if (leadIds.length > 0) {
       await supabase.from("screener_responses").delete().in("lead_id", leadIds);
       await supabase.from("participants").delete().in("lead_id", leadIds);
     }
-    if (cityId) {
-      await supabase.from("cities").delete().eq("id", cityId);
+    for (const id of cityIds) {
+      await supabase.from("cities").delete().eq("id", id);
     }
     await supabase
       .from("form_settings")
       .update({ study_config: originalConfig })
       .eq("form_type", "registration");
-    await supabase
-      .from("config_audit_log")
-      .delete()
-      .eq("actor_email", "system")
-      .eq("field", "form_status")
-      .gte("created_at", testStartedAt);
     console.log("Cleanup complete; study_config restored.");
   }
 }

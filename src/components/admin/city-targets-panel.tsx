@@ -32,6 +32,7 @@ type SnapshotPayload = QuotaSnapshot & {
   unmatchedCities?: UnmatchedCityRow[];
   unmatchedGlobalCompletes?: number;
   ignoredUnmatched?: IgnoredUnmatchedRow[];
+  defaultCityCapacity?: number;
 };
 
 export function CityTargetsPanel({
@@ -392,10 +393,10 @@ export function CityTargetsPanel({
       <h3 className="text-base font-semibold text-foreground">City Targets</h3>
       <p className="mt-2 text-sm leading-relaxed text-plum-muted">
         Sampling design is <strong>controlled 50:50 urban / rural within each
-        state</strong>. Numbers below are <strong>reference targets</strong>
-        {enforceCapacity ? " and hard limits while enforcement is on" : ", not hard caps"}.
-        National estimates need weights. Status is Achieved / Reference only.
-        Gender quota is not applied.
+        state</strong>. Each city has a stored capacity (default{" "}
+        {payload?.defaultCityCapacity ?? 12} qualified completes). Cities at or
+        over that limit are closed to new responses. Fieldwork is stopped with
+        the form open/close toggle, not a global cap.
       </p>
       <p className="mt-2 text-sm leading-relaxed text-plum-muted">
         Q15_1 / Q15_2 are self-report and never drive these cells. Respondents type
@@ -403,23 +404,40 @@ export function CityTargetsPanel({
         Unmatched completes still count toward the <strong>study total</strong>.
       </p>
 
-      <div className="mt-4 rounded-[12px] border border-primary/30 bg-accent-soft px-4 py-4">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
-          Live study total
-        </p>
-        <p className="mt-1 font-mono text-3xl font-bold tabular-nums tracking-tight text-foreground">
-          {payload?.achievedGlobal ?? 0}
-        </p>
-        <p className="mt-1 text-sm text-text-primary">
-          qualified completes · urban {payload?.achievedUrban ?? 0} : rural{" "}
-          {payload?.achievedRural ?? 0}
-          {payload?.unweightedUrbanPct == null
-            ? ""
-            : ` · ${payload.unweightedUrbanPct}% urban (${payload.skewPoints ?? 0} pts vs 50)`}
-        </p>
-        <p className="mt-1 text-xs text-plum-muted">
-          Close the form manually when this total looks right (around 200–230).
-        </p>
+      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+        <div className="rounded-[12px] border border-primary/30 bg-accent-soft px-4 py-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
+            Live study total
+          </p>
+          <p className="mt-1 font-mono text-3xl font-bold tabular-nums tracking-tight text-foreground">
+            {payload?.achievedGlobal ?? 0}
+          </p>
+          <p className="mt-1 text-sm text-text-primary">
+            qualified completes · urban {payload?.achievedUrban ?? 0} : rural{" "}
+            {payload?.achievedRural ?? 0}
+            {payload?.unweightedUrbanPct == null
+              ? ""
+              : ` · ${payload.unweightedUrbanPct}% urban (${payload.skewPoints ?? 0} pts vs 50)`}
+          </p>
+          <p className="mt-1 text-xs text-plum-muted">
+            Close the form manually when this total looks right (around 200–230).
+          </p>
+        </div>
+        <div className="rounded-[12px] border border-border bg-card px-4 py-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-muted">
+            Unmatched (no city)
+          </p>
+          <p className="mt-1 font-mono text-3xl font-bold tabular-nums tracking-tight text-foreground">
+            {payload?.unmatchedGlobalCompletes ?? 0}
+          </p>
+          <p className="mt-1 text-sm text-text-primary">
+            qualified completes that attributed to no city
+          </p>
+          <p className="mt-1 text-xs text-plum-muted">
+            They bypass the per-city limit and still count in the study total.
+            Typos are not blocked.
+          </p>
+        </div>
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -443,13 +461,7 @@ export function CityTargetsPanel({
       </div>
 
       {payload?.cellWarning ? (
-        <p
-          className={`mt-4 rounded-[10px] border px-3 py-2 text-sm ${
-            enforceCapacity
-              ? "border-destructive/40 bg-destructive/10 text-destructive"
-              : "border-border bg-accent-soft text-plum-muted"
-          }`}
-        >
+        <p className="mt-4 rounded-[10px] border border-border bg-accent-soft px-3 py-2 text-sm text-plum-muted">
           {payload.cellWarning}
         </p>
       ) : null}
@@ -608,6 +620,7 @@ export function CityTargetsPanel({
         regions={payload?.regions ?? []}
         cities={configCityOptions}
         enforceCapacity={enforceCapacity}
+        defaultCityCapacity={payload?.defaultCityCapacity ?? 12}
         onRefresh={load}
       />
 
@@ -1007,12 +1020,12 @@ function CellTable({
           <thead>
             <tr className="border-b border-border text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted">
               <th className="py-2 pr-3">City</th>
-              <th className="py-2 pr-3">Reference target</th>
+              <th className="py-2 pr-3">Target</th>
               <th className="py-2 pr-3">Buffer</th>
-              <th className="py-2 pr-3">Reference</th>
-              <th className="py-2 pr-3">Achieved</th>
-              <th className="py-2 pr-3">Vs reference</th>
-              <th className="py-2 pr-3">% of reference</th>
+              <th className="py-2 pr-3">Limit</th>
+              <th className="py-2 pr-3">Achieved / limit</th>
+              <th className="py-2 pr-3">Remaining</th>
+              <th className="py-2 pr-3">% full</th>
               <th className="py-2 pr-3">Status</th>
               <th className="py-2">Actions</th>
             </tr>
@@ -1028,7 +1041,7 @@ function CellTable({
               </tr>
             ) : (
               cities.map((city) => {
-                const overReference = city.achieved > city.closesAt;
+                const closedToNew = city.achieved >= city.closesAt;
                 return (
                 <tr key={city.id} className="border-b border-border/70">
                   <td className="py-3 pr-3 font-medium text-text-primary">{city.name}</td>
@@ -1081,34 +1094,26 @@ function CellTable({
                       </Button>
                     </div>
                   </td>
-                  <td className="py-3 pr-3 font-mono tabular-nums">{city.achieved}</td>
+                  <td className="py-3 pr-3 font-mono tabular-nums">
+                    {city.achieved} / {city.closesAt}
+                  </td>
                   <td className="py-3 pr-3 font-mono tabular-nums text-text-primary">
-                    {overReference
-                      ? `Over by ${city.achieved - city.closesAt}`
-                      : city.remaining}
+                    {Math.max(0, city.closesAt - city.achieved)}
                   </td>
                   <td className="py-3 pr-3 font-mono tabular-nums">{city.pctFull}%</td>
                   <td className="py-3 pr-3">
                     <span className={city.isActive ? "text-primary" : "text-text-muted"}>
                       {city.isActive ? "Active" : "Inactive"}
                     </span>
-                    {overReference ? (
+                    {closedToNew ? (
                       <>
                         {" · "}
-                        <span className="text-text-muted">Over reference</span>
-                      </>
-                    ) : null}
-                    {enforceCapacity ? (
-                      <>
-                        {" · "}
-                        <span className={city.isOpen ? "text-primary" : "text-text-muted"}>
-                          {city.isOpen ? "Open" : "Closed"}
-                        </span>
+                        <span className="text-text-muted">Closed</span>
                       </>
                     ) : (
                       <>
                         {" · "}
-                        <span className="text-text-muted">Auto-close off</span>
+                        <span className="text-text-muted">Open</span>
                       </>
                     )}
                   </td>

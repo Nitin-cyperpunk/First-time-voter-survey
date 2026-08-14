@@ -153,31 +153,6 @@ export function StudyConfigSettings({ initialConfig }: StudyConfigSettingsProps)
         </div>
       </div>
 
-      {!enforcing ? (
-        <div
-          className="rounded-[14px] border border-primary/30 bg-accent-soft px-5 py-4 text-sm leading-relaxed text-text-primary"
-          role="status"
-        >
-          <p className="font-semibold text-foreground">
-            Capacity enforcement is OFF. No respondent will be turned away.
-            Close the form manually when the sample is sufficient.
-          </p>
-          <p className="mt-1 text-plum-muted">
-            Qualified completes still count by city, state, and area type. Use
-            those live totals — not a hard cap — to decide when to close
-            (around 200–230).
-          </p>
-        </div>
-      ) : (
-        <div
-          className="rounded-[14px] border border-destructive/40 bg-destructive/10 px-5 py-4 text-sm leading-relaxed text-destructive"
-          role="status"
-        >
-          Capacity enforcement is ON. Respondents can be rejected at city, cell,
-          state, or study reference limits.
-        </div>
-      )}
-
       <section className="rounded-[14px] border border-border bg-card p-6 shadow-sm">
         <h3 className="flex items-center gap-2 text-base font-semibold text-foreground">
           <span
@@ -208,26 +183,21 @@ export function StudyConfigSettings({ initialConfig }: StudyConfigSettingsProps)
             label="Form status"
           />
         </div>
-        <div
-          className={`mt-3 flex flex-wrap items-center justify-between gap-3 rounded-[12px] border px-4 py-3 ${
-            enforcing ? "border-border" : "border-border opacity-60"
-          }`}
-        >
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-border px-4 py-3 opacity-60">
           <div>
             <p className="text-sm font-semibold text-foreground">
               Auto-close when full
             </p>
             <p className="text-xs text-plum-muted">
-              {enforcing
-                ? "Sets form_status to closed when qualified completions reach the study reference."
-                : "Inactive while enforcement is off. The form closes only when you toggle Accept responses."}
+              Inactive. Fieldwork is stopped with Accept responses, not a
+              global cap.
             </p>
           </div>
           <Toggle
-            checked={enforcing && config.auto_close_on_full}
-            onChange={(next) => patch({ auto_close_on_full: next })}
+            checked={false}
+            onChange={() => patch({ auto_close_on_full: false })}
             label="Auto-close on full"
-            disabled={!enforcing}
+            disabled
           />
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-border px-4 py-3">
@@ -236,8 +206,8 @@ export function StudyConfigSettings({ initialConfig }: StudyConfigSettingsProps)
               Enforce capacity
             </p>
             <p className="text-xs text-plum-muted">
-              Single switch. Off (default): count and report only. On: restores
-              city → cell → state → study rejects without new development.
+              Per-city limit of {config.default_city_capacity} qualified
+              completes. Unmatched cities are not blocked. No global cap.
             </p>
           </div>
           <Toggle
@@ -257,36 +227,51 @@ export function StudyConfigSettings({ initialConfig }: StudyConfigSettingsProps)
           Global reference
         </h3>
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-plum-muted">
-          Reference N for <strong>qualified completions</strong> only (passed
-          terminate gates and submitted). Terminated and abandoned responses do
-          not count. This is not a hard cap unless enforcement is on.
+          This is a monitoring reference for the manual close at 200–230, not a
+          hard cap. Per-city limit is stored on each city (default{" "}
+          {config.default_city_capacity}).
         </p>
-        <label className="mt-4 block max-w-xs space-y-1.5">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-plum-faint">
-            Study reference
-          </span>
-          <Input
-            type="number"
-            min={1}
-            inputMode="numeric"
-            className="h-11 text-base font-semibold tabular-nums"
-            value={config.total_capacity}
-            onChange={(event) =>
-              patch({
-                total_capacity: Math.max(1, Number(event.target.value) || 1),
-              })
-            }
-          />
-        </label>
-        <p
-          className={`mt-3 text-sm font-medium ${
-            unallocated < 0 ? "text-error" : "text-text-primary"
-          }`}
-        >
-          Unallocated: {unallocated}
-          {unallocated < 0
-            ? " — save is blocked until state allocations fit."
-            : null}
+        <div className="mt-4 flex flex-wrap gap-4">
+          <label className="block max-w-xs space-y-1.5">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-plum-faint">
+              Study reference
+            </span>
+            <Input
+              type="number"
+              min={1}
+              inputMode="numeric"
+              className="h-11 text-base font-semibold tabular-nums"
+              value={config.total_capacity}
+              onChange={(event) =>
+                patch({
+                  total_capacity: Math.max(1, Number(event.target.value) || 1),
+                })
+              }
+            />
+          </label>
+          <label className="block max-w-xs space-y-1.5">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-plum-faint">
+              Default city capacity
+            </span>
+            <Input
+              type="number"
+              min={0}
+              inputMode="numeric"
+              className="h-11 text-base font-semibold tabular-nums"
+              value={config.default_city_capacity}
+              onChange={(event) =>
+                patch({
+                  default_city_capacity: Math.max(
+                    0,
+                    Number(event.target.value) || 0,
+                  ),
+                })
+              }
+            />
+          </label>
+        </div>
+        <p className="mt-3 text-sm font-medium text-text-primary">
+          Unallocated vs reference: {unallocated}
         </p>
       </section>
 

@@ -12,7 +12,6 @@ import {
   getCityById,
 } from "@/server/repositories/cities.repository";
 import { getStudyConfig } from "@/server/repositories/form-settings.repository";
-import { buildQuotaSnapshot } from "@/server/services/quota.service";
 import {
   countActiveUnmatchedCompletes,
   listUnmatchedCityRows,
@@ -50,32 +49,10 @@ async function isCityFull(cityId: string): Promise<boolean> {
   const config = await getStudyConfig();
   if (!isCapacityEnforced(config)) return false;
 
-  try {
-    const snapshot = await buildQuotaSnapshot();
-    if (snapshot.achievedGlobal >= snapshot.totalCapacity) return true;
-    for (const state of snapshot.states) {
-      if (state.remaining <= 0) {
-        for (const cell of [state.urban, state.rural]) {
-          if (cell.cities.some((c) => c.id === cityId)) return true;
-        }
-      }
-      for (const cell of [state.urban, state.rural]) {
-        if (cell.remaining <= 0 && cell.cities.some((c) => c.id === cityId)) {
-          return true;
-        }
-        const city = cell.cities.find((c) => c.id === cityId);
-        if (city && (city.remaining <= 0 || !city.isOpen || !city.isActive)) {
-          return true;
-        }
-      }
-    }
-  } catch {
-    const achieved = await countQualifiedCompletions({ cityId });
-    const city = await getCityById(cityId);
-    if (!city) return true;
-    return achieved >= city.capacity || !city.isOpen || !city.isActive;
-  }
-  return false;
+  const achieved = await countQualifiedCompletions({ cityId });
+  const city = await getCityById(cityId);
+  if (!city) return true;
+  return achieved >= city.capacity || !city.isOpen || !city.isActive;
 }
 
 function mapResolved(
@@ -185,7 +162,7 @@ export async function checkCityAvailability(input: {
   stateLabel?: string | null;
 }): Promise<{
   ok: boolean;
-  code?: "city_full" | "city_required" | "study_full";
+  code?: "city_full" | "city_required";
   message?: string;
   resolved: ResolvedCity;
 }> {
@@ -215,21 +192,6 @@ export async function checkCityAvailability(input: {
         resolved,
       };
     }
-  }
-
-  try {
-    const snapshot = await buildQuotaSnapshot();
-    if (snapshot.achievedGlobal >= snapshot.totalCapacity) {
-      return {
-        ok: false,
-        code: "study_full",
-        message:
-          "This survey has reached its respondent capacity and is no longer accepting new completions.",
-        resolved,
-      };
-    }
-  } catch {
-    /* ignore if quota tables pending */
   }
 
   return { ok: true, resolved };

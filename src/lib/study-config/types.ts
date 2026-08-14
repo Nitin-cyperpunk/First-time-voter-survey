@@ -7,18 +7,24 @@ export type FormStatus = "open" | "closed";
 export type StudyConfig = {
   target: number;
   buffer: number;
-  /** Reference N for counting/reporting. Not a hard cap unless enforce_capacity. */
+  /** Reference N for counting/reporting. Not a hard cap. Fieldwork closes via form_status. */
   total_capacity: number;
   /**
-   * Four-level quota enforcement (city → cell → state → study).
-   * Default FALSE: keep counting and admin display; never turn a respondent away
-   * for being over a reference target. Set TRUE to restore the original cascade
-   * without new development. Do not delete schema or count logic.
+   * Per-city qualified-complete limit (cities.capacity). Unmatched (no city_id)
+   * bypass it. Does not enforce cell / state / study caps unless
+   * enforce_quota_cascade is also true (kept in the RPC, default false).
    */
   enforce_capacity: boolean;
+  /**
+   * When true with enforce_capacity, restore city → cell → state → study rejects.
+   * Default false: city-level only. Not a UI control — config/SQL only.
+   */
+  enforce_quota_cascade: boolean;
+  /** Capacity stored on newly added cities. Override per city without a code change. */
+  default_city_capacity: number;
   /** Respondent-facing form open/close. Independent of target/buffer funnel. */
   form_status: FormStatus;
-  /** When enforce_capacity and qualified count reaches total_capacity, set form_status to closed. */
+  /** Do not enable for this study. Form is closed manually via form_status. */
   auto_close_on_full: boolean;
   survey_active: boolean;
   eligibility_open: boolean;
