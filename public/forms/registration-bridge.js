@@ -568,6 +568,13 @@
         "We'd also love to have you in our future research. 🌸",
       ],
     },
+    "TERMINATE_AGE_OUT_OF_RANGE": {
+      title: "Thank you for your interest!",
+      body: [
+        "This study is limited to a specific age group, so it isn't a fit for you right now — but we truly appreciate you stopping by.",
+        "You can still refer friends or family who may be eligible and share the study with them.",
+      ],
+    },
     default: {
       title: "Thank you for your interest!",
       body: [
@@ -679,6 +686,9 @@
     if (reasons.indexOf("consent") >= 0) return TERMINATION_COPY.consent;
     if (reasons.indexOf("gender-male") >= 0)
       return TERMINATION_COPY["gender-male"];
+    if (reasons.indexOf("TERMINATE_AGE_OUT_OF_RANGE") >= 0) {
+      return TERMINATION_COPY.TERMINATE_AGE_OUT_OF_RANGE;
+    }
     return TERMINATION_COPY.default;
   }
 
@@ -1270,17 +1280,19 @@
     return ageBandFromDob(dob);
   }
 
+  function formatAgeYears(n) {
+    const v = Math.round(Number(n) * 100) / 100;
+    return Number.isFinite(v) && v >= 1 ? String(v) : "";
+  }
+
   function coerceAgeBandValue(raw) {
     const value = String(raw || "").trim();
     if (/^(18|19|20|21|22|23\+)$/.test(value)) return value;
-    const years = Math.floor(Number(value));
-    if (!isFinite(years) || years < 1) return "";
-    if (years <= 18) return "18";
-    if (years === 19) return "19";
-    if (years === 20) return "20";
-    if (years === 21) return "21";
-    if (years === 22) return "22";
-    return "23+";
+    const numeric = Number(value);
+    if (Number.isFinite(numeric) && numeric >= 1 && numeric <= 120) {
+      return formatAgeYears(numeric);
+    }
+    return "";
   }
 
   function ageBandFromDob(iso) {
@@ -1288,13 +1300,8 @@
     const parts = iso.split("-").map(Number);
     const birth = new Date(parts[0], parts[1] - 1, parts[2]);
     if (Number.isNaN(birth.getTime())) return "";
-    const now = new Date();
-    let age = now.getFullYear() - birth.getFullYear();
-    const monthDiff = now.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) {
-      age -= 1;
-    }
-    return coerceAgeBandValue(String(age));
+    const age = (Date.now() - birth.getTime()) / 31557600000;
+    return formatAgeYears(age);
   }
 
   function demoContactFieldsValid() {
@@ -2455,10 +2462,19 @@
   }
 
   async function completeRegistrationOnForm(registration, options) {
-    showCopiedToast("Registration completed successfully.");
     clearRegistrationCompletePending();
     persistRegistrationResult(registration);
-    await mountThankYouExperience(registration);
+
+    try {
+      showCopiedToast("Registration completed successfully.");
+      await mountThankYouExperience(registration);
+    } catch (error) {
+      console.error(
+        "[ConcaveRegistrationBridge] thank-you mount failed:",
+        error,
+      );
+      await mountThankYouExperience(registration);
+    }
 
     if (options && options.openReferralModal) {
       const terminated = isTerminatedRegistrationStatus(registration.status);
@@ -2808,21 +2824,40 @@
 
     const fullName = document.querySelector("[name=name]")?.value?.trim() || "";
     const mobile = document.querySelector("[name=phone]")?.value?.trim() || "";
-    const city = document.querySelector("[name=city]")?.value?.trim() || "";
+    let city = document.querySelector("[name=city]")?.value?.trim() || "";
     const email = document.querySelector("[name=email]")?.value?.trim() || "";
     const area = document.querySelector("[name=area]")?.value?.trim() || "";
     const pincode = document.querySelector("[name=zip]")?.value?.trim() || "";
     const dob = buildDobIso();
-    const ageBand = readAgeBand();
+    let ageBand = readAgeBand();
 
     if (!city || !ageBand) {
+      const payload = collectFtvAnswerJson();
+      const profile =
+        payload && payload.profile && typeof payload.profile === "object"
+          ? payload.profile
+          : null;
+      if (!city && profile && profile.city) {
+        city = String(profile.city).trim();
+      }
+      if (!ageBand && profile) {
+        ageBand = String(profile.age_band || profile.age_today || "").trim();
+      }
+    }
+
+    syncTerminationState();
+    const isTerminated =
+      Boolean(window.__terminated) ||
+      collectTerminationPayload().length > 0 ||
+      Boolean(submitOptions && submitOptions.forceTerminated);
+
+    if (!isTerminated && (!city || !ageBand)) {
       showRegistrationError(
         "Please complete your city and age before submitting.",
       );
       return;
     }
 
-    syncTerminationState();
     submitRegistration.submitted = true;
     showThankYouCtaLoading();
 
@@ -2833,6 +2868,20 @@
       var attribution = getReferrerAttribution();
       var referralPlatform = attribution.platform || "";
       var deviceFingerprint = await resolveDeviceFingerprint();
+      const terminationPayload = (function () {
+        const collected = collectTerminationPayload();
+        if (collected.length > 0) return collected;
+        if (submitOptions && submitOptions.forceTerminated) {
+          return [
+            {
+              ruleKey: "TERMINATE_AGE_OUT_OF_RANGE",
+              ruleLabel: "Age out of range",
+              reasonText: "Age out of range",
+            },
+          ];
+        }
+        return [];
+      })();
       var response = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -2840,8 +2889,8 @@
           fullName: fullName || undefined,
           mobile: mobile || undefined,
           dob: dob || undefined,
-          age_band: ageBand,
-          city: city,
+          age_band: ageBand || undefined,
+          city: city || undefined,
           email: email || undefined,
           area: area || undefined,
           pincode: pincode || undefined,
@@ -2857,8 +2906,8 @@
           submittedAt: tracking.submittedAt || submittedAt,
           currentScreen: tracking.currentScreen || undefined,
           lastScreen: tracking.lastScreen || undefined,
-          terminated: Boolean(window.__terminated),
-          terminations: collectTerminationPayload(),
+          terminated: isTerminated,
+          terminations: terminationPayload,
           deviceFingerprint: deviceFingerprint || undefined,
         }),
       });
@@ -2874,6 +2923,23 @@
         }
         if (data.code === "DUPLICATE_MOBILE") {
           showAlreadyRegisteredDialog(mobile);
+          return;
+        }
+        if (
+          !submitOptions?.retriedAsTerminated &&
+          (data.code === "AGE_OUT_OF_RANGE" || isTerminated)
+        ) {
+          return submitRegistration(referrerRef, {
+            ...(submitOptions || {}),
+            retriedAsTerminated: true,
+            forceTerminated: true,
+          });
+        }
+        if (isTerminated) {
+          console.warn(
+            "[ConcaveRegistrationBridge] terminated registration failed:",
+            data.error || response.status,
+          );
           return;
         }
         showRegistrationError(
@@ -2928,11 +2994,16 @@
     }
   }
 
-  async function checkMobileExistsAndPrompt() {
+  async function checkMobileExistsAndPrompt(sourceInput) {
     if (submitRegistration.submitted) return;
     if (window.__concaveRefillMode) return;
 
-    const rawMobile = document.querySelector("[name=phone]")?.value || "";
+    const rawMobile =
+      (sourceInput && sourceInput.value) ||
+      document.getElementById("fPhone")?.value ||
+      document.querySelector('[name="phone"]:not([type="hidden"])')?.value ||
+      document.querySelector("[name=phone]")?.value ||
+      "";
     const mobile = normalizeMobile(rawMobile);
 
     if (mobile.length < 10) return;
@@ -2942,6 +3013,33 @@
     if (await checkParticipantMobileExists(mobile)) {
       showAlreadyRegisteredDialog(rawMobile.trim());
     }
+  }
+
+  function bindMobileExistenceCheck(input) {
+    if (!input || input.dataset.existenceCheckBound === "1") return;
+    if (String(input.type || "").toLowerCase() === "hidden") return;
+    input.dataset.existenceCheckBound = "1";
+
+    function runCheck() {
+      void checkMobileExistsAndPrompt(input);
+    }
+
+    input.addEventListener("blur", runCheck);
+    input.addEventListener("change", runCheck);
+    input.addEventListener("input", function () {
+      const mobile = normalizeMobile(input.value || "");
+      if (mobile.length >= 10) runCheck();
+    });
+  }
+
+  function scanMobileExistenceInputs() {
+    ["#fPhone", 'input[name="phone"]', '[data-rl-field="mobile"]'].forEach(
+      function (selector) {
+        document.querySelectorAll(selector).forEach(function (input) {
+          bindMobileExistenceCheck(input);
+        });
+      },
+    );
   }
 
   function installReferralLeadMobileCheck(panel) {
@@ -2987,16 +3085,15 @@
   }
 
   function installMobileExistenceCheck() {
-    const phone = document.querySelector("[name=phone]");
-    if (!phone || phone.dataset.existenceCheckBound === "1") return;
-    phone.dataset.existenceCheckBound = "1";
+    scanMobileExistenceInputs();
 
-    phone.addEventListener("blur", function () {
-      void checkMobileExistsAndPrompt();
+    if (installMobileExistenceCheck.observer) return;
+
+    const observer = new MutationObserver(function () {
+      scanMobileExistenceInputs();
     });
-    phone.addEventListener("change", function () {
-      void checkMobileExistsAndPrompt();
-    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    installMobileExistenceCheck.observer = observer;
   }
 
   window.ConcaveRegistrationBridge = {

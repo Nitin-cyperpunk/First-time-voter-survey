@@ -40,7 +40,28 @@ export function isAgeWithinStudyRule(
 export const AGE_BAND_VALUES = ["18", "19", "20", "21", "22", "23+"] as const;
 export type AgeBandValue = (typeof AGE_BAND_VALUES)[number];
 
-/** Map a whole-year age (or DOB) to the discrete FTV bands. */
+/** Round to 2 decimal places, matching the FTV form `yrs()` helper. */
+export function formatAgeYears(years: number): string {
+  if (!Number.isFinite(years) || years < 1) return "";
+  return String(Math.round(years * 100) / 100);
+}
+
+/** Decimal age from DOB using the same average-year length as the live form. */
+export function getAgeYearsDecimal(
+  dob: string,
+  referenceDate: Date = new Date(),
+): number | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dob.trim())) return null;
+  const [year, month, day] = dob.split("-").map(Number);
+  const birthDate = new Date(year, month - 1, day);
+  if (Number.isNaN(birthDate.getTime())) return null;
+  const msPerYear = 31557600000;
+  const age = (referenceDate.getTime() - birthDate.getTime()) / msPerYear;
+  if (!Number.isFinite(age) || age < 0) return null;
+  return Math.round(age * 100) / 100;
+}
+
+/** Map a whole-year age to legacy discrete FTV bands (kept for old payloads). */
 export function ageBandFromYears(years: number): AgeBandValue | "" {
   const age = Math.floor(years);
   if (!Number.isFinite(age) || age < 1) return "";
@@ -55,28 +76,34 @@ export function ageBandFromYears(years: number): AgeBandValue | "" {
 export function coerceAgeBand(
   raw: unknown,
   dob?: string | null,
-): AgeBandValue | "" {
+): string {
   if (typeof raw === "number") {
-    const fromNumber = ageBandFromYears(raw);
-    if (fromNumber) return fromNumber;
+    return formatAgeYears(raw);
   }
   const text = String(raw ?? "").trim();
+  if (!text) {
+    if (dob) {
+      const decimal = getAgeYearsDecimal(dob);
+      if (decimal != null) return formatAgeYears(decimal);
+    }
+    return "";
+  }
+  if (/^23\+$/i.test(text)) return "23+";
   if ((AGE_BAND_VALUES as readonly string[]).includes(text)) {
-    return text as AgeBandValue;
+    return text;
   }
   const numeric = Number(text);
-  if (text && Number.isFinite(numeric)) {
-    const fromNumber = ageBandFromYears(numeric);
-    if (fromNumber) return fromNumber;
+  if (Number.isFinite(numeric) && numeric >= 1 && numeric <= 120) {
+    return formatAgeYears(numeric);
   }
   if (dob) {
-    const years = getAgeYears(dob);
-    if (years != null) return ageBandFromYears(years);
+    const decimal = getAgeYearsDecimal(dob);
+    if (decimal != null) return formatAgeYears(decimal);
   }
   return "";
 }
 
-/** Discrete years 18–22, or 23+ (open-ended). */
+/** Decimal ages (e.g. 24.3), whole years, or legacy 23+ band. */
 export function parseAgeBand(
   band: string,
 ): { min: number; max: number } | null {
@@ -84,7 +111,6 @@ export function parseAgeBand(
   if (/^23\+$/i.test(value) || /^23\s*or\s*older$/i.test(value)) {
     return { min: 23, max: Number.POSITIVE_INFINITY };
   }
-  if (!/^\d{1,3}$/.test(value)) return null;
   const age = Number(value);
   if (!Number.isFinite(age) || age < 1 || age > 120) return null;
   return { min: age, max: age };

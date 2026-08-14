@@ -858,7 +858,7 @@ S.push({ id:"QA", html:function(){
   A.profile.age_at_poll = yrs(dt, POLL_DATE);
   A.profile.age_at_qualifying_date = yrs(dt, QUAL_DATE);
   A.profile.age_today = yrs(dt, new Date());
-  A.profile.age_band = ageBandFromYears(A.profile.age_today);
+  A.profile.age_band = formatAgeYears(A.profile.age_today);
   var ageEl = document.getElementById("age_band");
   if(ageEl) ageEl.value = A.profile.age_band || "";
   var nameEl = document.getElementById("bridge_name");
@@ -1296,15 +1296,9 @@ function normZip(v){
   return String(v == null ? "" : v).replace(/\D/g, "").slice(0, 6);
 }
 function yrs(from, to){ return Math.round(((to - from) / 31557600000) * 100) / 100; }
-function ageBandFromYears(n){
-  var age = Math.floor(+n);
-  if(!isFinite(age) || age < 1) return "";
-  if(age <= 18) return "18";
-  if(age === 19) return "19";
-  if(age === 20) return "20";
-  if(age === 21) return "21";
-  if(age === 22) return "22";
-  return "23+";
+function formatAgeYears(n){
+  var v = Math.round(+n * 100) / 100;
+  return isFinite(v) && v >= 1 ? String(v) : "";
 }
 
 function err(anchor, text){
@@ -1493,7 +1487,7 @@ function setBridgeField(name, value){
 function syncBridgeFields(){
   var p = A.profile || {};
   setBridgeField("city", p.city || "");
-  setBridgeField("age_band", p.age_band || ageBandFromYears(p.age_today));
+  setBridgeField("age_band", p.age_band || formatAgeYears(p.age_today));
   setBridgeField("name", p.name || "");
   setBridgeField("phone", p.phone || "");
   setBridgeField("dob_date", p.dob || "");

@@ -142,6 +142,9 @@ In the Supabase SQL editor, run **in order**:
 13. `supabase/migrations/013_state_area_quota.sql`
 14. `supabase/migrations/014_area_type_rural.sql`
 15. `supabase/migrations/015_free_text_city_resolve.sql`
+16. `supabase/migrations/016_screener_answers_gin.sql`
+17. `supabase/migrations/017_participants_status_terminated.sql` — required if age/Q1/Q2 terminations fail with `participants_status_check`
+18. `supabase/migrations/018_message_templates_ftv_cleanup.sql` — hides legacy Enamor templates from active use
 
 Already-applied DBs: do not replay 001–014. If 013/014 are not applied yet, run them in order, then **015**. If only 015 is pending, run **015 only**.
 

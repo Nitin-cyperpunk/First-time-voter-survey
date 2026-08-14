@@ -29,7 +29,7 @@ import { createFormTerminations } from "@/server/repositories/form-terminations.
 import { checkDuplicateFingerprint } from "@/server/services/duplicate-fingerprint.service";
 import {
   buildRegistrationTerminationNotes,
-  isRegistrationTerminated,
+  resolveRegistrationTerminationState,
   resolveScreenerCompletionTracking,
 } from "@/lib/registration-terminations";
 import { CapacityError } from "@/lib/capacity";
@@ -263,6 +263,27 @@ function resolveScreenerCsvRow(input: {
   return schemaRow as Json;
 }
 
+function extractStateLabel(input: LaunchRegistrationInput): string | null {
+  const profile = input.answerJson?.profile as
+    | { state?: { label?: string; code?: number } }
+    | undefined;
+  if (profile?.state?.label) return String(profile.state.label);
+
+  const q151 = input.answers?.Q15_1;
+  if (typeof q151 === "string" && q151.trim()) return q151.trim();
+  if (Array.isArray(q151) && typeof q151[0] === "string") return q151[0].trim();
+
+  return null;
+}
+
+function resolveRegistrationCity(input: LaunchRegistrationInput): string {
+  const direct = input.city?.trim() || "";
+  if (direct) return direct;
+
+  const profile = input.answerJson?.profile as { city?: string } | undefined;
+  return profile?.city?.trim() || "";
+}
+
 export async function registerParticipant(
   input: LaunchRegistrationInput,
   options: { ipAddress?: string | null; userAgent?: string | null },
@@ -272,8 +293,24 @@ export async function registerParticipant(
     throw new CapacityError("form_closed");
   }
 
-  if (!isAgeBandWithinStudyRule(input.age_band, studyConfig)) {
-    throw new Error(`AGE_OUT_OF_RANGE:${ageOutOfRangeMessage(studyConfig)}`);
+  let { terminated: registrationTerminated, terminations } =
+    resolveRegistrationTerminationState(input);
+  const ageBand = input.age_band?.trim() || "";
+
+  if (
+    !registrationTerminated &&
+    ageBand &&
+    !isAgeBandWithinStudyRule(ageBand, studyConfig)
+  ) {
+    registrationTerminated = true;
+    terminations = [
+      ...terminations,
+      {
+        ruleKey: "TERMINATE_AGE_OUT_OF_RANGE",
+        ruleLabel: "Age out of range",
+        reasonText: ageOutOfRangeMessage(studyConfig),
+      },
+    ];
   }
 
   const mobile = input.mobile?.trim() ? normalizePhone(input.mobile) : "";
@@ -303,19 +340,21 @@ export async function registerParticipant(
     storedResponseTimes,
   );
 
-  const validation = validateScreenerSubmission(
-    storedAnswers,
-    alignedResponseTimes ?? undefined,
-  );
-  if (!validation.ok) {
-    throw new Error(`INVALID_RESPONSE:${validation.error}`);
-  }
+  if (!registrationTerminated) {
+    const validation = validateScreenerSubmission(
+      storedAnswers,
+      alignedResponseTimes ?? undefined,
+    );
+    if (!validation.ok) {
+      throw new Error(`INVALID_RESPONSE:${validation.error}`);
+    }
 
-  for (const [qIndex, field] of form.schema.fields.entries()) {
-    const qKey = isQKey(field.id) ? field.id : `Q${qIndex + 1}`;
-    const answerValue = storedAnswers[qKey] ?? normalizedAnswers[field.id];
-    if ("required" in field && field.required && !hasStoredAnswerValue(answerValue)) {
-      throw new Error(`MISSING_ANSWER:${field.id}`);
+    for (const [qIndex, field] of form.schema.fields.entries()) {
+      const qKey = isQKey(field.id) ? field.id : `Q${qIndex + 1}`;
+      const answerValue = storedAnswers[qKey] ?? normalizedAnswers[field.id];
+      if ("required" in field && field.required && !hasStoredAnswerValue(answerValue)) {
+        throw new Error(`MISSING_ANSWER:${field.id}`);
+      }
     }
   }
 
@@ -344,25 +383,43 @@ export async function registerParticipant(
   const otherSource =
     rawSource === ACQUISITION_OTHER ? input.otherSource?.trim() || null : null;
 
-  const cityRaw = input.city?.trim() || "";
-  if (!cityRaw) {
-    throw new CapacityError("city_required");
+  const cityRaw = resolveRegistrationCity(input);
+  const stateLabel = extractStateLabel(input);
+
+  if (!registrationTerminated) {
+    if (!cityRaw) {
+      throw new CapacityError("city_required");
+    }
+
+    const availability = await checkCityAvailability({
+      cityRaw,
+      stateLabel,
+    });
+    if (!availability.ok) {
+      throw new CapacityError(
+        availability.code === "study_full" ? "study_full" : "city_full",
+        availability.message,
+      );
+    }
   }
 
-  const stateLabel = extractStateLabel(input);
-  const availability = await checkCityAvailability({
-    cityRaw,
-    stateLabel,
-  });
-  if (!availability.ok) {
-    throw new CapacityError(
-      availability.code === "study_full" ? "study_full" : "city_full",
-      availability.message,
-    );
-  }
-  // Re-resolve at submit so race between blur and submit is covered by RPC too.
-  const fresh = await resolveCityText({ cityRaw, stateLabel });
+  const fresh = cityRaw
+    ? await resolveCityText({ cityRaw, stateLabel })
+    : {
+        raw: "",
+        matchKey: "",
+        matchType: "unmatched" as const,
+        cityId: null,
+        name: null,
+        state: null,
+        areaType: null,
+        isOpen: true,
+        isActive: true,
+        isFull: false,
+      };
+
   if (
+    !registrationTerminated &&
     fresh.matchType !== "unmatched" &&
     fresh.cityId &&
     (fresh.isFull || !fresh.isOpen || !fresh.isActive)
@@ -371,8 +428,11 @@ export async function registerParticipant(
   }
 
   const referralCode = await generateUniqueReferralCode();
-  const registrationTerminated = isRegistrationTerminated(input);
-  const screenerTracking = resolveScreenerCompletionTracking(input);
+  const screenerTracking = resolveScreenerCompletionTracking({
+    terminated: registrationTerminated,
+    terminations,
+    answerJson: input.answerJson,
+  });
   const deviceFingerprint = normalizeDeviceFingerprint(input.deviceFingerprint);
 
   const finalStatus = registrationTerminated ? "terminated" : "completed";
@@ -382,7 +442,7 @@ export async function registerParticipant(
     fullName: input.fullName?.trim() || "Anonymous",
     mobile: mobile || null,
     dob: input.dob?.trim() || null,
-    ageBand: input.age_band,
+    ageBand: ageBand || null,
     city: fresh.name ?? cityRaw,
     cityId: fresh.cityId,
     cityRaw,
@@ -405,7 +465,7 @@ export async function registerParticipant(
   await recordParticipantStatusHistory(participant.leadId, finalStatus, {
     changedBy: "system",
     notes: registrationTerminated
-      ? buildRegistrationTerminationNotes(input.terminations)
+      ? buildRegistrationTerminationNotes(terminations)
       : "Qualified form completion",
   });
 
@@ -432,7 +492,11 @@ export async function registerParticipant(
       : null;
 
   let screenerInserted = false;
-  if (Object.keys(storedAnswers).length > 0) {
+  const hasScreenerPayload =
+    Object.keys(storedAnswers).length > 0 ||
+    (registrationTerminated && Boolean(input.answerJson));
+
+  if (hasScreenerPayload) {
     assertScreenerNotSubmitted(await hasScreenerResponse(participant.leadId));
 
     try {
@@ -467,7 +531,7 @@ export async function registerParticipant(
       });
       screenerInserted = true;
     } catch (error) {
-      if (error instanceof CapacityError) {
+      if (error instanceof CapacityError && !registrationTerminated) {
         try {
           await deleteParticipantByLeadId(participant.leadId);
         } catch (cleanupError) {
@@ -476,8 +540,16 @@ export async function registerParticipant(
             cleanupError,
           );
         }
+        throw error;
       }
-      throw error;
+      if (registrationTerminated) {
+        console.error(
+          "[registerParticipant] terminated screener insert failed open:",
+          error,
+        );
+      } else {
+        throw error;
+      }
     }
   }
 
@@ -485,7 +557,7 @@ export async function registerParticipant(
     await persistFtvAnalysisResponse({
       answerJson: input.answerJson ?? null,
       terminated: registrationTerminated,
-      terminations: input.terminations,
+      terminations,
       leadId: participant.leadId,
       cityId: fresh.cityId,
       startedAt,
@@ -498,9 +570,9 @@ export async function registerParticipant(
     console.error("[registerParticipant] ftv_responses dual-write failed:", error);
   }
 
-  if (input.terminations?.length) {
+  if (terminations.length) {
     await createFormTerminations(
-      input.terminations.map((item) => ({
+      terminations.map((item) => ({
         leadId: participant.leadId,
         formType: "registration",
         formVersion: form.version,
@@ -539,17 +611,4 @@ export async function registerParticipant(
     referralLink: buildReferralLink(participant.referralCode),
     messages,
   };
-}
-
-function extractStateLabel(input: LaunchRegistrationInput): string | null {
-  const profile = input.answerJson?.profile as
-    | { state?: { label?: string; code?: number } }
-    | undefined;
-  if (profile?.state?.label) return String(profile.state.label);
-
-  const q151 = input.answers?.Q15_1;
-  if (typeof q151 === "string" && q151.trim()) return q151.trim();
-  if (Array.isArray(q151) && typeof q151[0] === "string") return q151[0].trim();
-
-  return null;
 }

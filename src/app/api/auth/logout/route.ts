@@ -5,6 +5,8 @@ import {
   revokeCurrentSession,
 } from "@/lib/auth/participant-session";
 
+export const dynamic = "force-dynamic";
+
 export async function POST() {
   try {
     await revokeCurrentSession();

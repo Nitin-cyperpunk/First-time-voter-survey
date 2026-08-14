@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { REQUIRED_MESSAGE_TEMPLATE_KEYS } from "@/lib/message-templates/keys";
+import { REQUIRED_MESSAGE_TEMPLATE_KEYS, LEGACY_MESSAGE_TEMPLATE_KEYS } from "@/lib/message-templates/keys";
 import {
   MESSAGE_TEMPLATE_PLACEHOLDERS,
   PREVIEW_MOCK_CONTEXT,
@@ -114,9 +114,10 @@ export function MessageTemplatesManager() {
   }, [loadTemplates]);
 
   const templateEntries = useMemo(() => {
-    return Object.entries(templates).sort(([, a], [, b]) =>
-      a.title.localeCompare(b.title),
-    );
+    const legacy = new Set<string>(LEGACY_MESSAGE_TEMPLATE_KEYS);
+    return Object.entries(templates)
+      .filter(([key]) => !legacy.has(key))
+      .sort(([, a], [, b]) => a.title.localeCompare(b.title));
   }, [templates]);
 
   const filteredEntries = useMemo(() => {

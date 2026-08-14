@@ -5,6 +5,8 @@ import { getAuthenticatedParticipant } from "@/lib/auth/participant-session";
 import { isValidUpiId, normalizeUpiId } from "@/lib/upi";
 import { updateParticipantUpi } from "@/server/repositories/participants.repository";
 
+export const dynamic = "force-dynamic";
+
 const upiSchema = z.object({
   upiId: z.string().trim().min(1, "UPI ID is required."),
 });

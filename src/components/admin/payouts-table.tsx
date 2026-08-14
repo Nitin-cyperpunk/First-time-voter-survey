@@ -17,6 +17,7 @@ import {
   TablePagination,
   type BulkAction,
 } from "@/components/admin/bulk-selection";
+import { adminPath } from "@/lib/admin-paths";
 import { DuplicateStatusBadge } from "@/components/admin/duplicate-status-badge";
 import { GridExportButtons } from "@/components/admin/grid-export-buttons";
 import { PayoutUpiEditor } from "@/components/admin/payout-upi-editor";
@@ -578,7 +579,7 @@ export function PayoutsTable() {
                   />
                   <TableCell className="font-mono text-[11.5px]">
                     <Link
-                      href={`/respondents/${encodeURIComponent(row.leadId)}`}
+                      href={adminPath(`/respondents/${encodeURIComponent(row.leadId)}`)}
                       className="text-primary hover:underline"
                       onClick={(event) => event.stopPropagation()}
                     >
@@ -776,7 +777,7 @@ export function PayoutsTable() {
                 <div className="mt-6">
                   <Button asChild variant="outline" className="w-full">
                     <Link
-                      href={`/respondents/${encodeURIComponent(selected.leadId)}`}
+                      href={adminPath(`/respondents/${encodeURIComponent(selected.leadId)}`)}
                     >
                       Open full respondent record
                     </Link>
