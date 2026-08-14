@@ -338,6 +338,54 @@ export type Database = {
           created_at?: string;
         }
       >;
+      city_unmatched_reviews: TableDefinition<
+        {
+          match_key: string;
+          sample_raw: string;
+          status: string;
+          resolved_city_id: string | null;
+          resolved_action: string | null;
+          over_quota_decision: string | null;
+          actor_id: string | null;
+          actor_email: string | null;
+          response_count: number;
+          details: Json | null;
+          created_at: string;
+          updated_at: string;
+          restored_at: string | null;
+        },
+        {
+          match_key: string;
+          sample_raw: string;
+          status: string;
+          resolved_city_id?: string | null;
+          resolved_action?: string | null;
+          over_quota_decision?: string | null;
+          actor_id?: string | null;
+          actor_email?: string | null;
+          response_count?: number;
+          details?: Json | null;
+          created_at?: string;
+          updated_at?: string;
+          restored_at?: string | null;
+        }
+      >;
+      quota_cell_over_quota: TableDefinition<
+        {
+          state: string;
+          area_type: string;
+          flagged_at: string;
+          flagged_by: string | null;
+          reason: string | null;
+        },
+        {
+          state: string;
+          area_type: string;
+          flagged_at?: string;
+          flagged_by?: string | null;
+          reason?: string | null;
+        }
+      >;
       study_state_allocations: TableDefinition<
         {
           state: string;

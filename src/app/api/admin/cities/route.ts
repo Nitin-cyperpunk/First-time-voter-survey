@@ -7,9 +7,10 @@ import { canAccess } from "@/lib/roles";
 import { logConfigChange } from "@/server/repositories/config-audit.repository";
 import { createCity } from "@/server/repositories/cities.repository";
 import {
-  countUnmatchedCompletions,
-  listUnmatchedCityCounts,
-} from "@/server/services/city-resolve.service";
+  countActiveUnmatchedCompletes,
+  listIgnoredUnmatchedCities,
+  listUnmatchedCityRows,
+} from "@/server/services/unmatched-city-resolve.service";
 import {
   buildQuotaSnapshot,
   ensureStateAllocation,
@@ -37,17 +38,13 @@ export async function GET() {
 
   try {
     const snapshot = await buildQuotaSnapshot();
-    let unmatchedCities: Array<{ raw: string; count: number; latestAt: string }> =
-      [];
-    let unmatchedGlobalCompletes = 0;
+    let unmatchedCities = await listUnmatchedCityRows(40);
+    let unmatchedGlobalCompletes = await countActiveUnmatchedCompletes();
+    let ignoredUnmatched: Awaited<ReturnType<typeof listIgnoredUnmatchedCities>> = [];
     try {
-      unmatchedCities = await listUnmatchedCityCounts(40);
-      unmatchedGlobalCompletes = await countUnmatchedCompletions();
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "";
-      if (!/city_raw|city_match_type|PGRST205|schema cache/i.test(message)) {
-        throw error;
-      }
+      ignoredUnmatched = await listIgnoredUnmatchedCities();
+    } catch {
+      /* migration 019 may be pending */
     }
     return NextResponse.json({
       ...snapshot,
@@ -57,6 +54,7 @@ export async function GET() {
       unallocated: snapshot.unallocated,
       unmatchedCities,
       unmatchedGlobalCompletes,
+      ignoredUnmatched,
     });
   } catch (error) {
     console.error("GET /api/admin/cities failed:", error);

@@ -7,7 +7,10 @@ import {
   type AreaType,
 } from "@/lib/india-states";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { listCities } from "@/server/repositories/cities.repository";
+import {
+  findCityByNameAndState,
+  listCities,
+} from "@/server/repositories/cities.repository";
 
 export type ImportPreviewRow = {
   rowNumber: number;
@@ -42,6 +45,24 @@ function parseAliases(raw: unknown): string[] {
     .filter(Boolean);
 }
 
+export function cityImportLookupKeys(name: string, state: string): string[] {
+  const stateKey = state.toLowerCase();
+  return [
+    `${cityMatchKey(name)}|${stateKey}`,
+    `${name.trim().toLowerCase()}|${stateKey}`,
+  ];
+}
+
+export function findExistingCityForImportRow<
+  T extends { id: string; name: string; state: string },
+>(byKey: Map<string, T>, name: string, state: string): T | undefined {
+  for (const key of cityImportLookupKeys(name, state)) {
+    const existing = byKey.get(key);
+    if (existing) return existing;
+  }
+  return undefined;
+}
+
 export function parseCityImportFile(buffer: ArrayBuffer): Record<string, unknown>[] {
   const workbook = XLSX.read(buffer, { type: "array" });
   const sheetName = workbook.SheetNames[0];
@@ -56,9 +77,12 @@ export async function previewCityImport(
   rows: Record<string, unknown>[],
 ): Promise<ImportPreview> {
   const cities = await listCities();
-  const byKey = new Map(
-    cities.map((city) => [`${cityMatchKey(city.name)}|${city.state.toLowerCase()}`, city]),
-  );
+  const byKey = new Map<string, (typeof cities)[number]>();
+  for (const city of cities) {
+    for (const key of cityImportLookupKeys(city.name, city.state)) {
+      byKey.set(key, city);
+    }
+  }
   const seenInFile = new Set<string>();
 
   const toAdd: ImportPreviewRow[] = [];
@@ -119,8 +143,8 @@ export async function previewCityImport(
     }
 
     const name = normalizeCityDisplayName(cityRaw);
-    const fileKey = `${cityMatchKey(name)}|${state.toLowerCase()}`;
-    if (seenInFile.has(fileKey)) {
+    const lookupKeys = cityImportLookupKeys(name, state);
+    if (lookupKeys.some((key) => seenInFile.has(key))) {
       rejected.push({
         ...base,
         city: name,
@@ -130,9 +154,9 @@ export async function previewCityImport(
       });
       return;
     }
-    seenInFile.add(fileKey);
+    for (const key of lookupKeys) seenInFile.add(key);
 
-    const existing = byKey.get(fileKey);
+    const existing = findExistingCityForImportRow(byKey, name, state);
     const row: ImportPreviewRow = {
       ...base,
       action: existing ? "update" : "add",
@@ -148,6 +172,17 @@ export async function previewCityImport(
   return { toAdd, toUpdate, rejected };
 }
 
+function isDuplicateCityError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const row = error as { code?: string; message?: string; details?: string };
+  return (
+    row.code === "23505" ||
+    /duplicate key|idx_cities_name_state_unique/i.test(
+      `${row.message ?? ""} ${row.details ?? ""}`,
+    )
+  );
+}
+
 export async function commitCityImport(input: {
   preview: ImportPreview;
   actorId?: string | null;
@@ -159,6 +194,14 @@ export async function commitCityImport(input: {
   let updated = 0;
 
   for (const row of input.preview.toAdd) {
+    const existing = await findCityByNameAndState(row.city, row.state);
+    if (existing) {
+      await applyImportCityUpdate(admin, existing.id, row, input.actorId);
+      updated += 1;
+      await upsertAliases(existing.id, row.aliases, input.actorId);
+      continue;
+    }
+
     const match_key = cityMatchKey(row.city);
     const { data, error } = await admin
       .from("cities")
@@ -175,33 +218,29 @@ export async function commitCityImport(input: {
       })
       .select("id")
       .single();
+
+    if (isDuplicateCityError(error)) {
+      const duplicate = await findCityByNameAndState(row.city, row.state);
+      if (!duplicate) throw error;
+      await applyImportCityUpdate(admin, duplicate.id, row, input.actorId);
+      updated += 1;
+      await upsertAliases(duplicate.id, row.aliases, input.actorId);
+      continue;
+    }
     if (error) throw error;
+
     added += 1;
     await upsertAliases(data.id, row.aliases, input.actorId);
   }
 
   for (const row of input.preview.toUpdate) {
-    if (!row.existingId) continue;
-    const patch: {
-      name: string;
-      state: string;
-      area_type: AreaType;
-      match_key: string;
-      updated_by: string | null;
-      capacity?: number;
-    } = {
-      name: row.city,
-      state: row.state,
-      area_type: row.areaType as AreaType,
-      match_key: cityMatchKey(row.city),
-      updated_by: input.actorId ?? null,
-    };
-    // Do not overwrite capacity unless the file provided one.
-    if (row.capacity != null) patch.capacity = row.capacity;
-    const { error } = await admin.from("cities").update(patch).eq("id", row.existingId);
-    if (error) throw error;
+    const cityId =
+      row.existingId ??
+      (await findCityByNameAndState(row.city, row.state))?.id;
+    if (!cityId) continue;
+    await applyImportCityUpdate(admin, cityId, row, input.actorId);
     updated += 1;
-    await upsertAliases(row.existingId, row.aliases, input.actorId);
+    await upsertAliases(cityId, row.aliases, input.actorId);
   }
 
   const rejected = input.preview.rejected.length;
@@ -233,6 +272,31 @@ export async function commitCityImport(input: {
   });
 
   return { added, updated, rejected };
+}
+
+async function applyImportCityUpdate(
+  admin: ReturnType<typeof getSupabaseAdmin>,
+  cityId: string,
+  row: ImportPreviewRow,
+  actorId?: string | null,
+) {
+  const patch: {
+    name: string;
+    state: string;
+    area_type: AreaType;
+    match_key: string;
+    updated_by: string | null;
+    capacity?: number;
+  } = {
+    name: row.city,
+    state: row.state,
+    area_type: row.areaType as AreaType,
+    match_key: cityMatchKey(row.city),
+    updated_by: actorId ?? null,
+  };
+  if (row.capacity != null) patch.capacity = row.capacity;
+  const { error } = await admin.from("cities").update(patch).eq("id", cityId);
+  if (error) throw error;
 }
 
 async function upsertAliases(
