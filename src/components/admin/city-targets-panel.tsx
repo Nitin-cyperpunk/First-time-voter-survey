@@ -36,9 +36,11 @@ type SnapshotPayload = QuotaSnapshot & {
 
 export function CityTargetsPanel({
   totalCapacity,
+  enforceCapacity = false,
   onCapacityHintChange,
 }: {
   totalCapacity: number;
+  enforceCapacity?: boolean;
   onCapacityHintChange?: (stateAllocationSum: number) => void;
 }) {
   const [payload, setPayload] = useState<SnapshotPayload | null>(null);
@@ -287,7 +289,7 @@ export function CityTargetsPanel({
       if (!response.ok) throw new Error(data.error ?? "Failed to save capacity.");
       await load();
       dismissToast(loadingId);
-      toastSuccess("Closes at saved.");
+      toastSuccess("Reference saved.");
     } catch (error) {
       dismissToast(loadingId);
       toastError(error instanceof Error ? error.message : "Failed to save capacity.");
@@ -390,18 +392,38 @@ export function CityTargetsPanel({
       <h3 className="text-base font-semibold text-foreground">City Targets</h3>
       <p className="mt-2 text-sm leading-relaxed text-plum-muted">
         Sampling design is <strong>controlled 50:50 urban / rural within each
-        state</strong>, inside the global cap — not PPS. National estimates need
-        weights. Report the unweighted urban:rural ratio at close. Status is
-        Achieved / Closes at only. Gender quota is not applied.
+        state</strong>. Numbers below are <strong>reference targets</strong>
+        {enforceCapacity ? " and hard limits while enforcement is on" : ", not hard caps"}.
+        National estimates need weights. Status is Achieved / Reference only.
+        Gender quota is not applied.
       </p>
       <p className="mt-2 text-sm leading-relaxed text-plum-muted">
         Q15_1 / Q15_2 are self-report and never drive these cells. Respondents type
         a free-text city; the server resolves it to this list (exact, then alias).
-        Unmatched completes count toward the <strong>global cap only</strong>.
+        Unmatched completes still count toward the <strong>study total</strong>.
       </p>
 
+      <div className="mt-4 rounded-[12px] border border-primary/30 bg-accent-soft px-4 py-4">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
+          Live study total
+        </p>
+        <p className="mt-1 font-mono text-3xl font-bold tabular-nums tracking-tight text-foreground">
+          {payload?.achievedGlobal ?? 0}
+        </p>
+        <p className="mt-1 text-sm text-text-primary">
+          qualified completes · urban {payload?.achievedUrban ?? 0} : rural{" "}
+          {payload?.achievedRural ?? 0}
+          {payload?.unweightedUrbanPct == null
+            ? ""
+            : ` · ${payload.unweightedUrbanPct}% urban (${payload.skewPoints ?? 0} pts vs 50)`}
+        </p>
+        <p className="mt-1 text-xs text-plum-muted">
+          Close the form manually when this total looks right (around 200–230).
+        </p>
+      </div>
+
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Global cap" value={String(payload?.totalCapacity ?? totalCapacity)} />
+        <Stat label="Study reference" value={String(payload?.totalCapacity ?? totalCapacity)} />
         <Stat
           label="State alloc sum"
           value={`${payload?.stateAllocationSum ?? 0} · unalloc ${unallocated}`}
@@ -415,13 +437,19 @@ export function CityTargetsPanel({
           }
         />
         <Stat
-          label="Completes"
+          label="Qualified completes"
           value={`${payload?.achievedGlobal ?? 0} · U ${payload?.achievedUrban ?? 0} / R ${payload?.achievedRural ?? 0}`}
         />
       </div>
 
       {payload?.cellWarning ? (
-        <p className="mt-4 rounded-[10px] border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+        <p
+          className={`mt-4 rounded-[10px] border px-3 py-2 text-sm ${
+            enforceCapacity
+              ? "border-destructive/40 bg-destructive/10 text-destructive"
+              : "border-border bg-accent-soft text-plum-muted"
+          }`}
+        >
           {payload.cellWarning}
         </p>
       ) : null}
@@ -530,6 +558,7 @@ export function CityTargetsPanel({
               key={row.state}
               row={row}
               globalUrbanPct={payload.urbanPct}
+              enforceCapacity={enforceCapacity}
               expanded={expandAllStates || expandedState === row.state}
               cityFilter={cityFilter.trim().toLowerCase()}
               editAlloc={editAlloc[row.state] ?? String(row.allocation)}
@@ -578,6 +607,7 @@ export function CityTargetsPanel({
         unmatchedGlobal={payload?.unmatchedGlobalCompletes ?? 0}
         regions={payload?.regions ?? []}
         cities={configCityOptions}
+        enforceCapacity={enforceCapacity}
         onRefresh={load}
       />
 
@@ -706,6 +736,7 @@ function allIndiaStateRows(payload: SnapshotPayload): QuotaStateRow[] {
 function StateBlock({
   row,
   globalUrbanPct,
+  enforceCapacity,
   expanded,
   cityFilter,
   editAlloc,
@@ -727,6 +758,7 @@ function StateBlock({
 }: {
   row: QuotaStateRow;
   globalUrbanPct: number;
+  enforceCapacity: boolean;
   expanded: boolean;
   cityFilter: string;
   editAlloc: string;
@@ -793,7 +825,7 @@ function StateBlock({
           <p className="mt-1 text-xs text-plum-muted">
             {cityCount === 0
               ? "No cities imported yet · not in quota split"
-              : `${row.achieved}/${row.allocation} · ${row.pctFull}% full · ${cityCount} ${
+              : `${row.achieved}/${row.allocation} · ${row.pctFull}% of reference · ${cityCount} ${
                   cityCount === 1 ? "city" : "cities"
                 } · urban split ${balance}${
                   row.urbanPctManual ? " (override)" : ` (global ${globalUrbanPct}%)`
@@ -885,6 +917,7 @@ function StateBlock({
             title="Urban"
             cell={row.urban}
             cityFilter={cityFilter}
+            enforceCapacity={enforceCapacity}
             editBuffer={editBuffer}
             editCapacity={editCapacity}
             onBufferChange={onBufferChange}
@@ -900,6 +933,7 @@ function StateBlock({
             title="Rural"
             cell={row.rural}
             cityFilter={cityFilter}
+            enforceCapacity={enforceCapacity}
             editBuffer={editBuffer}
             editCapacity={editCapacity}
             onBufferChange={onBufferChange}
@@ -923,6 +957,7 @@ function CellTable({
   title,
   cell,
   cityFilter,
+  enforceCapacity,
   editBuffer,
   editCapacity,
   onBufferChange,
@@ -937,6 +972,7 @@ function CellTable({
   title: string;
   cell: QuotaSnapshot["states"][number]["urban"];
   cityFilter: string;
+  enforceCapacity: boolean;
   editBuffer: Record<string, string>;
   editCapacity: Record<string, string>;
   onBufferChange: (cityId: string, value: string) => void;
@@ -971,12 +1007,12 @@ function CellTable({
           <thead>
             <tr className="border-b border-border text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted">
               <th className="py-2 pr-3">City</th>
-              <th className="py-2 pr-3">Target</th>
+              <th className="py-2 pr-3">Reference target</th>
               <th className="py-2 pr-3">Buffer</th>
-              <th className="py-2 pr-3">Closes at</th>
+              <th className="py-2 pr-3">Reference</th>
               <th className="py-2 pr-3">Achieved</th>
-              <th className="py-2 pr-3">Remaining</th>
-              <th className="py-2 pr-3">% full</th>
+              <th className="py-2 pr-3">Vs reference</th>
+              <th className="py-2 pr-3">% of reference</th>
               <th className="py-2 pr-3">Status</th>
               <th className="py-2">Actions</th>
             </tr>
@@ -991,7 +1027,9 @@ function CellTable({
                 </td>
               </tr>
             ) : (
-              cities.map((city) => (
+              cities.map((city) => {
+                const overReference = city.achieved > city.closesAt;
+                return (
                 <tr key={city.id} className="border-b border-border/70">
                   <td className="py-3 pr-3 font-medium text-text-primary">{city.name}</td>
                   <td className="py-3 pr-3 font-mono tabular-nums">{city.target}</td>
@@ -1044,19 +1082,39 @@ function CellTable({
                     </div>
                   </td>
                   <td className="py-3 pr-3 font-mono tabular-nums">{city.achieved}</td>
-                  <td className="py-3 pr-3 font-mono tabular-nums">{city.remaining}</td>
+                  <td className="py-3 pr-3 font-mono tabular-nums text-text-primary">
+                    {overReference
+                      ? `Over by ${city.achieved - city.closesAt}`
+                      : city.remaining}
+                  </td>
                   <td className="py-3 pr-3 font-mono tabular-nums">{city.pctFull}%</td>
                   <td className="py-3 pr-3">
                     <span className={city.isActive ? "text-primary" : "text-text-muted"}>
                       {city.isActive ? "Active" : "Inactive"}
                     </span>
-                    {" · "}
-                    <span className={city.isOpen ? "text-primary" : "text-text-muted"}>
-                      {city.isOpen ? "Open" : "Closed"}
-                    </span>
+                    {overReference ? (
+                      <>
+                        {" · "}
+                        <span className="text-text-muted">Over reference</span>
+                      </>
+                    ) : null}
+                    {enforceCapacity ? (
+                      <>
+                        {" · "}
+                        <span className={city.isOpen ? "text-primary" : "text-text-muted"}>
+                          {city.isOpen ? "Open" : "Closed"}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        {" · "}
+                        <span className="text-text-muted">Auto-close off</span>
+                      </>
+                    )}
                   </td>
                   <td className="py-3">
                     <div className="flex flex-wrap gap-2">
+                      {enforceCapacity ? (
                       <Button
                         type="button"
                         size="sm"
@@ -1065,6 +1123,7 @@ function CellTable({
                       >
                         {city.isOpen ? "Close" : "Open"}
                       </Button>
+                      ) : null}
                       <Button
                         type="button"
                         size="sm"
@@ -1084,7 +1143,8 @@ function CellTable({
                     </div>
                   </td>
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>

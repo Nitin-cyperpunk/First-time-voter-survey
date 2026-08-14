@@ -800,7 +800,8 @@ S.push({ id:"QA", html:function(){
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ city: city, state: stLabel || undefined })
       }).then(function(r){ return r.json(); }).then(function(data){
-        if(data && data.ok === false && data.message){
+        var cap = data && (data.code === "city_full" || data.code === "cell_full" || data.code === "state_full" || data.code === "study_full");
+        if(data && data.ok === false && data.message && !cap){
           showCityErr(data.message);
         } else {
           clearCityErr();

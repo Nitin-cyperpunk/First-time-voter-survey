@@ -5,6 +5,29 @@ export function isRegistrationAccepting(config: StudyConfig): boolean {
   return config.form_status === "open";
 }
 
+/**
+ * Single switch for city/cell/state/study quota enforcement.
+ * Counting always runs. When false, submit never rejects for being over a reference.
+ */
+export function isCapacityEnforced(config: StudyConfig): boolean {
+  return config.enforce_capacity === true;
+}
+
+/**
+ * Mid-survey respondents (form already mounted, startedAt set) may finish after
+ * a manual close so partial data is not discarded. Fresh POSTs without startedAt
+ * are rejected with form_closed.
+ */
+export function isFormClosedForNewRespondents(config: StudyConfig): boolean {
+  return config.form_status !== "open";
+}
+
+export function maySubmitWhileFormClosed(startedAt?: string | Date | null): boolean {
+  if (startedAt == null) return false;
+  if (startedAt instanceof Date) return !Number.isNaN(startedAt.getTime());
+  return String(startedAt).trim().length > 0;
+}
+
 export function getAgeYears(
   dob: string,
   referenceDate: Date = new Date(),

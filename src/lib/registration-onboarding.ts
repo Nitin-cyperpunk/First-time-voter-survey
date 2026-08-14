@@ -10,6 +10,7 @@ export type RegistrationThankYouMessages = {
   instagram_referral: RegistrationRenderedMessage;
   whatsapp_referral: RegistrationRenderedMessage;
   not_eligible_referral: RegistrationRenderedMessage;
+  whatsapp_submission_confirmation?: RegistrationRenderedMessage;
 };
 
 export type StoredRegistrationResult = {

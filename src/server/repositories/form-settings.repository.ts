@@ -1,4 +1,8 @@
 import { DEFAULT_MESSAGE_TEMPLATES } from "@/lib/message-templates/defaults";
+import {
+  MESSAGE_TEMPLATE_KEYS,
+  resolveWhatsAppSubmissionConfirmationKey,
+} from "@/lib/message-templates/keys";
 import type {
   MessageTemplate,
   MessageTemplatesRecord,
@@ -60,7 +64,18 @@ export function mergeMessageTemplates(
   if (Object.keys(stored).length === 0) {
     return { ...DEFAULT_MESSAGE_TEMPLATES };
   }
-  return { ...DEFAULT_MESSAGE_TEMPLATES, ...stored };
+  const merged: MessageTemplatesRecord = {
+    ...DEFAULT_MESSAGE_TEMPLATES,
+    ...stored,
+  };
+  const official = MESSAGE_TEMPLATE_KEYS.WHATSAPP_SUBMISSION_CONFIRMATION;
+  if (!stored[official]) {
+    const aliasKey = resolveWhatsAppSubmissionConfirmationKey(stored);
+    if (stored[aliasKey]) {
+      merged[official] = stored[aliasKey];
+    }
+  }
+  return merged;
 }
 
 function isMissingColumn(error: unknown) {

@@ -7,11 +7,18 @@ export type FormStatus = "open" | "closed";
 export type StudyConfig = {
   target: number;
   buffer: number;
-  /** Hard cap on qualified screener completions. Default 200. */
+  /** Reference N for counting/reporting. Not a hard cap unless enforce_capacity. */
   total_capacity: number;
+  /**
+   * Four-level quota enforcement (city → cell → state → study).
+   * Default FALSE: keep counting and admin display; never turn a respondent away
+   * for being over a reference target. Set TRUE to restore the original cascade
+   * without new development. Do not delete schema or count logic.
+   */
+  enforce_capacity: boolean;
   /** Respondent-facing form open/close. Independent of target/buffer funnel. */
   form_status: FormStatus;
-  /** When qualified count reaches total_capacity, set form_status to closed. */
+  /** When enforce_capacity and qualified count reaches total_capacity, set form_status to closed. */
   auto_close_on_full: boolean;
   survey_active: boolean;
   eligibility_open: boolean;

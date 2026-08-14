@@ -3,14 +3,15 @@ import type { StudyConfig } from "@/lib/study-config/types";
 /**
  * Defaults: all gates open. Age rule off until admin enables it.
  * target=150, buffer=30 → closesAt = target + buffer (180).
- * Hard qualified-completion cap is total_capacity (200).
+ * total_capacity (200) is a reference N. Enforcement is off unless enforce_capacity.
  */
 export const DEFAULT_STUDY_CONFIG: StudyConfig = {
   target: 150,
   buffer: 30,
   total_capacity: 200,
+  enforce_capacity: false,
   form_status: "open",
-  auto_close_on_full: true,
+  auto_close_on_full: false,
   survey_active: true,
   eligibility_open: true,
   screener_open: true,

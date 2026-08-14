@@ -11,7 +11,12 @@ import {
 } from "@/features/registration-complete/components/registration-complete-ui";
 import { isTerminatedStatus } from "@/lib/participant-lifecycle";
 import { buildWhatsAppVerificationUrl } from "@/config/social";
-import { buildWhatsAppShareUrl } from "@/lib/message-templates/client";
+import { buildParticipantTemplateContext } from "@/features/message-templates/lib/normalize-templates";
+import {
+  getRenderedMessage,
+  buildWhatsAppShareUrl,
+} from "@/lib/message-templates/client";
+import { MESSAGE_TEMPLATE_KEYS } from "@/lib/message-templates/keys";
 import {
   clearRegistrationCompletePending,
   loadRegistrationResult,
@@ -78,19 +83,35 @@ export function RegistrationCompleteContent() {
 
   const terminated = data ? isTerminatedStatus(data.status) : false;
 
-  function handleWhatsAppContact() {
+  async function handleWhatsAppContact() {
     if (!data) return;
-    const message =
-      "Hi!\n\nI completed the First-Time Voters Study.\n\n" +
-      (data.fullName ? `Name: ${data.fullName}\n` : "") +
-      (data.mobile ? `Mobile: ${data.mobile}\n` : "") +
-      (data.leadId ? `Lead ID: ${data.leadId}\n` : "");
-    window.open(
-      buildWhatsAppVerificationUrl(message),
-      "_blank",
-      "noopener,noreferrer",
-    );
-    toastWhatsAppShareInitiated();
+    try {
+      const fromRegister =
+        data.messages.whatsapp_submission_confirmation?.message?.trim() ?? "";
+      const message =
+        fromRegister ||
+        (await getRenderedMessage(
+          MESSAGE_TEMPLATE_KEYS.WHATSAPP_SUBMISSION_CONFIRMATION,
+          buildParticipantTemplateContext({
+            fullName: data.fullName,
+            mobile: data.mobile,
+            leadId: data.leadId,
+            referralLink: data.referralLink,
+          }),
+        ));
+      if (!message.trim()) {
+        toastUnexpectedError();
+        return;
+      }
+      window.open(
+        buildWhatsAppVerificationUrl(message),
+        "_blank",
+        "noopener,noreferrer",
+      );
+      toastWhatsAppShareInitiated();
+    } catch {
+      toastUnexpectedError();
+    }
   }
 
   function handleReferralInstagram() {

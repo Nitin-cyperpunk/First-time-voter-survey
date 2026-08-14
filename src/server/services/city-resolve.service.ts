@@ -5,11 +5,13 @@ import {
   type ResolvedCity,
 } from "@/lib/city-resolve";
 import { parseAreaType } from "@/lib/india-states";
+import { isCapacityEnforced } from "@/lib/study-config/gates";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   countQualifiedCompletions,
   getCityById,
 } from "@/server/repositories/cities.repository";
+import { getStudyConfig } from "@/server/repositories/form-settings.repository";
 import { buildQuotaSnapshot } from "@/server/services/quota.service";
 import {
   countActiveUnmatchedCompletes,
@@ -45,6 +47,9 @@ type CityRow = {
 };
 
 async function isCityFull(cityId: string): Promise<boolean> {
+  const config = await getStudyConfig();
+  if (!isCapacityEnforced(config)) return false;
+
   try {
     const snapshot = await buildQuotaSnapshot();
     if (snapshot.achievedGlobal >= snapshot.totalCapacity) return true;
@@ -194,7 +199,12 @@ export async function checkCityAvailability(input: {
     };
   }
 
+  const config = await getStudyConfig();
   const resolved = await resolveCityText(input);
+  if (!isCapacityEnforced(config)) {
+    return { ok: true, resolved };
+  }
+
   if (resolved.matchType !== "unmatched" && resolved.cityId) {
     if (resolved.isFull || !resolved.isOpen || !resolved.isActive) {
       const label = resolved.name ?? raw;

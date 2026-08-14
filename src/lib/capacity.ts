@@ -4,9 +4,11 @@
  * WHAT COUNTS: screener_responses.completion_status = 'Completed' only.
  * Terminated, partial, and NULL rows never consume a slot.
  *
- * Four-level enforcement inside insert_screener_response_with_capacity:
- * pg_advisory_xact_lock + city / cell / state / study counts + INSERT
- * in one transaction. Do not select-count then insert from the app.
+ * Counting always runs. Four-level ENFORCEMENT (city / cell / state / study)
+ * is gated by study_config.enforce_capacity (default false). When false,
+ * city_full / cell_full / state_full / study_full are not reachable.
+ * Set the flag true to restore rejects inside insert_screener_response_with_capacity
+ * without new development. Keep the advisory lock + INSERT transaction.
  */
 
 export type CapacityRejectCode =
