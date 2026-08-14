@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { coerceAgeBand, parseAgeBand } from "@/lib/study-config/gates";
+import { isRegistrationTerminated } from "@/lib/registration-terminations";
 import {
   isFutureDob,
   isValidDobFormat,
@@ -79,24 +80,15 @@ export const launchRegistrationSchema = z.preprocess(
       coerceAgeBand(profile?.age_today, dob);
     if (dob && !input.dob) input.dob = dob;
     if (band) input.age_band = band;
-    else if (input.terminated) input.age_band = "18";
     return input;
   },
-  z.object({
+  z
+    .object({
     fullName: z.string().trim().max(120, "Name is too long").optional().default(""),
     mobile: optionalPhoneSchema.optional().default(""),
     dob: optionalDobSchema.optional().default(""),
-    age_band: z
-      .string()
-      .trim()
-      .refine((value) => parseAgeBand(value) !== null, {
-        message: "Please select your age.",
-      }),
-  city: z
-    .string()
-    .trim()
-    .min(2, "Please enter your city.")
-    .max(80, "City name is too long."),
+    age_band: z.string().trim().optional().default(""),
+  city: z.string().trim().max(80, "City name is too long.").optional().default(""),
   city_id: z.string().uuid().optional().or(z.literal("")),
   email: z
     .union([
@@ -139,7 +131,37 @@ export const launchRegistrationSchema = z.preprocess(
   terminations: z.array(terminationEventSchema).optional(),
   answerJson: z.record(z.string(), z.any()).optional(),
   csvRow: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
-  }),
+  })
+    .superRefine((data, ctx) => {
+      const terminated = isRegistrationTerminated(data);
+      if (!terminated) {
+        if (!data.city?.trim() || data.city.trim().length < 2) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Please enter your city.",
+            path: ["city"],
+          });
+        }
+        const band = data.age_band?.trim() || "";
+        if (!band || parseAgeBand(band) === null) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Please select your age.",
+            path: ["age_band"],
+          });
+        }
+        return;
+      }
+
+      const band = data.age_band?.trim() || "";
+      if (band && parseAgeBand(band) === null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Please select your age.",
+          path: ["age_band"],
+        });
+      }
+    }),
 );
 
 export const launchLoginSchema = z.object({

@@ -568,6 +568,13 @@
         "We'd also love to have you in our future research. 🌸",
       ],
     },
+    "TERMINATE_AGE_OUT_OF_RANGE": {
+      title: "Thank you for your interest!",
+      body: [
+        "This study is limited to a specific age group, so it isn't a fit for you right now — but we truly appreciate you stopping by.",
+        "You can still refer friends or family who may be eligible and share the study with them.",
+      ],
+    },
     default: {
       title: "Thank you for your interest!",
       body: [
@@ -679,6 +686,9 @@
     if (reasons.indexOf("consent") >= 0) return TERMINATION_COPY.consent;
     if (reasons.indexOf("gender-male") >= 0)
       return TERMINATION_COPY["gender-male"];
+    if (reasons.indexOf("TERMINATE_AGE_OUT_OF_RANGE") >= 0) {
+      return TERMINATION_COPY.TERMINATE_AGE_OUT_OF_RANGE;
+    }
     return TERMINATION_COPY.default;
   }
 
@@ -2452,10 +2462,19 @@
   }
 
   async function completeRegistrationOnForm(registration, options) {
-    showCopiedToast("Registration completed successfully.");
     clearRegistrationCompletePending();
     persistRegistrationResult(registration);
-    await mountThankYouExperience(registration);
+
+    try {
+      showCopiedToast("Registration completed successfully.");
+      await mountThankYouExperience(registration);
+    } catch (error) {
+      console.error(
+        "[ConcaveRegistrationBridge] thank-you mount failed:",
+        error,
+      );
+      await mountThankYouExperience(registration);
+    }
 
     if (options && options.openReferralModal) {
       const terminated = isTerminatedRegistrationStatus(registration.status);
@@ -2805,21 +2824,40 @@
 
     const fullName = document.querySelector("[name=name]")?.value?.trim() || "";
     const mobile = document.querySelector("[name=phone]")?.value?.trim() || "";
-    const city = document.querySelector("[name=city]")?.value?.trim() || "";
+    let city = document.querySelector("[name=city]")?.value?.trim() || "";
     const email = document.querySelector("[name=email]")?.value?.trim() || "";
     const area = document.querySelector("[name=area]")?.value?.trim() || "";
     const pincode = document.querySelector("[name=zip]")?.value?.trim() || "";
     const dob = buildDobIso();
-    const ageBand = readAgeBand();
+    let ageBand = readAgeBand();
 
     if (!city || !ageBand) {
+      const payload = collectFtvAnswerJson();
+      const profile =
+        payload && payload.profile && typeof payload.profile === "object"
+          ? payload.profile
+          : null;
+      if (!city && profile && profile.city) {
+        city = String(profile.city).trim();
+      }
+      if (!ageBand && profile) {
+        ageBand = String(profile.age_band || profile.age_today || "").trim();
+      }
+    }
+
+    syncTerminationState();
+    const isTerminated =
+      Boolean(window.__terminated) ||
+      collectTerminationPayload().length > 0 ||
+      Boolean(submitOptions && submitOptions.forceTerminated);
+
+    if (!isTerminated && (!city || !ageBand)) {
       showRegistrationError(
         "Please complete your city and age before submitting.",
       );
       return;
     }
 
-    syncTerminationState();
     submitRegistration.submitted = true;
     showThankYouCtaLoading();
 
@@ -2830,6 +2868,20 @@
       var attribution = getReferrerAttribution();
       var referralPlatform = attribution.platform || "";
       var deviceFingerprint = await resolveDeviceFingerprint();
+      const terminationPayload = (function () {
+        const collected = collectTerminationPayload();
+        if (collected.length > 0) return collected;
+        if (submitOptions && submitOptions.forceTerminated) {
+          return [
+            {
+              ruleKey: "TERMINATE_AGE_OUT_OF_RANGE",
+              ruleLabel: "Age out of range",
+              reasonText: "Age out of range",
+            },
+          ];
+        }
+        return [];
+      })();
       var response = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -2837,8 +2889,8 @@
           fullName: fullName || undefined,
           mobile: mobile || undefined,
           dob: dob || undefined,
-          age_band: ageBand,
-          city: city,
+          age_band: ageBand || undefined,
+          city: city || undefined,
           email: email || undefined,
           area: area || undefined,
           pincode: pincode || undefined,
@@ -2854,8 +2906,8 @@
           submittedAt: tracking.submittedAt || submittedAt,
           currentScreen: tracking.currentScreen || undefined,
           lastScreen: tracking.lastScreen || undefined,
-          terminated: Boolean(window.__terminated),
-          terminations: collectTerminationPayload(),
+          terminated: isTerminated,
+          terminations: terminationPayload,
           deviceFingerprint: deviceFingerprint || undefined,
         }),
       });
@@ -2871,6 +2923,23 @@
         }
         if (data.code === "DUPLICATE_MOBILE") {
           showAlreadyRegisteredDialog(mobile);
+          return;
+        }
+        if (
+          !submitOptions?.retriedAsTerminated &&
+          (data.code === "AGE_OUT_OF_RANGE" || isTerminated)
+        ) {
+          return submitRegistration(referrerRef, {
+            ...(submitOptions || {}),
+            retriedAsTerminated: true,
+            forceTerminated: true,
+          });
+        }
+        if (isTerminated) {
+          console.warn(
+            "[ConcaveRegistrationBridge] terminated registration failed:",
+            data.error || response.status,
+          );
           return;
         }
         showRegistrationError(
