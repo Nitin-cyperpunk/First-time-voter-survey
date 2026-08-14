@@ -17,6 +17,8 @@ import {
 type SnapshotPayload = QuotaSnapshot & {
   regions?: string[];
   error?: string;
+  unmatchedCities?: Array<{ raw: string; count: number; latestAt: string }>;
+  unmatchedGlobalCompletes?: number;
 };
 
 export function CityTargetsPanel({
@@ -28,10 +30,6 @@ export function CityTargetsPanel({
 }) {
   const [payload, setPayload] = useState<SnapshotPayload | null>(null);
   const [loading, setLoading] = useState(true);
-  const [name, setName] = useState("");
-  const [state, setState] = useState("");
-  const [areaType, setAreaType] = useState<AreaType>("urban");
-  const [buffer, setBuffer] = useState(0);
   const [editAlloc, setEditAlloc] = useState<Record<string, string>>({});
   const [editUrbanPct, setEditUrbanPct] = useState<Record<string, string>>({});
   const [editBuffer, setEditBuffer] = useState<Record<string, string>>({});
@@ -39,12 +37,42 @@ export function CityTargetsPanel({
   const [reTo, setReTo] = useState("");
   const [reAmount, setReAmount] = useState(1);
   const [reReason, setReReason] = useState("");
+  const [importPreview, setImportPreview] = useState<{
+    preview: {
+      toAdd: Array<{
+        rowNumber: number;
+        city: string;
+        state: string;
+        areaType: string;
+      }>;
+      toUpdate: Array<{
+        rowNumber: number;
+        city: string;
+        state: string;
+        areaType: string;
+      }>;
+      rejected: Array<{
+        rowNumber: number;
+        city: string;
+        state: string;
+        reason?: string;
+      }>;
+    };
+    fileName: string;
+    counts: { add: number; update: number; reject: number };
+  } | null>(null);
+  const [unmatched, setUnmatched] = useState<
+    Array<{ raw: string; count: number; latestAt: string }>
+  >([]);
+  const [unmatchedGlobal, setUnmatchedGlobal] = useState(0);
 
   const load = useCallback(async () => {
     const response = await fetch("/api/admin/cities");
     const data = (await response.json()) as SnapshotPayload;
     if (!response.ok) throw new Error(data.error ?? "Failed to load City Targets.");
     setPayload(data);
+    setUnmatched(data.unmatchedCities ?? []);
+    setUnmatchedGlobal(data.unmatchedGlobalCompletes ?? 0);
     setEditAlloc({});
     setEditUrbanPct({});
     setEditBuffer({});
@@ -59,7 +87,6 @@ export function CityTargetsPanel({
       .finally(() => setLoading(false));
   }, [load]);
 
-  const regions = payload?.regions ?? [];
   const cellOptions = useMemo(() => {
     if (!payload) return [];
     return payload.states.flatMap((row) => [
@@ -68,32 +95,55 @@ export function CityTargetsPanel({
     ]);
   }, [payload]);
 
-  async function addCity() {
-    const loadingId = toastLoading("Adding city…");
+  async function previewImport(file: File) {
+    const loadingId = toastLoading("Reading city file…");
     try {
-      const response = await fetch("/api/admin/cities", {
+      const form = new FormData();
+      form.append("file", file);
+      const response = await fetch("/api/admin/cities/import", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          state,
-          areaType,
-          capacity: 0,
-          buffer: Math.max(0, buffer),
-          isActive: true,
-          isOpen: true,
-        }),
+        body: form,
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error ?? "Failed to add city.");
-      setName("");
-      setBuffer(0);
-      await load();
+      if (!response.ok) throw new Error(data.error ?? "Import preview failed.");
+      setImportPreview({
+        preview: data.preview,
+        fileName: data.fileName ?? file.name,
+        counts: data.counts,
+      });
       dismissToast(loadingId);
-      toastSuccess("City added. Recalculate the cell to split targets.");
+      toastSuccess(
+        `Preview ready: ${data.counts.add} add · ${data.counts.update} update · ${data.counts.reject} reject.`,
+      );
     } catch (error) {
       dismissToast(loadingId);
-      toastError(error instanceof Error ? error.message : "Failed to add city.");
+      toastError(error instanceof Error ? error.message : "Import preview failed.");
+    }
+  }
+
+  async function confirmImport() {
+    if (!importPreview) return;
+    const loadingId = toastLoading("Importing cities…");
+    try {
+      const form = new FormData();
+      form.append("confirm", "1");
+      form.append("preview", JSON.stringify(importPreview.preview));
+      form.append("fileName", importPreview.fileName);
+      const response = await fetch("/api/admin/cities/import", {
+        method: "POST",
+        body: form,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error ?? "Import failed.");
+      setImportPreview(null);
+      await load();
+      dismissToast(loadingId);
+      toastSuccess(
+        `Imported ${data.added ?? 0} new · updated ${data.updated ?? 0}. Recalculate cells as needed.`,
+      );
+    } catch (error) {
+      dismissToast(loadingId);
+      toastError(error instanceof Error ? error.message : "Import failed.");
     }
   }
 
@@ -264,9 +314,9 @@ export function CityTargetsPanel({
         Achieved / Closes at only. Gender quota is not applied.
       </p>
       <p className="mt-2 text-sm leading-relaxed text-plum-muted">
-        Q15_1 / Q15_2 are self-report and never drive these cells. Respondent
-        city dropdown shows <strong>city names only</strong> (no state or urban
-        labels).
+        Q15_1 / Q15_2 are self-report and never drive these cells. Respondents type
+        a free-text city; the server resolves it to this list (exact, then alias).
+        Unmatched completes count toward the <strong>global cap only</strong>.
       </p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -295,48 +345,87 @@ export function CityTargetsPanel({
         </p>
       ) : null}
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <Input
-          placeholder="City"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-        />
-        <Select value={state} onChange={(event) => setState(event.target.value)}>
-          <option value="">State / UT</option>
-          {regions.map((region) => (
-            <option key={region} value={region}>
-              {region}
-            </option>
-          ))}
-        </Select>
-        <Select
-          value={areaType}
-          onChange={(event) => setAreaType(event.target.value as AreaType)}
-        >
-          <option value="urban">Urban</option>
-          <option value="rural">Rural</option>
-        </Select>
-        <Input
-          type="number"
-          min={0}
-          placeholder="Buffer"
-          value={buffer}
-          onChange={(event) => setBuffer(Number(event.target.value) || 0)}
-        />
-        <Button
-          type="button"
-          onClick={() => void addCity()}
-          disabled={!name.trim() || !state}
-        >
-          Add city
-        </Button>
+      <div className="mt-5 rounded-[12px] border border-border p-4">
+        <h4 className="text-sm font-semibold text-foreground">Bulk city import</h4>
+        <p className="mt-1 text-xs leading-relaxed text-plum-muted">
+          Upload CSV or XLSX with columns{" "}
+          <code className="text-[11px]">city, state, area_type</code> (urban/rural).
+          Optional: <code className="text-[11px]">capacity</code>,{" "}
+          <code className="text-[11px]">aliases</code> (pipe/comma separated). Existing
+          capacity is kept unless the file provides capacity.
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <Input
+            type="file"
+            accept=".csv,.xlsx,.xls"
+            className="max-w-md"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
+              if (file) void previewImport(file);
+            }}
+          />
+          {importPreview ? (
+            <>
+              <Button type="button" onClick={() => void confirmImport()}>
+                Confirm import ({importPreview.counts.add + importPreview.counts.update})
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setImportPreview(null)}
+              >
+                Cancel preview
+              </Button>
+            </>
+          ) : null}
+        </div>
+        {importPreview ? (
+          <div className="mt-3 space-y-2 text-xs text-plum-muted">
+            <p>
+              {importPreview.fileName}: {importPreview.counts.add} add ·{" "}
+              {importPreview.counts.update} update · {importPreview.counts.reject}{" "}
+              reject
+            </p>
+            {importPreview.preview.rejected.slice(0, 8).map((row) => (
+              <p key={`rej-${row.rowNumber}`} className="text-destructive">
+                Row {row.rowNumber}: {row.city || "(blank)"} / {row.state || "—"} —{" "}
+                {row.reason ?? "rejected"}
+              </p>
+            ))}
+            {importPreview.preview.rejected.length > 8 ? (
+              <p>…and {importPreview.preview.rejected.length - 8} more rejects.</p>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="mt-5 rounded-[12px] border border-border p-4">
+        <h4 className="text-sm font-semibold text-foreground">Unmatched cities</h4>
+        <p className="mt-1 text-xs leading-relaxed text-plum-muted">
+          Completes that typed a city not in this list. They consume global capacity
+          only ({unmatchedGlobal} unmatched completes). Add them via import or aliases
+          if they should fill a cell.
+        </p>
+        {unmatched.length === 0 ? (
+          <p className="mt-2 text-xs text-text-muted">No unmatched completes yet.</p>
+        ) : (
+          <ul className="mt-3 max-h-48 space-y-1 overflow-y-auto text-xs text-plum-muted">
+            {unmatched.map((row) => (
+              <li key={row.raw}>
+                <span className="font-medium text-foreground">{row.raw}</span> ·{" "}
+                {row.count} complete{row.count === 1 ? "" : "s"}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {loading ? (
         <p className="mt-6 text-sm text-text-muted">Loading City Targets…</p>
       ) : (payload?.states.length ?? 0) === 0 ? (
         <p className="mt-6 text-sm text-text-muted">
-          No states yet. Add a city to start a quota cell.
+          No states yet. Import a city file to start a quota cell.
         </p>
       ) : (
         payload?.states.map((row) => (

@@ -7,6 +7,10 @@ import { canAccess } from "@/lib/roles";
 import { logConfigChange } from "@/server/repositories/config-audit.repository";
 import { createCity } from "@/server/repositories/cities.repository";
 import {
+  countUnmatchedCompletions,
+  listUnmatchedCityCounts,
+} from "@/server/services/city-resolve.service";
+import {
   buildQuotaSnapshot,
   ensureStateAllocation,
   normalizeCityInput,
@@ -33,12 +37,26 @@ export async function GET() {
 
   try {
     const snapshot = await buildQuotaSnapshot();
+    let unmatchedCities: Array<{ raw: string; count: number; latestAt: string }> =
+      [];
+    let unmatchedGlobalCompletes = 0;
+    try {
+      unmatchedCities = await listUnmatchedCityCounts(40);
+      unmatchedGlobalCompletes = await countUnmatchedCompletions();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      if (!/city_raw|city_match_type|PGRST205|schema cache/i.test(message)) {
+        throw error;
+      }
+    }
     return NextResponse.json({
       ...snapshot,
       regions: INDIA_REGIONS,
       totalCapacity: snapshot.totalCapacity,
       activeCityCapacitySum: snapshot.totalClosesAt,
       unallocated: snapshot.unallocated,
+      unmatchedCities,
+      unmatchedGlobalCompletes,
     });
   } catch (error) {
     console.error("GET /api/admin/cities failed:", error);
@@ -46,6 +64,12 @@ export async function GET() {
     if (/study_state_allocations|quota_cell|PGRST205|schema cache/i.test(message)) {
       return NextResponse.json(
         { error: "Quota migration 013 is pending. Run supabase/migrations/013_state_area_quota.sql." },
+        { status: 503 },
+      );
+    }
+    if (/city_aliases|match_key|city_import_log|PGRST205|schema cache/i.test(message)) {
+      return NextResponse.json(
+        { error: "City resolve migration 015 is pending. Run supabase/migrations/015_free_text_city_resolve.sql." },
         { status: 503 },
       );
     }

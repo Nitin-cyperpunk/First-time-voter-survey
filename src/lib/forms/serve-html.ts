@@ -3,12 +3,7 @@ import { NextResponse } from "next/server";
 import type { FormType } from "@/lib/forms/types";
 import { injectRegistrationBridge } from "@/lib/forms/html-upload";
 import { injectFieldQKeyMap } from "@/lib/forms/inject-field-q-key-map";
-import {
-  ensureCityIdSelect,
-  injectSelectableCitiesScript,
-} from "@/lib/forms/inject-city-select";
 import { isRegistrationAccepting } from "@/lib/study-config/gates";
-import { listSelectableCities } from "@/server/services/quota.service";
 import { getActivePublishedForm } from "@/server/repositories/forms.repository";
 import { getStudyConfig } from "@/server/repositories/form-settings.repository";
 
@@ -134,14 +129,6 @@ export async function serveActiveFormHtml(formType: FormType = "registration") {
 
   let html = ensureRegistrationScripts(form.htmlContent);
   html = injectStudyConfigScript(html, studyConfig);
-  html = ensureCityIdSelect(html);
-  try {
-    const cities = await listSelectableCities();
-    html = injectSelectableCitiesScript(html, cities);
-  } catch (error) {
-    console.error("[serveActiveFormHtml] failed to inject cities:", error);
-    html = injectSelectableCitiesScript(html, []);
-  }
 
   const withFieldMap = injectFieldQKeyMap(html, {
     excludeCoreFields: true,

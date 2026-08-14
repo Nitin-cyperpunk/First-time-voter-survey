@@ -72,15 +72,39 @@ export async function listFtvExportBundle(
     ...new Set(respondents.map((row) => row.city_id).filter(Boolean)),
   ] as string[];
 
-  const cityById = new Map<string, { area_type: string; state: string }>();
+  const cityById = new Map<string, { area_type: string; state: string; name: string }>();
   if (cityIds.length > 0) {
     const { data: cities, error: cityError } = await supabase
       .from("cities")
-      .select("id, area_type, state")
+      .select("id, area_type, state, name")
       .in("id", cityIds);
     if (cityError) throw cityError;
     for (const city of cities ?? []) {
-      cityById.set(city.id, { area_type: city.area_type, state: city.state });
+      cityById.set(city.id, {
+        area_type: city.area_type,
+        state: city.state,
+        name: city.name,
+      });
+    }
+  }
+
+  const leadIds = respondents
+    .map((row) => row.lead_id)
+    .filter((id): id is string => Boolean(id));
+  const screenerByLead = new Map<
+    string,
+    { city_raw: string | null; city_match_type: string | null }
+  >();
+  if (leadIds.length > 0) {
+    const { data: screeners } = await supabase
+      .from("screener_responses")
+      .select("lead_id, city_raw, city_match_type")
+      .in("lead_id", leadIds);
+    for (const row of screeners ?? []) {
+      screenerByLead.set(row.lead_id, {
+        city_raw: row.city_raw,
+        city_match_type: row.city_match_type,
+      });
     }
   }
 
@@ -90,8 +114,12 @@ export async function listFtvExportBundle(
       city?.area_type === "local" || city?.area_type === "non_urban"
         ? "rural"
         : (city?.area_type ?? "");
+    const screener = row.lead_id ? screenerByLead.get(row.lead_id) : undefined;
     return {
       ...row,
+      city_raw: screener?.city_raw ?? row.city ?? "",
+      city_resolved: city?.name ?? "",
+      match_type: screener?.city_match_type ?? (row.city_id ? "exact" : "unmatched"),
       city_area_type: areaType,
       city_state: city?.state ?? "",
       quota_cell: city?.state && areaType ? `${city.state}|${areaType}` : "",

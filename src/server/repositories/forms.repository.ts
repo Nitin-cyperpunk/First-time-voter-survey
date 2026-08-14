@@ -62,7 +62,9 @@ function hasPreviewableHtml(row: {
   );
 }
 
-export async function listFormVersions(formType: FormType) {
+export async function listFormVersions(
+  formType: FormType,
+): Promise<FormVersionAdminRow[]> {
   const { data, error } = await getSupabaseAdmin()
     .from("form_versions")
     .select(
@@ -72,7 +74,8 @@ export async function listFormVersions(formType: FormType) {
     .order("version", { ascending: true });
 
   if (error) throw error;
-  return (data ?? []).map(mapFormVersion);
+  const rows = (data ?? []) as Array<Parameters<typeof mapFormVersion>[0]>;
+  return rows.map(mapFormVersion);
 }
 
 export async function getActiveVersionNumber(formType: FormType) {

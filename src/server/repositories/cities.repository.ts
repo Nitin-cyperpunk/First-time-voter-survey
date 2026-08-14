@@ -1,3 +1,4 @@
+import { cityMatchKey } from "@/lib/city-resolve";
 import { parseAreaType, type AreaType } from "@/lib/india-states";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -153,6 +154,7 @@ export async function createCity(input: {
       area_type: input.areaType,
       capacity: input.capacity ?? 0,
       buffer: input.buffer ?? 0,
+      match_key: cityMatchKey(input.name),
       is_open: input.isOpen ?? true,
       is_active: input.isActive ?? true,
       created_by: input.actorId,
@@ -188,7 +190,10 @@ export async function updateCity(
     is_open?: boolean;
     is_active?: boolean;
   } = { updated_by: input.actorId };
-  if (input.name !== undefined) patch.name = input.name.trim();
+  if (input.name !== undefined) {
+    patch.name = input.name.trim();
+    (patch as { match_key?: string }).match_key = cityMatchKey(input.name);
+  }
   if (input.state !== undefined) patch.state = input.state.trim();
   if (input.areaType !== undefined) patch.area_type = input.areaType;
   if (input.capacity !== undefined) patch.capacity = input.capacity;

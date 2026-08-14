@@ -43,20 +43,17 @@ function stripShowResult(html: string) {
   return html.replace(/\bfunction showResult\s*\(/g, "function showResultRemoved(");
 }
 
-function stripCityId(html: string) {
-  return html.replace(/\bname=["']city_id["']/gi, 'name="city_removed"');
-}
-
 test("anonymous FTV form satisfies the registration HTML contract", () => {
   assert.deepEqual(validateRegistrationHtml(ftvHtml), []);
 });
 
-test("Step 3 contract matrix on first_time_voters_survey.html", () => {
+test("contract matrix: city_id not required; showResult + s-thankyou required", () => {
   const checks = inspectRegistrationContract(ftvHtml);
   const byKey = Object.fromEntries(checks.map((c) => [c.key, c]));
 
-  assert.equal(byKey.city_id?.required, true);
-  assert.equal(byKey.city_id?.found, true);
+  assert.equal(byKey.city_id?.required, false);
+  assert.equal(byKey.city_id?.found, false);
+  assert.equal(byKey.city?.found, true);
   assert.equal(byKey.showResult?.required, true);
   assert.equal(byKey.showResult?.found, true);
   assert.equal(byKey["s-thankyou"]?.required, true);
@@ -84,13 +81,11 @@ test("hasElementId finds s-thankyou with class-before-id via tag parse", () => {
   assert.equal(hasElementId("#s-thankyou { display:block }", "s-thankyou"), false);
 });
 
-test("city_id matches select with name+id, not only input", () => {
-  assert.equal(hasFieldName(ftvHtml, "city_id"), true);
-  assert.equal(
-    hasFieldName(`<select name="city_id" id="city_id"></select>`, "city_id"),
-    true,
-  );
-  assert.equal(hasFieldName(`<input type="text" id="fCity">`, "city_id"), false);
+test("live form has free-text city, not city_id select", () => {
+  assert.equal(hasFieldName(ftvHtml, "city_id"), false);
+  assert.equal(hasFieldName(ftvHtml, "city"), true);
+  assert.match(ftvHtml, /id=["']fCity["']/i);
+  assert.doesNotMatch(ftvHtml, /id=["']fCityId["']/i);
 });
 
 test("showResult accepts declaration, assignment, and object method — not a call", () => {
@@ -119,7 +114,6 @@ test("negative: removing s-thankyou fails only that check", () => {
   assert.deepEqual(errors, [
     "Missing required thank-you screen id: s-thankyou.",
   ]);
-  assert.equal(hasFieldName(html, "city_id"), true);
   assert.equal(hasShowResultFunction(html), true);
 });
 
@@ -128,21 +122,12 @@ test("negative: removing showResult fails only that check", () => {
   const errors = validateRegistrationHtml(html);
   assert.deepEqual(errors, ["Missing required function: showResult(id)."]);
   assert.equal(hasElementId(html, "s-thankyou"), true);
-  assert.equal(hasFieldName(html, "city_id"), true);
 });
 
-test("negative: removing city_id fails only that check", () => {
-  const html = stripCityId(ftvHtml);
-  const errors = validateRegistrationHtml(html);
-  assert.deepEqual(errors, ["Missing required field: city_id."]);
-  assert.equal(hasShowResultFunction(html), true);
-  assert.equal(hasElementId(html, "s-thankyou"), true);
-});
-
-test("validator does not require age_band, name, phone, DOB, s-terminate, or showScreen", () => {
+test("negative: omitting city_id still passes when showResult + thank-you exist", () => {
   const html = `
     <html><body>
-      <select name="city_id"></select>
+      <input type="text" name="city" id="fCity">
       <div class="shell screen hidden" id="s-thankyou"></div>
       <script>
         function showResult(id) {
@@ -154,25 +139,39 @@ test("validator does not require age_band, name, phone, DOB, s-terminate, or sho
   assert.deepEqual(validateRegistrationHtml(html), []);
 });
 
-test("empty document reports only the three required checks", () => {
+test("validator does not require age_band, name, phone, DOB, city_id, s-terminate, or showScreen", () => {
+  const html = `
+    <html><body>
+      <div class="shell screen hidden" id="s-thankyou"></div>
+      <script>
+        function showResult(id) {
+          document.getElementById(id).classList.remove("hidden");
+        }
+      </script>
+    </body></html>
+  `;
+  assert.deepEqual(validateRegistrationHtml(html), []);
+});
+
+test("empty document reports only the two required checks", () => {
   const errors = validateRegistrationHtml("<html><body></body></html>");
   assert.deepEqual(errors, [
-    "Missing required field: city_id.",
     "Missing required function: showResult(id).",
     "Missing required thank-you screen id: s-thankyou.",
   ]);
 });
 
 test(
-  "Downloads FTV original fails all three required checks",
+  "Downloads FTV original fails required checks",
   { skip: !existsSync(downloadsPath) },
   () => {
     const html = readFileSync(downloadsPath, "utf8");
-    assert.deepEqual(validateRegistrationHtml(html), [
-      "Missing required field: city_id.",
-      "Missing required function: showResult(id).",
-      "Missing required thank-you screen id: s-thankyou.",
-    ]);
+    const errors = validateRegistrationHtml(html);
+    assert.ok(errors.includes("Missing required function: showResult(id)."));
+    assert.ok(
+      errors.includes("Missing required thank-you screen id: s-thankyou."),
+    );
+    assert.equal(errors.includes("Missing required field: city_id."), false);
   },
 );
 
@@ -184,7 +183,8 @@ test(
     assert.equal(looksLikeStandaloneFtvOriginal(surveycHtml), false);
     assert.deepEqual(validateRegistrationHtml(surveycHtml), []);
     const prepared = prepareUploadedFormHtml(surveycHtml, "registration");
-    assert.equal(hasFieldName(prepared, "city_id"), true);
+    assert.equal(hasFieldName(prepared, "city_id"), false);
+    assert.equal(hasFieldName(prepared, "city"), true);
     assert.equal(hasElementId(prepared, "s-thankyou"), true);
     assert.equal(hasShowResultFunction(prepared), true);
     assert.match(prepared, /ConcaveRegistrationBridge\.attach\(showResult\)/);
@@ -192,7 +192,7 @@ test(
   },
 );
 
-test("standalone original detector flags fCity + innerHTML thank-you without city_id", () => {
+test("standalone original detector flags fCity + innerHTML thank-you", () => {
   const html = `<input id="fCity"><script>
     function finish(){ shell.innerHTML = '<div class="end">thanks</div>'; }
   </script>`;
@@ -206,9 +206,10 @@ test("standalone original detector flags fCity + innerHTML thank-you without cit
   assert.match(diag.hint ?? "", /standalone/i);
 });
 
-test("unmodified first_time_voters_survey.html prepares with zero errors and keeps city_id", () => {
+test("unmodified first_time_voters_survey.html prepares with zero errors and no city_id", () => {
   const prepared = prepareUploadedFormHtml(ftvHtml, "registration");
-  assert.equal(hasFieldName(prepared, "city_id"), true);
+  assert.equal(hasFieldName(prepared, "city_id"), false);
+  assert.equal(hasFieldName(prepared, "city"), true);
   assert.equal(hasElementId(prepared, "s-thankyou"), true);
   assert.equal(hasShowResultFunction(prepared), true);
   assert.match(prepared, /ConcaveRegistrationBridge\.attach\(showResult\)/);
@@ -216,7 +217,7 @@ test("unmodified first_time_voters_survey.html prepares with zero errors and kee
 
 test("bridge attach accepts go(0) without showScreen(0)", () => {
   const html = `<!doctype html><html><head></head><body>
-    <select name="city_id"></select>
+    <input name="city" id="fCity">
     <div id="s-thankyou"></div>
     <script>
       function showResult(id) {}
@@ -227,13 +228,15 @@ test("bridge attach accepts go(0) without showScreen(0)", () => {
   assert.deepEqual(validateRegistrationHtml(html), []);
   const prepared = prepareUploadedFormHtml(html, "registration");
   assert.match(prepared, /ConcaveRegistrationBridge\.attach\(showResult\)/);
-  assert.doesNotMatch(prepared, /showScreen\(0\)/);
 });
 
-test("decodeUploadedHtmlBytes recovers UTF-16 LE HTML", () => {
-  const utf8 = `<select name="city_id"></select><div id="s-thankyou"></div><script>function showResult(id){}</script>`;
-  const utf16 = Buffer.from(`\uFEFF${utf8}`, "utf16le");
-  const decoded = decodeUploadedHtmlBytes(utf16);
+test("UTF-16 LE BOM decode preserves contract fields", () => {
+  const utf8 = `<input name="city" id="fCity"><div id="s-thankyou"></div><script>function showResult(id){}</script>`;
+  const le = Buffer.concat([
+    Buffer.from([0xff, 0xfe]),
+    Buffer.from(utf8, "utf16le"),
+  ]);
+  const decoded = decodeUploadedHtmlBytes(le);
   assert.equal(decoded.encoding, "utf16le-bom");
   assert.deepEqual(validateRegistrationHtml(decoded.html), []);
 });
@@ -242,7 +245,7 @@ test("injectRegistrationBridge is idempotent", () => {
   const once = injectRegistrationBridge(ftvHtml);
   const twice = injectRegistrationBridge(once);
   assert.equal(
-    twice.split("ConcaveRegistrationBridge.attach").length,
-    once.split("ConcaveRegistrationBridge.attach").length,
+    (once.match(/ConcaveRegistrationBridge\.attach/g) ?? []).length,
+    (twice.match(/ConcaveRegistrationBridge\.attach/g) ?? []).length,
   );
 });

@@ -4,6 +4,7 @@ import { FORM_TYPE_LABELS } from "@/lib/forms/types";
 import {
   getActiveVersionNumber,
   listFormVersions,
+  type FormVersionAdminRow,
 } from "@/server/repositories/forms.repository";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +24,8 @@ export default async function FormsPage() {
       listFormVersions("registration"),
       getActiveVersionNumber("registration"),
     ]);
-    const rows: FormVersionRow[] = forms.map((form) => ({
+    const rows: FormVersionRow[] = (forms as FormVersionAdminRow[]).map(
+      (form) => ({
       version: form.version,
       name: form.name ?? `${FORM_TYPE_LABELS.registration} v${form.version}`,
       sourceLabel: form.hasHtmlContent
@@ -33,7 +35,8 @@ export default async function FormsPage() {
       hasHtmlContent: form.hasHtmlContent,
       published: form.published,
       isActive: form.version === activeVersion,
-    }));
+    }),
+    );
 
     return (
       <FormManagement

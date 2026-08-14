@@ -38,6 +38,8 @@ export type Database = {
           age_band: string | null;
           city: string | null;
           city_id: string | null;
+          city_raw: string | null;
+          city_match_type: string | null;
           email: string | null;
           area: string | null;
           pincode: string | null;
@@ -69,6 +71,8 @@ export type Database = {
           age_band?: string | null;
           city?: string | null;
           city_id?: string | null;
+          city_raw?: string | null;
+          city_match_type?: string | null;
           email?: string | null;
           area?: string | null;
           pincode?: string | null;
@@ -224,6 +228,8 @@ export type Database = {
           config_area_type: string | null;
           config_state: string | null;
           self_reported_area_type: string | null;
+          city_raw: string | null;
+          city_match_type: string | null;
         },
         {
           id?: string;
@@ -245,6 +251,8 @@ export type Database = {
           config_area_type?: string | null;
           config_state?: string | null;
           self_reported_area_type?: string | null;
+          city_raw?: string | null;
+          city_match_type?: string | null;
         }
       >;
       cities: TableDefinition<
@@ -257,6 +265,7 @@ export type Database = {
           buffer: number;
           is_open: boolean;
           is_active: boolean;
+          match_key: string | null;
           created_at: string;
           updated_at: string;
           created_by: string | null;
@@ -271,6 +280,7 @@ export type Database = {
           buffer?: number;
           is_open?: boolean;
           is_active?: boolean;
+          match_key?: string | null;
           created_at?: string;
           updated_at?: string;
           created_by?: string | null;
@@ -691,8 +701,10 @@ export type Database = {
           p_submitted_at: string | null;
           p_total_duration_sec: number | null;
           p_ip_address: string | null;
-          p_city_id: string;
+          p_city_id: string | null;
           p_self_reported_area_type: string | null;
+          p_city_raw?: string | null;
+          p_city_match_type?: string | null;
         };
         Returns: Json;
       };

@@ -417,7 +417,7 @@ pre{
 <div class="shell" id="shell"></div>
 
 <div id="bridge-fields" hidden>
-  <select name="city_id" id="city_id"><option value="">Select city</option></select>
+  <input type="hidden" name="city" id="city" value="">
   <input type="hidden" name="age_band" id="age_band" value="">
   <input type="hidden" name="email" id="email" value="">
   <input type="hidden" name="area" id="area" value="">
@@ -839,10 +839,10 @@ S.push({ id:"QA", html:function(){
     ageOpts += '<label class="opt'+(on?' sel':'')+'"><input type="radio" name="qa_age" value="'+band+'"'+(on?' checked':'')+'><span>'+esc(band === "23+" ? "23 or older" : band)+'</span></label>';
   }
   var f = '<div class="fields">' +
-    '<div class="field wide"><label class="lbl" for="fCityId">City</label><select id="fCityId"><option value="">Select city</option></select></div>' +
     '<div class="field wide"><label class="lbl">Age</label><div class="opts" data-single="qa_age">'+ageOpts+'</div></div>' +
     '<div class="field"><label class="lbl" for="fEmail">Email (optional)</label><input type="email" id="fEmail" autocomplete="email"></div>' +
     '<div class="field"><label class="lbl" for="fArea">Area you reside</label><input type="text" id="fArea"></div>' +
+    '<div class="field"><label class="lbl" for="fCity">City</label><input type="text" id="fCity" autocomplete="address-level2"><div class="err-msg" id="fCityErr" hidden></div></div>' +
     '<div class="field"><label class="lbl" for="fState">State / UT</label><select id="fState">'+opt+'</select></div>' +
     '<div class="field"><label class="lbl" for="fZip">PIN code</label><input type="text" id="fZip" inputmode="numeric" autocomplete="postal-code" maxlength="6" placeholder="6-digit PIN code"></div>' +
   '</div>';
@@ -850,39 +850,56 @@ S.push({ id:"QA", html:function(){
 }, wire:function(){
   var p = A.profile || {};
   function set(id,v){ if(v) document.getElementById(id).value = v; }
-  set("fEmail",p.email); set("fArea",p.area); set("fZip",p.zip);
+  set("fEmail",p.email); set("fArea",p.area); set("fCity",p.city); set("fZip",p.zip);
   if(p.state) document.getElementById("fState").value = p.state.code;
 
-  var visibleCity = document.getElementById("fCityId");
-  var bridgeCity = document.getElementById("city_id");
-  if(typeof window.__concaveFillCitySelect === "function"){
-    window.__concaveFillCitySelect(bridgeCity);
-  } else if(!(window.__concaveSelectableCities && window.__concaveSelectableCities.length)){
-    fetch("/api/cities").then(function(r){ return r.json(); }).then(function(data){
-      window.__concaveSelectableCities = (data && data.cities) || [];
-      fillVisibleCitySelect(visibleCity, p.city_id);
-      if(bridgeCity) fillVisibleCitySelect(bridgeCity, p.city_id);
-    }).catch(function(){});
+  var cityInput = document.getElementById("fCity");
+  var cityErr = document.getElementById("fCityErr");
+  function clearCityErr(){
+    if(cityErr){ cityErr.hidden = true; cityErr.textContent = ""; }
+    if(cityInput) cityInput.classList.remove("invalid");
+    A._cityBlocked = false;
   }
-  fillVisibleCitySelect(visibleCity, p.city_id);
-  if(bridgeCity && visibleCity){
-    visibleCity.addEventListener("change", function(){ bridgeCity.value = visibleCity.value; });
+  function showCityErr(msg){
+    if(cityErr){ cityErr.hidden = false; cityErr.textContent = msg; }
+    if(cityInput) cityInput.classList.add("invalid");
+    A._cityBlocked = true;
+  }
+  if(cityInput){
+    cityInput.addEventListener("input", clearCityErr);
+    cityInput.addEventListener("blur", function(){
+      var city = cityInput.value.trim();
+      var stEl = document.getElementById("fState");
+      var stLabel = stEl && stEl.value ? (stEl.options[stEl.selectedIndex].text || "") : "";
+      if(!city){ clearCityErr(); return; }
+      fetch("/api/cities/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ city: city, state: stLabel || undefined })
+      }).then(function(r){ return r.json(); }).then(function(data){
+        if(data && data.ok === false && data.message){
+          showCityErr(data.message);
+        } else {
+          clearCityErr();
+        }
+      }).catch(function(){ clearCityErr(); });
+    });
   }
 
   var zp = document.getElementById("fZip");
   zp.addEventListener("input", function(){ zp.value = normZip(zp.value); clearErr(); });
 }, validate:function(){
   var g = function(id){ return document.getElementById(id).value.trim(); };
-  var email=g("fEmail"), area=g("fArea"), st=document.getElementById("fState").value;
-  var cityId = g("fCityId");
+  var email=g("fEmail"), area=g("fArea"), city=g("fCity"), st=document.getElementById("fState").value;
   var zip = normZip(g("fZip"));
   var ageEl = document.querySelector('input[name="qa_age"]:checked');
   var ageBand = ageEl ? ageEl.value : "";
 
-  if(!cityId) return err("QA","Please select your city.");
   if(!ageBand) return err("QA","Please select your age.");
   if(email && !/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)) return err("QA","Please enter a valid email address.");
   if(!area) return err("QA","Please enter the area you reside in.");
+  if(!city) return err("QA","Please enter your city.");
+  if(A._cityBlocked) return err("QA", document.getElementById("fCityErr")?.textContent || "This city is not accepting responses.");
   if(!st) return err("QA","Please select your state or union territory.");
   if(!zip) return err("QA","Please enter your PIN code.");
   if(zip.length < 6) return err("QA","PIN code is too short. Please enter all 6 digits.");
@@ -896,14 +913,12 @@ S.push({ id:"QA", html:function(){
     }
   }
 
-  var citySel = document.getElementById("fCityId");
-  var cityLabel = citySel.options[citySel.selectedIndex] ? citySel.options[citySel.selectedIndex].text : "";
   A.profile = A.profile || {};
   A.profile.email=email; A.profile.area=area; A.profile.zip=zip;
-  A.profile.city_id=cityId; A.profile.city=cityLabel;
+  A.profile.city=city;
   A.profile.state = { code:+st, label:stateLabel(+st) };
   A.profile.age_band = ageBand;
-  document.getElementById("city_id").value = cityId;
+  document.getElementById("city").value = city;
   document.getElementById("age_band").value = ageBand;
   document.getElementById("email").value = email;
   document.getElementById("area").value = area;
@@ -1579,22 +1594,6 @@ function wireQ8(){
 var shell = document.getElementById("shell");
 var terminated = null;
 
-function fillVisibleCitySelect(sel, current){
-  if(!sel) return;
-  var cities = window.__concaveSelectableCities || [];
-  if(!cities.length && sel.options.length > 1) return;
-  var keep = current || sel.value || "";
-  sel.innerHTML = '<option value="">Select city</option>';
-  for(var i=0;i<cities.length;i++){
-    var c = cities[i];
-    var o = document.createElement("option");
-    o.value = c.id;
-    o.textContent = c.name;
-    sel.appendChild(o);
-  }
-  if(keep) sel.value = keep;
-}
-
 function setBridgeField(name, value){
   var host = document.getElementById("bridge-fields");
   if(!host) return;
@@ -1610,8 +1609,7 @@ function setBridgeField(name, value){
 
 function syncBridgeFields(){
   var p = A.profile || {};
-  var citySel = document.getElementById("city_id");
-  if(citySel && p.city_id) citySel.value = p.city_id;
+  setBridgeField("city", p.city || "");
   setBridgeField("age_band", p.age_band || "");
   setBridgeField("email", p.email || "");
   setBridgeField("area", p.area || "");
@@ -1889,7 +1887,7 @@ function buildPayload(){
     state_match: (p.state && A.Q15_1) ? (p.state.code === A.Q15_1.code) : null,
     profile: {
       email:p.email||null, area:p.area||null, city:p.city||null,
-      city_id:p.city_id||null, state:p.state||null, zip:p.zip||null,
+      state:p.state||null, zip:p.zip||null,
       age_band:p.age_band||null,
       gender:A.QC||null, relationship_status:A.QD||null
     },
