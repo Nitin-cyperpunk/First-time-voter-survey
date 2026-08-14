@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/auth/admin-session";
 import { listFtvExportBundle } from "@/server/repositories/ftv-export.repository";
 
+export const dynamic = "force-dynamic";
+
 function parseLeadIdsParam(searchParams: URLSearchParams): string[] | undefined {
   const raw = searchParams.get("lead_ids");
   if (!raw) return undefined;
