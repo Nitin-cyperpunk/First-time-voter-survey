@@ -159,6 +159,67 @@ export async function sumActiveCityCapacities(
     .reduce((sum, city) => sum + city.capacity, 0);
 }
 
+export async function findCityByMatchKeyAndState(
+  matchKey: string,
+  state: string,
+  excludeCityId?: string,
+): Promise<CityRecord | null> {
+  const key = matchKey.trim();
+  const trimmedState = state.trim();
+  if (!key || !trimmedState) return null;
+
+  let query = getSupabaseAdmin()
+    .from("cities")
+    .select("*")
+    .eq("match_key", key)
+    .ilike("state", trimmedState);
+  if (excludeCityId) query = query.neq("id", excludeCityId);
+  const { data, error } = await query.limit(1).maybeSingle();
+  if (error) throw error;
+  return data ? mapCity(data as CityRow) : null;
+}
+
+export async function findAliasTargetCity(matchKey: string): Promise<{
+  alias: string;
+  city: CityRecord;
+} | null> {
+  const key = matchKey.trim();
+  if (!key) return null;
+  const { data: aliasRow, error } = await getSupabaseAdmin()
+    .from("city_aliases")
+    .select("alias, city_id")
+    .eq("match_key", key)
+    .maybeSingle();
+  if (error) throw error;
+  if (!aliasRow?.city_id) return null;
+  const city = await getCityById(aliasRow.city_id);
+  if (!city) return null;
+  return { alias: aliasRow.alias, city };
+}
+
+export async function assertCityMatchKeyAvailable(input: {
+  matchKey: string;
+  state: string;
+  excludeCityId?: string;
+}): Promise<void> {
+  const aliasHit = await findAliasTargetCity(input.matchKey);
+  if (aliasHit && aliasHit.city.id !== input.excludeCityId) {
+    throw new Error(
+      `CITY_MATCH_KEY_IS_ALIAS: "${input.matchKey}" is already an alias of ${aliasHit.city.name} (${aliasHit.city.state}). Add it as an alias on that city instead of creating a new row.`,
+    );
+  }
+  const existing = await findCityByMatchKeyAndState(
+    input.matchKey,
+    input.state,
+    input.excludeCityId,
+  );
+  if (existing) {
+    throw new Error(
+      `CITY_MATCH_KEY_EXISTS: ${existing.name} (${existing.state}) already uses this spelling.`,
+    );
+  }
+}
+
 export async function createCity(input: {
   name: string;
   state: string;
@@ -171,6 +232,11 @@ export async function createCity(input: {
 }): Promise<CityRecord> {
   const capacity =
     input.capacity ?? (await getStudyConfig()).default_city_capacity;
+  const matchKey = cityMatchKey(input.name);
+  await assertCityMatchKeyAvailable({
+    matchKey,
+    state: input.state.trim(),
+  });
   const { data, error } = await getSupabaseAdmin()
     .from("cities")
     .insert({
@@ -179,7 +245,7 @@ export async function createCity(input: {
       area_type: input.areaType,
       capacity,
       buffer: input.buffer ?? 0,
-      match_key: cityMatchKey(input.name),
+      match_key: matchKey,
       is_open: input.isOpen ?? true,
       is_active: input.isActive ?? true,
       created_by: input.actorId,
@@ -188,8 +254,17 @@ export async function createCity(input: {
     .select("*")
     .single();
 
-  if (error) throw error;
+  if (error) {
+    throw new Error(describeCityWriteError(error.message));
+  }
   return mapCity(data as CityRow);
+}
+
+function describeCityWriteError(message: string): string {
+  if (/CITY_MATCH_KEY_IS_ALIAS|idx_cities_match_key_state_unique|duplicate key/i.test(message)) {
+    return message.replace(/^.*CITY_MATCH_KEY_IS_ALIAS:\s*/i, "CITY_MATCH_KEY_IS_ALIAS: ");
+  }
+  return message;
 }
 
 export async function updateCity(
@@ -220,6 +295,16 @@ export async function updateCity(
     (patch as { match_key?: string }).match_key = cityMatchKey(input.name);
   }
   if (input.state !== undefined) patch.state = input.state.trim();
+  const nextName = input.name !== undefined ? input.name.trim() : undefined;
+  const nextState = input.state !== undefined ? input.state.trim() : undefined;
+  if (nextName !== undefined || nextState !== undefined) {
+    const current = await getCityById(id);
+    await assertCityMatchKeyAvailable({
+      matchKey: cityMatchKey(nextName ?? current?.name ?? ""),
+      state: nextState ?? current?.state ?? "",
+      excludeCityId: id,
+    });
+  }
   if (input.areaType !== undefined) patch.area_type = input.areaType;
   if (input.capacity !== undefined) patch.capacity = input.capacity;
   if (input.buffer !== undefined) patch.buffer = input.buffer;
@@ -233,7 +318,9 @@ export async function updateCity(
     .select("*")
     .single();
 
-  if (error) throw error;
+  if (error) {
+    throw new Error(describeCityWriteError(error.message));
+  }
   return mapCity(data as CityRow);
 }
 

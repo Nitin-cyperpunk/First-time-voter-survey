@@ -423,19 +423,19 @@ export function CityTargetsPanel({
             Close the form manually when this total looks right (around 200–230).
           </p>
         </div>
-        <div className="rounded-[12px] border border-border bg-card px-4 py-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-muted">
-            Unmatched (no city)
+        <div className="rounded-[12px] border border-amber-500/40 bg-amber-50/40 px-4 py-4 dark:bg-amber-950/20">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-amber-800 dark:text-amber-200">
+            Unmatched completes (bypass city cap)
           </p>
           <p className="mt-1 font-mono text-3xl font-bold tabular-nums tracking-tight text-foreground">
             {payload?.unmatchedGlobalCompletes ?? 0}
           </p>
           <p className="mt-1 text-sm text-text-primary">
-            qualified completes that attributed to no city
+            qualified completes with no city_id — they skip the 12-per-city limit
+            and still count in the study total
           </p>
           <p className="mt-1 text-xs text-plum-muted">
-            They bypass the per-city limit and still count in the study total.
-            Typos are not blocked.
+            Typos are not blocked. Review them in Unmatched cities below.
           </p>
         </div>
       </div>
@@ -1041,7 +1041,9 @@ function CellTable({
               </tr>
             ) : (
               cities.map((city) => {
-                const closedToNew = city.achieved >= city.closesAt;
+                const overQuota = city.achieved > city.closesAt;
+                const closedToNew =
+                  overQuota || city.achieved >= city.closesAt || !city.isOpen;
                 return (
                 <tr key={city.id} className="border-b border-border/70">
                   <td className="py-3 pr-3 font-medium text-text-primary">{city.name}</td>
@@ -1095,7 +1097,9 @@ function CellTable({
                     </div>
                   </td>
                   <td className="py-3 pr-3 font-mono tabular-nums">
-                    {city.achieved} / {city.closesAt}
+                    {overQuota
+                      ? `${city.achieved} / ${city.closesAt} · closed`
+                      : `${city.achieved} / ${city.closesAt}`}
                   </td>
                   <td className="py-3 pr-3 font-mono tabular-nums text-text-primary">
                     {Math.max(0, city.closesAt - city.achieved)}

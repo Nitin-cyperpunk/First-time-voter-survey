@@ -70,3 +70,35 @@ export function aggregateNormalizedCities(
     }))
     .sort((a, b) => b.count - a.count);
 }
+
+export type GeographyBreakdown = {
+  label: string;
+  completes: number;
+  allParticipants: number;
+  completePct: number;
+};
+
+export function aggregateNormalizedCitiesSplit(
+  rows: Array<{ city: string | null | undefined; qualified: boolean }>,
+): GeographyBreakdown[] {
+  const totals = new Map<string, { completes: number; all: number }>();
+  for (const row of rows) {
+    const label = normalizeCityName(row.city);
+    const current = totals.get(label) ?? { completes: 0, all: 0 };
+    current.all += 1;
+    if (row.qualified) current.completes += 1;
+    totals.set(label, current);
+  }
+  const allParticipants = rows.length;
+  return Array.from(totals.entries())
+    .map(([label, counts]) => ({
+      label,
+      completes: counts.completes,
+      allParticipants: counts.all,
+      completePct:
+        allParticipants > 0
+          ? Math.round((counts.completes / allParticipants) * 100)
+          : 0,
+    }))
+    .sort((a, b) => b.completes - a.completes || b.allParticipants - a.allParticipants);
+}

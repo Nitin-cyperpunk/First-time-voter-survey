@@ -18,6 +18,13 @@ export type SurveyTimingMetrics = {
   abandonmentNote: string | null;
 };
 
+export type GeographyBreakdown = {
+  label: string;
+  completes: number;
+  allParticipants: number;
+  completePct: number;
+};
+
 export type DashboardMetrics = {
   totalRespondents: number;
   totalReferrals: number;
@@ -28,7 +35,7 @@ export type DashboardMetrics = {
   referralByPlatform: MetricBreakdown[];
   terminationsByReason: MetricBreakdown[];
   terminationsAvailable: boolean;
-  geographyByCity: MetricBreakdown[];
+  geographyByCity: GeographyBreakdown[];
   surveyTiming: SurveyTimingMetrics;
   kpis: {
     registered: number;

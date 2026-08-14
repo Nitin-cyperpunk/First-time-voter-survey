@@ -9,6 +9,7 @@ import {
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getStudyConfig } from "@/server/repositories/form-settings.repository";
 import {
+  assertCityMatchKeyAvailable,
   findCityByNameAndState,
   listCities,
 } from "@/server/repositories/cities.repository";
@@ -84,6 +85,14 @@ export async function previewCityImport(
       byKey.set(key, city);
     }
   }
+  const aliasByMatchKey = await loadAliasMatchKeyIndex();
+  const cityByMatchKeyState = new Map<string, { id: string; name: string; state: string }>();
+  for (const city of cities) {
+    cityByMatchKeyState.set(
+      `${cityMatchKey(city.name)}|${city.state.toLowerCase()}`,
+      { id: city.id, name: city.name, state: city.state },
+    );
+  }
   const seenInFile = new Set<string>();
 
   const toAdd: ImportPreviewRow[] = [];
@@ -157,7 +166,31 @@ export async function previewCityImport(
     }
     for (const key of lookupKeys) seenInFile.add(key);
 
+    const matchKey = cityMatchKey(name);
+    const aliasHit = aliasByMatchKey.get(matchKey);
+    if (aliasHit) {
+      rejected.push({
+        ...base,
+        city: name,
+        state,
+        areaType,
+        reason: `Spelling is already an alias of ${aliasHit.cityName} (${aliasHit.state}).`,
+      });
+      return;
+    }
+    const sameState = cityByMatchKeyState.get(`${matchKey}|${state.toLowerCase()}`);
     const existing = findExistingCityForImportRow(byKey, name, state);
+    if (sameState && !existing) {
+      rejected.push({
+        ...base,
+        city: name,
+        state,
+        areaType,
+        existingId: sameState.id,
+        reason: `A city in ${sameState.state} already uses this match key (${sameState.name}).`,
+      });
+      return;
+    }
     const row: ImportPreviewRow = {
       ...base,
       action: existing ? "update" : "add",
@@ -205,6 +238,7 @@ export async function commitCityImport(input: {
     }
 
     const match_key = cityMatchKey(row.city);
+    await assertCityMatchKeyAvailable({ matchKey: match_key, state: row.state });
     const { data, error } = await admin
       .from("cities")
       .insert({
@@ -277,6 +311,50 @@ export async function commitCityImport(input: {
   return { added, updated, rejected };
 }
 
+async function loadAliasMatchKeyIndex(): Promise<
+  Map<string, { cityName: string; state: string }>
+> {
+  const admin = getSupabaseAdmin();
+  const aliases: Array<{ match_key: string; city_id: string; alias: string }> = [];
+  let from = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data, error } = await admin
+      .from("city_aliases")
+      .select("match_key, city_id, alias")
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    const rows = data ?? [];
+    aliases.push(...rows);
+    if (rows.length < pageSize) break;
+    from += pageSize;
+  }
+
+  const cityIds = [...new Set(aliases.map((row) => row.city_id))];
+  const cityById = new Map<string, { name: string; state: string }>();
+  for (let i = 0; i < cityIds.length; i += 80) {
+    const chunk = cityIds.slice(i, i + 80);
+    const { data, error } = await admin
+      .from("cities")
+      .select("id, name, state")
+      .in("id", chunk);
+    if (error) throw error;
+    for (const city of data ?? []) {
+      cityById.set(city.id, { name: city.name, state: city.state });
+    }
+  }
+
+  const index = new Map<string, { cityName: string; state: string }>();
+  for (const row of aliases) {
+    const city = cityById.get(row.city_id);
+    index.set(row.match_key, {
+      cityName: city?.name ?? row.alias,
+      state: city?.state ?? "existing city",
+    });
+  }
+  return index;
+}
+
 async function applyImportCityUpdate(
   admin: ReturnType<typeof getSupabaseAdmin>,
   cityId: string,
@@ -298,6 +376,11 @@ async function applyImportCityUpdate(
     updated_by: actorId ?? null,
   };
   if (row.capacity != null) patch.capacity = row.capacity;
+  await assertCityMatchKeyAvailable({
+    matchKey: patch.match_key,
+    state: row.state,
+    excludeCityId: cityId,
+  });
   const { error } = await admin.from("cities").update(patch).eq("id", cityId);
   if (error) throw error;
 }
