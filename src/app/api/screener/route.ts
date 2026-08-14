@@ -6,6 +6,7 @@ import {
   clearSessionCookie,
   revokeCurrentSession,
 } from "@/lib/auth/participant-session";
+import { originFromRequest } from "@/lib/app-url";
 import { registerParticipant } from "@/features/launch/services/register.service";
 import { launchRegistrationSchema } from "@/features/launch/schemas/registration";
 
@@ -36,6 +37,7 @@ export async function POST(request: NextRequest) {
     const result = await registerParticipant(parsed.data, {
       ipAddress: getClientIp(request),
       userAgent: request.headers.get("user-agent"),
+      baseUrl: originFromRequest(request) ?? undefined,
     });
 
     await revokeCurrentSession();

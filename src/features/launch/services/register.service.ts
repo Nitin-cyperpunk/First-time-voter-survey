@@ -286,7 +286,11 @@ function resolveRegistrationCity(input: LaunchRegistrationInput): string {
 
 export async function registerParticipant(
   input: LaunchRegistrationInput,
-  options: { ipAddress?: string | null; userAgent?: string | null },
+  options: {
+    ipAddress?: string | null;
+    userAgent?: string | null;
+    baseUrl?: string;
+  },
 ) {
   const studyConfig = await getStudyConfig();
   if (!isRegistrationAccepting(studyConfig)) {
@@ -599,7 +603,9 @@ export async function registerParticipant(
     }
   }
 
-  const messages = await buildRegistrationThankYouMessages(participant);
+  const messages = await buildRegistrationThankYouMessages(participant, {
+    baseUrl: options.baseUrl,
+  });
 
   return {
     registered: true,
@@ -608,7 +614,9 @@ export async function registerParticipant(
     mobile: participant.mobile,
     status: finalStatus,
     eligible: !registrationTerminated,
-    referralLink: buildReferralLink(participant.referralCode),
+    referralLink: buildReferralLink(participant.referralCode, {
+      baseUrl: options.baseUrl,
+    }),
     messages,
   };
 }

@@ -6,12 +6,13 @@ import {
   normalizeParticipantStatus,
 } from "@/lib/participant-lifecycle";
 import { getAuthenticatedParticipant, participantUnauthorizedResponse } from "@/lib/auth/participant-session";
+import { originFromRequest } from "@/lib/app-url";
 import { buildReferralLink } from "@/lib/referral-code.service";
 import { getRewardAmounts } from "@/lib/study-config/rewards";
 import { getParticipantReferralStats } from "@/server/repositories/referral-stats.repository";
 import { hasScreenerResponse } from "@/server/repositories/screener.repository";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const participant = await getAuthenticatedParticipant();
 
@@ -36,7 +37,9 @@ export async function GET() {
       fullName: participant.fullName,
       mobile: participant.mobile,
       leadId: participant.leadId,
-      referralLink: buildReferralLink(participant.referralCode),
+      referralLink: buildReferralLink(participant.referralCode, {
+        baseUrl: originFromRequest(request) ?? undefined,
+      }),
       status: participant.status,
       displayStatus: formatParticipantStatusLabel(participant.status),
       screenerSubmitted,

@@ -246,9 +246,7 @@ export function LaunchRegistrationForm() {
         messages: data.messages,
       });
 
-      window.setTimeout(() => {
-        router.push("/registration-complete");
-      }, 1500);
+      router.push("/registration-complete");
     } catch {
       dismissToast(loadingId);
       toastUnexpectedError();

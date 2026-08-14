@@ -15,6 +15,7 @@ import { createCityAlias } from "@/server/repositories/city-aliases.repository";
 import {
   countQualifiedCompletions,
   createCity,
+  findCityByNameAndState,
   getCityById,
   listCities,
   updateCity,
@@ -70,6 +71,17 @@ async function loadUnmatchedScreenerRows(): Promise<ScreenerUnmatchedRow[]> {
 
 function rowMatchKey(raw: string): string {
   return cityMatchKey(raw) || raw.trim().toLowerCase();
+}
+
+function isDuplicateCityError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const row = error as { code?: string; message?: string; details?: string };
+  return (
+    row.code === "23505" ||
+    /duplicate key|idx_cities_name_state_unique/i.test(
+      `${row.message ?? ""} ${row.details ?? ""}`,
+    )
+  );
 }
 
 async function loadAliasCatalog(
@@ -212,9 +224,24 @@ export async function previewUnmatchedResolve(input: {
       if (!resolution.name?.trim() || !resolution.state || !resolution.areaType) {
         throw new Error(`Missing city fields for ${resolution.matchKey}.`);
       }
-      matchType = "exact";
-      targetCityName = normalizeCityDisplayName(resolution.name);
-      targetCityId = `new:${resolution.matchKey}`;
+      const normalized = normalizeCityInput({
+        name: resolution.name,
+        state: resolution.state,
+        areaType: resolution.areaType,
+      });
+      const existing = await findCityByNameAndState(
+        normalized.name,
+        normalized.state,
+      );
+      if (existing) {
+        matchType = "exact";
+        targetCityId = existing.id;
+        targetCityName = existing.name;
+      } else {
+        matchType = "exact";
+        targetCityName = normalized.name;
+        targetCityId = `new:${resolution.matchKey}`;
+      }
     } else {
       if (!resolution.cityId) {
         throw new Error(`Missing target city for alias on ${resolution.matchKey}.`);
@@ -403,46 +430,86 @@ export async function commitUnmatchedResolve(input: {
       });
       await ensureStateAllocation(normalized.state, input.actorId);
 
-      const snapshot = await buildQuotaSnapshot();
-      let closesAt = resolution.capacity ?? 0;
-      const previewCity = preview.cities.find(
-        (c) => c.cityId === `new:${resolution.matchKey}`,
-      );
-      if (
-        previewCity &&
-        previewCity.incoming > closesAt &&
-        input.overQuotaDecision === "raise_city_capacity"
-      ) {
-        closesAt = previewCity.afterAchieved;
-      }
-      validateCityClosesAt(
-        snapshot,
+      const existing = await findCityByNameAndState(
+        normalized.name,
         normalized.state,
-        normalized.areaType,
-        null,
-        closesAt,
       );
+      if (existing) {
+        targetCityId = existing.id;
+        matchType = "exact";
+        sampleRaw = normalized.name;
+        await ensureUnmatchedAlias({
+          cityId: existing.id,
+          matchKey: resolution.matchKey,
+          actorId: input.actorId,
+        });
+        await logConfigChange({
+          actorId: input.actorId,
+          actorEmail: input.actorEmail,
+          entityType: "city",
+          entityId: existing.id,
+          field: "city.reused_from_unmatched",
+          oldValue: null,
+          newValue: `${existing.name} / ${existing.state} / ${existing.areaType}`,
+        });
+      } else {
+        const snapshot = await buildQuotaSnapshot();
+        let closesAt = resolution.capacity ?? 0;
+        const previewCity = preview.cities.find(
+          (c) => c.cityId === `new:${resolution.matchKey}`,
+        );
+        if (
+          previewCity &&
+          previewCity.incoming > closesAt &&
+          input.overQuotaDecision === "raise_city_capacity"
+        ) {
+          closesAt = previewCity.afterAchieved;
+        }
+        validateCityClosesAt(
+          snapshot,
+          normalized.state,
+          normalized.areaType,
+          null,
+          closesAt,
+        );
 
-      const created = await createCity({
-        name: normalized.name,
-        state: normalized.state,
-        areaType: normalized.areaType,
-        capacity: closesAt,
-        actorId: input.actorId,
-      });
-      targetCityId = created.id;
-      matchType = "exact";
-      sampleRaw = normalized.name;
+        let created;
+        try {
+          created = await createCity({
+            name: normalized.name,
+            state: normalized.state,
+            areaType: normalized.areaType,
+            capacity: closesAt,
+            actorId: input.actorId,
+          });
+        } catch (error) {
+          if (!isDuplicateCityError(error)) throw error;
+          const duplicate = await findCityByNameAndState(
+            normalized.name,
+            normalized.state,
+          );
+          if (!duplicate) throw error;
+          created = duplicate;
+          await ensureUnmatchedAlias({
+            cityId: duplicate.id,
+            matchKey: resolution.matchKey,
+            actorId: input.actorId,
+          });
+        }
+        targetCityId = created.id;
+        matchType = "exact";
+        sampleRaw = normalized.name;
 
-      await logConfigChange({
-        actorId: input.actorId,
-        actorEmail: input.actorEmail,
-        entityType: "city",
-        entityId: created.id,
-        field: "city.created_from_unmatched",
-        oldValue: null,
-        newValue: `${created.name} / ${created.state} / ${created.areaType}`,
-      });
+        await logConfigChange({
+          actorId: input.actorId,
+          actorEmail: input.actorEmail,
+          entityType: "city",
+          entityId: created.id,
+          field: "city.created_from_unmatched",
+          oldValue: null,
+          newValue: `${created.name} / ${created.state} / ${created.areaType}`,
+        });
+      }
     } else {
       if (!resolution.cityId) throw new Error("Missing alias target city.");
       const city = await getCityById(resolution.cityId);
@@ -524,6 +591,28 @@ export async function commitUnmatchedResolve(input: {
   }
 
   return preview;
+}
+
+async function ensureUnmatchedAlias(input: {
+  cityId: string;
+  matchKey: string;
+  actorId: string;
+}) {
+  const city = await getCityById(input.cityId);
+  if (!city) return;
+  if (rowMatchKey(city.name) === input.matchKey) return;
+
+  const rows = await loadUnmatchedScreenerRows();
+  const sample = rows.find(
+    (r) => rowMatchKey(String(r.city_raw ?? "")) === input.matchKey,
+  );
+  const displayAlias = sample?.city_raw?.trim() || input.matchKey;
+  await createCityAlias({
+    cityId: input.cityId,
+    alias: normalizeCityDisplayName(displayAlias),
+    matchKey: input.matchKey,
+    actorId: input.actorId,
+  });
 }
 
 async function backfillResponses(input: {
