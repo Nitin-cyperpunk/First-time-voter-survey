@@ -3,7 +3,7 @@ import type {
   MetricBreakdown,
   SurveyTimingMetrics,
 } from "@/features/respondents/types";
-import { aggregateNormalizedCities } from "@/features/respondents/lib/city-normalization";
+import { aggregateNormalizedCitiesSplit } from "@/features/respondents/lib/city-normalization";
 import { buildFunnelSnapshot } from "@/features/respondents/lib/funnel-snapshot";
 import { QUALIFIED_COMPLETION_STATUSES } from "@/features/respondents/lib/metric-status-sets";
 import { closesAt } from "@/lib/study-config/defaults";
@@ -101,7 +101,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     db
       .from("participants")
       .select("acquisition_source, acquisition_type, referral_platform"),
-    db.from("participants").select("city"),
+    db.from("participants").select("city, status"),
     db
       .from("form_terminations")
       .select("rule_key, rule_label, reason_text")
@@ -203,8 +203,12 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     "Unknown",
   );
 
-  const geographyByCity = aggregateNormalizedCities(
-    (cityRes.data ?? []).map((row) => row.city),
+  const qualified = new Set<string>(QUALIFIED_COMPLETION_STATUSES);
+  const geographyByCity = aggregateNormalizedCitiesSplit(
+    (cityRes.data ?? []).map((row) => ({
+      city: row.city,
+      qualified: qualified.has(row.status),
+    })),
   ).slice(0, 15);
 
   const kpis = {

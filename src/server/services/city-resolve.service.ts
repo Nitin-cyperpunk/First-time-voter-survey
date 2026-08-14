@@ -92,6 +92,10 @@ function mapResolved(
 
 /**
  * Match order: exact key within state → exact key any state → alias → unmatched.
+ *
+ * Homonyms across states (Hyderabad Telangana vs Uttar Pradesh) stay separate
+ * cities. When stateLabel is present, the in-state row wins. When it is absent,
+ * `.limit(1)` can pick either homonym — that is a known gap, not a merge.
  */
 export async function resolveCityText(input: {
   cityRaw: string;

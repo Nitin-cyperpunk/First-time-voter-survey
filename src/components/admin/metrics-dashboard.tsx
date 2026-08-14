@@ -7,17 +7,20 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import Link from "next/link";
 import { ChevronDownIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type {
   DashboardMetrics,
+  GeographyBreakdown,
   MetricBreakdown,
 } from "@/features/respondents/types";
 import type {
   DropSeverity,
   FunnelSnapshotStatus,
 } from "@/features/respondents/lib/funnel-snapshot";
+import { adminPath } from "@/lib/admin-paths";
 import { cn } from "@/lib/utils";
 
 const REFRESH_MS = 30_000;
@@ -474,17 +477,26 @@ export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
 
         <Collapsible
           title="Geography (soft)"
-          summary="Normalized cities · no quotas"
+          summary="Normalized names · not the quota view"
           open={open.geography}
           onToggle={() => setOpen((s) => ({ ...s, geography: !s.geography }))}
         >
+          <p className="mb-3 text-sm leading-relaxed text-plum-muted">
+            Aggregates alias spellings (Bangalore → Bengaluru) across{" "}
+            <strong>all participant statuses</strong>. This is not the 12-per-city
+            cap. Quota counts live on{" "}
+            <Link
+              href={adminPath("/settings")}
+              className="font-medium text-primary underline-offset-2 hover:underline"
+            >
+              City Targets
+            </Link>
+            .
+          </p>
           {metrics.geographyByCity.length === 0 ? (
             <PendingNote text="No city data on participants yet." />
           ) : (
-            <BarList
-              title="Cities (normalized)"
-              rows={metrics.geographyByCity}
-            />
+            <GeographyBarList rows={metrics.geographyByCity} />
           )}
         </Collapsible>
 
@@ -670,6 +682,35 @@ function HeadroomBar({
           style={{ width: `${Math.max(2, pct)}%` }}
         />
       </div>
+    </div>
+  );
+}
+
+function GeographyBarList({ rows }: { rows: GeographyBreakdown[] }) {
+  const max = Math.max(...rows.map((r) => r.allParticipants), 1);
+  return (
+    <div>
+      <p className="mb-3 text-xs font-semibold uppercase tracking-[0.06em] text-plum-faint">
+        Completes vs all participants
+      </p>
+      <ul className="space-y-2">
+        {rows.map((row) => (
+          <li key={row.label}>
+            <div className="mb-1 flex justify-between gap-2 text-sm">
+              <span className="capitalize text-foreground">{row.label}</span>
+              <span className="font-mono text-xs text-plum-muted">
+                {row.completes} completes · {row.allParticipants} all
+              </span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-rose-tint">
+              <div
+                className="h-full rounded-full bg-primary/80"
+                style={{ width: `${(row.completes / max) * 100}%` }}
+              />
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
