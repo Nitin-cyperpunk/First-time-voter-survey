@@ -3,11 +3,18 @@ import { test } from "node:test";
 
 import { DEFAULT_STUDY_CONFIG } from "@/lib/study-config/defaults";
 import {
+  coerceAgeBand,
   isAgeBandWithinStudyRule,
   parseAgeBand,
 } from "@/lib/study-config/gates";
 
-test("parseAgeBand reads discrete years and 23+", () => {
+test("coerceAgeBand maps DOB decimals and 23+", () => {
+  assert.equal(coerceAgeBand("24.63"), "23+");
+  assert.equal(coerceAgeBand(22), "22");
+  assert.equal(coerceAgeBand("", "2002-06-15"), "23+");
+  assert.equal(coerceAgeBand("18"), "18");
+  assert.equal(coerceAgeBand(16), "18");
+});
   assert.deepEqual(parseAgeBand("18"), { min: 18, max: 18 });
   assert.deepEqual(parseAgeBand("23+"), {
     min: 23,

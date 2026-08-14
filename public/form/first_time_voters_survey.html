@@ -56,7 +56,12 @@ body{
 /* ---------- Shell ---------- */
 .shell{max-width:760px;margin:0 auto;padding:34px 22px 80px;}
 .screen{display:none;animation:rise .3s ease both;}
-.screen.on{display:block;}
+.screen.on,
+#s-thankyou:not(.hidden),
+#s-terminate:not(.hidden){display:block;}
+.hidden{display:none !important;}
+.err-msg{font-size:13px;color:var(--danger);margin-top:6px;}
+input.invalid,select.invalid{border-color:var(--danger);}
 @keyframes rise{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
 
 /* ---------- Type ---------- */
@@ -405,6 +410,33 @@ pre{
 
 <div class="shell" id="shell"></div>
 
+<div id="bridge-fields" hidden>
+  <input type="hidden" name="city" id="bridge_city" value="">
+  <input type="hidden" name="age_band" id="age_band" value="">
+  <input type="hidden" name="name" id="bridge_name" value="">
+  <input type="hidden" name="phone" id="bridge_phone" value="">
+  <input type="hidden" name="dob_date" id="bridge_dob" value="">
+  <input type="hidden" name="email" id="email" value="">
+  <input type="hidden" name="area" id="area" value="">
+  <input type="hidden" name="zip" id="zip" value="">
+</div>
+
+<div class="shell screen hidden" id="s-thankyou">
+  <div class="end">
+    <h1>Thank you for participating in this research.</h1>
+    <p>Your responses will help build a clearer picture of what shaped first-time voters in the 2024 Lok Sabha election.</p>
+    <p>Findings will be reported only in aggregate. You may now close this page.</p>
+  </div>
+</div>
+
+<div class="shell screen hidden" id="s-terminate">
+  <div class="end">
+    <h1>Thank you for your time.</h1>
+    <p>This study is limited to a specific group of respondents, and based on your answers your profile falls outside it.</p>
+    <p>We would be glad to have you in a future study. You may now close this page.</p>
+  </div>
+</div>
+
 <div class="modal" id="tcModal" role="dialog" aria-modal="true" aria-labelledby="tcTitle" hidden>
   <div class="modal-back" data-close="1"></div>
   <div class="modal-card">
@@ -732,7 +764,7 @@ S.push({ id:"QA", html:function(){
     '<div class="field"><label class="lbl" for="fPhone">Phone Number</label><input type="tel" id="fPhone" inputmode="numeric" autocomplete="tel" maxlength="16" placeholder="10-digit mobile number"></div>' +
     '<div class="field"><label class="lbl" for="fEmail">Email</label><input type="email" id="fEmail" autocomplete="email"></div>' +
     '<div class="field"><label class="lbl" for="fArea">Area you reside</label><input type="text" id="fArea"></div>' +
-    '<div class="field"><label class="lbl" for="fCity">City</label><input type="text" id="fCity"></div>' +
+    '<div class="field"><label class="lbl" for="fCity">City</label><input type="text" id="fCity" autocomplete="address-level2"><div class="err-msg" id="fCityErr" hidden></div></div>' +
     '<div class="field"><label class="lbl" for="fState">State</label><select id="fState">'+opt+'</select></div>' +
     '<div class="field"><label class="lbl" for="fZip">Zip</label><input type="text" id="fZip" inputmode="numeric" autocomplete="postal-code" maxlength="6" placeholder="6-digit PIN code"></div>' +
     '<div class="field dobfield"><label class="lbl" for="dDOB">Date of Birth</label><input type="date" id="dDOB" max="'+today+'"></div>' +
@@ -752,6 +784,39 @@ S.push({ id:"QA", html:function(){
   ph.addEventListener("blur",  function(){ ph.value = normPhone(ph.value); });
   var zp = document.getElementById("fZip");
   zp.addEventListener("input", function(){ zp.value = normZip(zp.value); clearErr(); });
+
+  var cityInput = document.getElementById("fCity");
+  var cityErr = document.getElementById("fCityErr");
+  function clearCityErr(){
+    if(cityErr){ cityErr.hidden = true; cityErr.textContent = ""; }
+    if(cityInput) cityInput.classList.remove("invalid");
+    A._cityBlocked = false;
+  }
+  function showCityErr(msg){
+    if(cityErr){ cityErr.hidden = false; cityErr.textContent = msg; }
+    if(cityInput) cityInput.classList.add("invalid");
+    A._cityBlocked = true;
+  }
+  if(cityInput){
+    cityInput.addEventListener("input", clearCityErr);
+    cityInput.addEventListener("blur", function(){
+      var city = cityInput.value.trim();
+      var stEl = document.getElementById("fState");
+      var stLabel = stEl && stEl.value ? (stEl.options[stEl.selectedIndex].text || "") : "";
+      if(!city){ clearCityErr(); return; }
+      fetch("/api/cities/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ city: city, state: stLabel || undefined })
+      }).then(function(r){ return r.json(); }).then(function(data){
+        if(data && data.ok === false && data.message){
+          showCityErr(data.message);
+        } else {
+          clearCityErr();
+        }
+      }).catch(function(){ clearCityErr(); });
+    });
+  }
 }, validate:function(){
   var g = function(id){ return document.getElementById(id).value.trim(); };
   var name=g("fName"), email=g("fEmail"),
@@ -769,6 +834,7 @@ S.push({ id:"QA", html:function(){
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)) return err("QA","Please enter a valid email address.");
   if(!area) return err("QA","Please enter the area you reside in.");
   if(!city) return err("QA","Please enter your city.");
+  if(A._cityBlocked) return err("QA", (document.getElementById("fCityErr") && document.getElementById("fCityErr").textContent) || "This city is not accepting responses.");
   if(!st) return err("QA","Please select your state or union territory.");
 
   /* Zip: exactly 6 digits, Indian PIN codes never start with 0. */
@@ -792,6 +858,23 @@ S.push({ id:"QA", html:function(){
   A.profile.age_at_poll = yrs(dt, POLL_DATE);
   A.profile.age_at_qualifying_date = yrs(dt, QUAL_DATE);
   A.profile.age_today = yrs(dt, new Date());
+  A.profile.age_band = ageBandFromYears(A.profile.age_today);
+  var ageEl = document.getElementById("age_band");
+  if(ageEl) ageEl.value = A.profile.age_band || "";
+  var nameEl = document.getElementById("bridge_name");
+  if(nameEl) nameEl.value = name;
+  var phoneEl = document.getElementById("bridge_phone");
+  if(phoneEl) phoneEl.value = phone;
+  var dobEl = document.getElementById("bridge_dob");
+  if(dobEl) dobEl.value = A.profile.dob;
+  var cityEl = document.getElementById("bridge_city");
+  if(cityEl) cityEl.value = city;
+  var emailEl = document.getElementById("email");
+  if(emailEl) emailEl.value = email;
+  var areaEl = document.getElementById("area");
+  if(areaEl) areaEl.value = area;
+  var zipEl = document.getElementById("zip");
+  if(zipEl) zipEl.value = zip;
 
   /* T04 age gate */
   if(dt < DOB_MIN || dt > DOB_MAX) return stop("TERMINATE_AGE_OUT_OF_RANGE");
@@ -1213,6 +1296,16 @@ function normZip(v){
   return String(v == null ? "" : v).replace(/\D/g, "").slice(0, 6);
 }
 function yrs(from, to){ return Math.round(((to - from) / 31557600000) * 100) / 100; }
+function ageBandFromYears(n){
+  var age = Math.floor(+n);
+  if(!isFinite(age) || age < 1) return "";
+  if(age <= 18) return "18";
+  if(age === 19) return "19";
+  if(age === 20) return "20";
+  if(age === 21) return "21";
+  if(age === 22) return "22";
+  return "23+";
+}
 
 function err(anchor, text){
   var el = document.getElementById("q_" + anchor.replace(/[^A-Za-z0-9]/g,""));
@@ -1384,8 +1477,82 @@ function wireQ8(){
 var shell = document.getElementById("shell");
 var terminated = null;
 
+function setBridgeField(name, value){
+  var host = document.getElementById("bridge-fields");
+  if(!host) return;
+  var el = host.querySelector('[name="'+name+'"]');
+  if(!el){
+    el = document.createElement("input");
+    el.type = "hidden";
+    el.name = name;
+    host.appendChild(el);
+  }
+  el.value = value == null ? "" : String(value);
+}
+
+function syncBridgeFields(){
+  var p = A.profile || {};
+  setBridgeField("city", p.city || "");
+  setBridgeField("age_band", p.age_band || ageBandFromYears(p.age_today));
+  setBridgeField("name", p.name || "");
+  setBridgeField("phone", p.phone || "");
+  setBridgeField("dob_date", p.dob || "");
+  setBridgeField("email", p.email || "");
+  setBridgeField("area", p.area || "");
+  setBridgeField("zip", p.zip || "");
+  function dumpSingle(key){
+    var v = A[key];
+    if(!v) return;
+    setBridgeField(key, v.label || String(v.code || ""));
+  }
+  ["QC","QD","Q1","Q2","Q3","Q4","Q5","Q9","Q10","Q11","Q12","Q13","Q15_1","Q15_2","Q15_3","Q16"].forEach(dumpSingle);
+  function dumpGrid(key, items){
+    var v = A[key] || {};
+    for(var i=1;i<=items.length;i++){
+      if(v["r"+i] != null) setBridgeField(key+"_"+i, String(v["r"+i]));
+    }
+  }
+  dumpGrid("Q6a", Q6A);
+  dumpGrid("Q6b", Q6B);
+  var ranks = A.Q7 || [];
+  for(var r=1;r<=3;r++){
+    var pick = null;
+    for(var j=0;j<ranks.length;j++) if(ranks[j].rank === r) pick = ranks[j];
+    if(pick) setBridgeField("Q7_rank"+r, pick.label || String(pick.code));
+  }
+  var m = A.Q8 || { codes:[], labels:[] };
+  if(m.labels && m.labels.length) setBridgeField("Q8", m.labels.join(" | "));
+  else if(m.codes && m.codes.length) setBridgeField("Q8", m.codes.join(","));
+  if(A.Q17) setBridgeField("Q17", A.Q17);
+  if(A.consent) setBridgeField("consent", A.consent);
+  if(p.state) setBridgeField("qa_state", p.state.label || String(p.state.code));
+}
+
+function showResult(id){
+  syncBridgeFields();
+  document.querySelectorAll(".screen").forEach(function(s){ s.classList.add("hidden"); });
+  var target = document.getElementById(id);
+  if(target) target.classList.remove("hidden");
+  if(shell) shell.style.display = "none";
+  var rail = document.getElementById("rail");
+  if(rail) rail.style.display = "block";
+  var fill = document.getElementById("railFill");
+  if(fill) fill.style.width = "100%";
+  window.scrollTo(0,0);
+}
+
+function attachDebug(screenId){
+  if(!debugOn()) return;
+  var target = document.getElementById(screenId);
+  if(!target) return;
+  if(!document.getElementById("jsonOut")) target.insertAdjacentHTML("beforeend", debugPanel());
+  wireDebug();
+}
+
 function go(n){
   idx = n;
+  if(shell) shell.style.display = "";
+  document.querySelectorAll(".screen").forEach(function(s){ s.classList.add("hidden"); });
   var s = S[idx];
   var body = s.html();
   var h = "";
@@ -1424,17 +1591,12 @@ function stop(status){
   terminated = status;
   A.status = status;
   A.terminated_at = new Date().toISOString();
-  document.getElementById("rail").style.display = "block";
-  document.getElementById("railFill").style.width = "100%";
-  shell.innerHTML = '<div class="end">' +
-    '<h1>Thank you for your time.</h1>' +
-    '<p>This study is limited to a specific group of respondents, and based on your answers your profile falls outside it.</p>' +
-    '<p>We would be glad to have you in a future study. You may now close this page.</p>' +
-    '</div>' + debugPanel();
-  wireDebug();
-  submit();
-  /* The draft is cleared so a reload lands on a fresh start rather than
-     dropping the respondent back into a survey they have already exited. */
+  window.__terminated = true;
+  window.__termReasons = window.__termReasons || [];
+  if(window.__termReasons.indexOf(status) < 0) window.__termReasons.push(status);
+  showResult("s-terminate");
+  attachDebug("s-terminate");
+  if(!window.ConcaveRegistrationBridge) submit();
   try{ localStorage.removeItem("ftv_draft"); }catch(e){}
   return false;
 }
@@ -1443,15 +1605,10 @@ function stop(status){
 function finish(){
   A.status = "COMPLETE";
   A.terminated_at = null;
-  document.getElementById("rail").style.display = "block";
-  document.getElementById("railFill").style.width = "100%";
-  shell.innerHTML = '<div class="end">' +
-    '<h1>Thank you for participating in this research.</h1>' +
-    '<p>Your responses will help build a clearer picture of what shaped first-time voters in the 2024 Lok Sabha election.</p>' +
-    '<p>Findings will be reported only in aggregate. You may now close this page.</p>' +
-    '</div>' + debugPanel();
-  wireDebug();
-  submit();
+  window.__terminated = false;
+  showResult("s-thankyou");
+  attachDebug("s-thankyou");
+  if(!window.ConcaveRegistrationBridge) submit();
   try{ localStorage.removeItem("ftv_draft"); }catch(e){}
 }
 

@@ -1,7 +1,11 @@
 import { z } from "zod";
 
-import { AGE_BAND_VALUES } from "@/lib/study-config/gates";
-import { validateDob } from "@/lib/dob-validation";
+import { AGE_BAND_VALUES, coerceAgeBand } from "@/lib/study-config/gates";
+import {
+  isFutureDob,
+  isValidDobFormat,
+  validateDob,
+} from "@/lib/dob-validation";
 
 const dobSchema = z
   .string()
@@ -33,10 +37,11 @@ const optionalPhoneSchema = z
 const optionalDobSchema = z
   .string()
   .trim()
-  .refine(
-    (value) => value === "" || dobSchema.safeParse(value).success,
-    "Enter a valid date of birth (YYYY-MM-DD)",
-  );
+  .refine((value) => {
+    if (value === "") return true;
+    if (!isValidDobFormat(value)) return false;
+    return !isFutureDob(value);
+  }, "Enter a valid date of birth (YYYY-MM-DD)");
 
 const terminationEventSchema = z.object({
   ruleKey: z.string().trim().min(1),
@@ -47,13 +52,43 @@ const terminationEventSchema = z.object({
   reasonText: z.string().trim().optional().nullable(),
 });
 
-export const launchRegistrationSchema = z.object({
-  fullName: z.string().trim().max(120, "Name is too long").optional().default(""),
-  mobile: optionalPhoneSchema.optional().default(""),
-  dob: optionalDobSchema.optional().default(""),
-  age_band: z.enum(AGE_BAND_VALUES, {
-    message: "Please select your age.",
-  }),
+function profileFromAnswerJson(answerJson: Record<string, unknown> | undefined) {
+  const profile = answerJson?.profile;
+  if (!profile || typeof profile !== "object") return null;
+  return profile as {
+    dob?: string;
+    age_today?: number | string;
+    age_band?: string;
+  };
+}
+
+export const launchRegistrationSchema = z.preprocess(
+  (value) => {
+    if (!value || typeof value !== "object") return value;
+    const input = { ...(value as Record<string, unknown>) };
+    const profile = profileFromAnswerJson(
+      input.answerJson as Record<string, unknown> | undefined,
+    );
+    const dob =
+      (typeof input.dob === "string" && input.dob.trim()) ||
+      (typeof profile?.dob === "string" ? profile.dob : "") ||
+      "";
+    const band =
+      coerceAgeBand(input.age_band, dob) ||
+      coerceAgeBand(profile?.age_band, dob) ||
+      coerceAgeBand(profile?.age_today, dob);
+    if (dob && !input.dob) input.dob = dob;
+    if (band) input.age_band = band;
+    else if (input.terminated) input.age_band = "18";
+    return input;
+  },
+  z.object({
+    fullName: z.string().trim().max(120, "Name is too long").optional().default(""),
+    mobile: optionalPhoneSchema.optional().default(""),
+    dob: optionalDobSchema.optional().default(""),
+    age_band: z.enum(AGE_BAND_VALUES, {
+      message: "Please select your age.",
+    }),
   city: z
     .string()
     .trim()
@@ -101,7 +136,8 @@ export const launchRegistrationSchema = z.object({
   terminations: z.array(terminationEventSchema).optional(),
   answerJson: z.record(z.string(), z.any()).optional(),
   csvRow: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
-});
+  }),
+);
 
 export const launchLoginSchema = z.object({
   mobile: phoneSchema,

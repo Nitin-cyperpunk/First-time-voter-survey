@@ -1243,9 +1243,58 @@
 
   function readAgeBand() {
     const checked = document.querySelector('input[name="age_band"]:checked');
-    if (checked && checked.value) return String(checked.value).trim();
+    if (checked && checked.value) {
+      return coerceAgeBandValue(String(checked.value).trim());
+    }
     const named = document.querySelector("[name=age_band]");
-    return named?.value?.trim() || "";
+    const namedValue = coerceAgeBandValue(named?.value?.trim() || "");
+    if (namedValue) return namedValue;
+    try {
+      if (typeof window.buildPayload === "function") {
+        const payload = window.buildPayload();
+        const profile = payload && payload.profile ? payload.profile : null;
+        if (profile) {
+          const fromToday = coerceAgeBandValue(
+            String(profile.age_band || profile.age_today || ""),
+          );
+          if (fromToday) return fromToday;
+          const fromDob = ageBandFromDob(profile.dob || "");
+          if (fromDob) return fromDob;
+        }
+      }
+    } catch (_error) {
+      /* fall through */
+    }
+    const dob =
+      document.querySelector("[name=dob_date]")?.value?.trim() || "";
+    return ageBandFromDob(dob);
+  }
+
+  function coerceAgeBandValue(raw) {
+    const value = String(raw || "").trim();
+    if (/^(18|19|20|21|22|23\+)$/.test(value)) return value;
+    const years = Math.floor(Number(value));
+    if (!isFinite(years) || years < 1) return "";
+    if (years <= 18) return "18";
+    if (years === 19) return "19";
+    if (years === 20) return "20";
+    if (years === 21) return "21";
+    if (years === 22) return "22";
+    return "23+";
+  }
+
+  function ageBandFromDob(iso) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "";
+    const parts = iso.split("-").map(Number);
+    const birth = new Date(parts[0], parts[1] - 1, parts[2]);
+    if (Number.isNaN(birth.getTime())) return "";
+    const now = new Date();
+    let age = now.getFullYear() - birth.getFullYear();
+    const monthDiff = now.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) {
+      age -= 1;
+    }
+    return coerceAgeBandValue(String(age));
   }
 
   function demoContactFieldsValid() {
