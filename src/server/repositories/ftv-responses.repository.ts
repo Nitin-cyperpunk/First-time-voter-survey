@@ -106,7 +106,10 @@ async function directInsertFtv(input: {
     return { ok: false, code: "direct_insert_failed", error: first.error.message };
   }
 
-  const { referral_code: _ignored, ...withoutReferral } = row;
+  // Drop referral_code when the column is not yet migrated.
+  const withoutReferral = Object.fromEntries(
+    Object.entries(row).filter(([key]) => key !== "referral_code"),
+  );
   const second = await getSupabaseAdmin().from("ftv_responses").insert(withoutReferral);
   if (second.error) {
     return { ok: false, code: "direct_insert_failed", error: second.error.message };

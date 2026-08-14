@@ -287,6 +287,8 @@ export function RespondentsTable({ participants }: RespondentsTableProps) {
 
   useEffect(() => {
     pagination.setPage(1);
+    // Intentionally reset only when filters change; pagination object identity is unstable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setPage is stable enough for this reset
   }, [
     statusFilter,
     duplicateFilter,
@@ -294,7 +296,6 @@ export function RespondentsTable({ participants }: RespondentsTableProps) {
     acquisitionTypeFilter,
     sourceFilter,
     platformFilter,
-    pagination.setPage,
   ]);
 
   async function handleQcUpdate(outcome: "pass" | "fail") {

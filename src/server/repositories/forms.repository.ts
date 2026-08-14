@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { coerceFormExportSchema, parseFormExportSchemaFromHtml } from "@/lib/form-export";
+import { parseFormExportSchemaFromHtml } from "@/lib/form-export";
 import type { FormExportSchema } from "@/lib/form-export/types";
 import { loadBundledActiveForm, resolveActiveFormHtml } from "@/lib/forms/bundled-form-fallback";
 import { parseFormType, type FormType } from "@/lib/forms/types";

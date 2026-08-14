@@ -1,5 +1,4 @@
 import type {
-  DiscoveredQuestion,
   QuestionAnalyticsExport,
   QuestionInputType,
 } from "@/analytics/types";

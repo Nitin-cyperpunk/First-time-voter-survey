@@ -360,7 +360,6 @@ export async function registerParticipant(
       availability.message,
     );
   }
-  const resolved = availability.resolved;
   // Re-resolve at submit so race between blur and submit is covered by RPC too.
   const fresh = await resolveCityText({ cityRaw, stateLabel });
   if (

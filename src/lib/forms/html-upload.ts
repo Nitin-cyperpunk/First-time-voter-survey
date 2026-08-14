@@ -119,7 +119,8 @@ function looksLikeUtf16LeHtml(buf: Uint8Array): boolean {
   return nulOnOdd >= sample / 6 && /<!d|htm|<ht/i.test(ascii);
 }
 
-export function prepareUploadedFormHtml(html: string, _formType: FormType) {
+export function prepareUploadedFormHtml(html: string, _formType?: FormType) {
+  void _formType;
   return prepareRegistrationHtml(html);
 }
 

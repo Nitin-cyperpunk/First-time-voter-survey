@@ -103,7 +103,7 @@ export async function resolveCityText(input: {
   const admin = getSupabaseAdmin();
   const stateLabel = input.stateLabel?.trim() || null;
 
-  let query = admin
+  const query = admin
     .from("cities")
     .select("id, name, state, area_type, capacity, is_active, is_open, match_key")
     .eq("match_key", matchKey)
