@@ -114,6 +114,9 @@ export function parseAreaType(value: unknown): AreaType {
   return "urban";
 }
 
-export function quotaCellId(state: string, areaType: AreaType): string {
+export function quotaCellId(
+  state: string,
+  areaType: AreaType,
+): `${string}|urban` | `${string}|rural` {
   return `${state}|${areaType}`;
 }

@@ -182,10 +182,17 @@ export async function commitCityImport(input: {
 
   for (const row of input.preview.toUpdate) {
     if (!row.existingId) continue;
-    const patch: Record<string, unknown> = {
+    const patch: {
+      name: string;
+      state: string;
+      area_type: AreaType;
+      match_key: string;
+      updated_by: string | null;
+      capacity?: number;
+    } = {
       name: row.city,
       state: row.state,
-      area_type: row.areaType,
+      area_type: row.areaType as AreaType,
       match_key: cityMatchKey(row.city),
       updated_by: input.actorId ?? null,
     };
