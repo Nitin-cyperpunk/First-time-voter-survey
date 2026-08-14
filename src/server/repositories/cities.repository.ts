@@ -328,7 +328,8 @@ export async function countResponsesForCity(cityId: string): Promise<number> {
   const { count, error } = await getSupabaseAdmin()
     .from("screener_responses")
     .select("*", { count: "exact", head: true })
-    .eq("city_id", cityId);
+    .eq("city_id", cityId)
+    .is("deleted_at", null);
 
   if (error) throw error;
   return count ?? 0;

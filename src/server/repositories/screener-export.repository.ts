@@ -51,6 +51,7 @@ export async function listScreenerExportRows(leadIdsFilter?: string[]) {
     .select(
       "lead_id, answers, response_times, total_duration_sec, form_version, csv_row",
     )
+    .is("deleted_at", null)
     .order("submitted_at", { ascending: false });
 
   if (leadIdsFilter?.length) {

@@ -319,6 +319,7 @@ async function loadCityQuotaStats(cityIds: string[]): Promise<{
       .from("screener_responses")
       .select("city_id, submitted_at")
       .eq("completion_status", "Completed")
+      .is("deleted_at", null)
       .not("city_id", "is", null)
       .order("submitted_at", { ascending: true })
       .order("id", { ascending: true })
@@ -337,6 +338,7 @@ async function loadCityQuotaStats(cityIds: string[]): Promise<{
         .from("screener_responses")
         .select("city_id")
         .not("city_id", "is", null)
+        .is("deleted_at", null)
         .neq("completion_status", "Completed")
         .order("id", { ascending: true })
         .range(from, to),

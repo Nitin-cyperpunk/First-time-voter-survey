@@ -61,6 +61,9 @@ export type Database = {
           review_status: string;
           original_participant_lead_id: string | null;
           created_at: string;
+          deleted_at: string | null;
+          deleted_by: string | null;
+          delete_reason: string | null;
         },
         {
           lead_id?: string;
@@ -94,6 +97,9 @@ export type Database = {
           review_status?: string;
           original_participant_lead_id?: string | null;
           created_at?: string;
+          deleted_at?: string | null;
+          deleted_by?: string | null;
+          delete_reason?: string | null;
         }
       >;
       payouts: TableDefinition<
@@ -230,6 +236,9 @@ export type Database = {
           self_reported_area_type: string | null;
           city_raw: string | null;
           city_match_type: string | null;
+          deleted_at: string | null;
+          deleted_by: string | null;
+          delete_reason: string | null;
         },
         {
           id?: string;
@@ -253,6 +262,9 @@ export type Database = {
           self_reported_area_type?: string | null;
           city_raw?: string | null;
           city_match_type?: string | null;
+          deleted_at?: string | null;
+          deleted_by?: string | null;
+          delete_reason?: string | null;
         }
       >;
       cities: TableDefinition<
@@ -649,6 +661,9 @@ export type Database = {
           referral_code: string | null;
           payload: Json;
           created_at: string;
+          deleted_at: string | null;
+          deleted_by: string | null;
+          delete_reason: string | null;
         },
         {
           id?: number;
@@ -664,6 +679,9 @@ export type Database = {
           duration_seconds?: number | null;
           payload: Json;
           created_at?: string;
+          deleted_at?: string | null;
+          deleted_by?: string | null;
+          delete_reason?: string | null;
         },
         [
           {
@@ -707,6 +725,29 @@ export type Database = {
         };
         Relationships: [];
       };
+      ftv_answers_all: {
+        Row: {
+          respondent_id: string | null;
+          lead_id: string | null;
+          status: string | null;
+          created_at: string | null;
+          answer_order: number | null;
+          qid: string | null;
+          question: string | null;
+          question_type: string | null;
+          item: string | null;
+          item_code: number | null;
+          rank_position: number | null;
+          selection_order: number | null;
+          answer_code: number | null;
+          answer: string | null;
+          other_text: string | null;
+          answer_original: string | null;
+          answer_script: string | null;
+          spoken_language: string | null;
+        };
+        Relationships: [];
+      };
       ftv_respondents: {
         Row: {
           respondent_id: string | null;
@@ -722,6 +763,50 @@ export type Database = {
           terminated_at: string | null;
           duration_seconds: number | null;
           created_at: string | null;
+          name: string | null;
+          email: string | null;
+          phone: string | null;
+          area: string | null;
+          city: string | null;
+          age_band: string | null;
+          state_code: number | null;
+          state: string | null;
+          zip: string | null;
+          dob: string | null;
+          age_today: number | null;
+          age_at_poll: number | null;
+          age_at_qualifying_date: number | null;
+          gender_code: number | null;
+          gender: string | null;
+          relationship_code: number | null;
+          relationship_status: string | null;
+          state_match: boolean | null;
+          consent: string | null;
+          terms_accepted: boolean | null;
+          randomisation_seed: number | null;
+          order_q6_blocks: Json | null;
+          order_q6a: Json | null;
+          order_q6b: Json | null;
+          order_q14: Json | null;
+        };
+        Relationships: [];
+      };
+      ftv_respondents_all: {
+        Row: {
+          respondent_id: string | null;
+          lead_id: string | null;
+          city_id: string | null;
+          inbound_referral_code: string | null;
+          own_referral_code: string | null;
+          referred_by_lead_id: string | null;
+          survey_version: string | null;
+          status: string | null;
+          started_at: string | null;
+          completed_at: string | null;
+          terminated_at: string | null;
+          duration_seconds: number | null;
+          created_at: string | null;
+          deleted_at: string | null;
           name: string | null;
           email: string | null;
           phone: string | null;

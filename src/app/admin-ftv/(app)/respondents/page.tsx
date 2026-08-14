@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 
 import { listParticipants } from "@/server/repositories/admin.repository";
 import { ParticipantSearch } from "@/components/admin/participant-search";
@@ -8,6 +9,9 @@ import {
   type RespondentTableRow,
 } from "@/components/admin/respondents-table";
 import { formatAdminDateTime } from "@/lib/format-admin-datetime";
+import { getCurrentAdmin } from "@/lib/auth/admin-session";
+import { isSuperAdmin } from "@/lib/roles";
+import { adminPath } from "@/lib/admin-paths";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +20,11 @@ function formatDate(date: Date) {
 }
 
 export default async function RespondentsOpsPage() {
-  const participants = await listParticipants();
+  const [participants, admin] = await Promise.all([
+    listParticipants(),
+    getCurrentAdmin(),
+  ]);
+  const canDelete = Boolean(admin && isSuperAdmin(admin.role));
   const rows: RespondentTableRow[] = participants.map((participant) => ({
     leadId: participant.leadId,
     referralCode: participant.referralCode,
@@ -67,8 +75,16 @@ export default async function RespondentsOpsPage() {
               <p className="mb-1 text-xs font-medium text-plum-muted">
                 Response export
               </p>
-              <FtvExportButtons />
+              <FtvExportButtons canIncludeDeleted={canDelete} />
             </div>
+            {canDelete ? (
+              <Link
+                href={adminPath("/respondents/deleted")}
+                className="text-sm font-medium text-primary underline"
+              >
+                Deleted respondents
+              </Link>
+            ) : null}
           </div>
         </div>
       </div>
@@ -80,7 +96,7 @@ export default async function RespondentsOpsPage() {
           </div>
         }
       >
-        <RespondentsTable participants={rows} />
+        <RespondentsTable participants={rows} canDelete={canDelete} />
       </Suspense>
     </div>
   );

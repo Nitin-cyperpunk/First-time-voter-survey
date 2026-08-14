@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { isAdminAuthenticated } from "@/lib/auth/admin-session";
+import { getCurrentAdmin } from "@/lib/auth/admin-session";
+import { isSuperAdmin } from "@/lib/roles";
 import { listFtvExportBundle } from "@/server/repositories/ftv-export.repository";
 
 export const dynamic = "force-dynamic";
@@ -18,13 +19,20 @@ function parseLeadIdsParam(searchParams: URLSearchParams): string[] | undefined 
 }
 
 export async function GET(request: NextRequest) {
-  if (!(await isAdminAuthenticated())) {
+  const admin = await getCurrentAdmin();
+  if (!admin) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
+  const includeDeleted =
+    request.nextUrl.searchParams.get("include_deleted") === "1";
+  if (includeDeleted && !isSuperAdmin(admin.role)) {
+    return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   }
 
   try {
     const leadIds = parseLeadIdsParam(request.nextUrl.searchParams);
-    const bundle = await listFtvExportBundle(leadIds);
+    const bundle = await listFtvExportBundle(leadIds, { includeDeleted });
     return NextResponse.json(bundle);
   } catch (error) {
     console.error("GET /api/admin/ftv-responses/export failed:", error);

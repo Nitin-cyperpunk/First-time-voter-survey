@@ -62,6 +62,7 @@ async function loadUnmatchedScreenerRows(): Promise<ScreenerUnmatchedRow[]> {
     .select("lead_id, city_raw, submitted_at")
     .eq("city_match_type", "unmatched")
     .eq("completion_status", "Completed")
+    .is("deleted_at", null)
     .not("city_raw", "is", null)
     .order("submitted_at", { ascending: false })
     .limit(10000);
@@ -631,7 +632,8 @@ async function backfillResponses(input: {
     })
     .in("lead_id", input.leadIds)
     .eq("city_match_type", "unmatched")
-    .eq("completion_status", "Completed");
+    .eq("completion_status", "Completed")
+    .is("deleted_at", null);
 
   if (screenerError) throw screenerError;
 

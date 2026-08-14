@@ -105,6 +105,7 @@ export async function findByReferralCode(referralCode: string) {
     .from("participants")
     .select("*")
     .eq("referral_code", normalized)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (error) throw error;
@@ -134,6 +135,7 @@ export async function findByMobile(mobile: string) {
     .from("participants")
     .select("*")
     .eq("mobile", mobile.trim())
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (error) throw error;
@@ -146,6 +148,7 @@ export async function findByMobileAndDob(mobile: string, dob: string) {
     .select("*")
     .eq("mobile", mobile.trim())
     .eq("dob", dob)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (error) throw error;
@@ -157,6 +160,7 @@ export async function findParticipantByLeadId(leadId: string) {
     .from("participants")
     .select("*")
     .eq("lead_id", leadId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (error) throw error;
@@ -234,6 +238,7 @@ export async function searchParticipants(query: string) {
   const { data, error } = await getSupabaseAdmin()
     .from("participants")
     .select("*")
+    .is("deleted_at", null)
     .or(
       [
         `lead_id.ilike.${pattern}`,
@@ -253,7 +258,8 @@ export async function countParticipantsByIp(ipAddress: string) {
   const { count, error } = await getSupabaseAdmin()
     .from("participants")
     .select("*", { count: "exact", head: true })
-    .eq("ip_address", ipAddress);
+    .eq("ip_address", ipAddress)
+    .is("deleted_at", null);
 
   if (error) throw error;
   return count ?? 0;

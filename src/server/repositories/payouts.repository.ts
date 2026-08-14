@@ -143,6 +143,7 @@ export async function listPayouts(params: PayoutListParams) {
     .select(
       "lead_id, full_name, mobile, email, city, status, upi_id, referral_code, is_flagged_duplicate, duplicate_flag, duplicate_reason, ip_address, original_participant_lead_id, created_at, payouts(payment_status, payment_date)",
     )
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   if (error) throw error;

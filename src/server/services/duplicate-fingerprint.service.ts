@@ -19,6 +19,7 @@ async function findEarliestParticipantWithFingerprint(
     .select("lead_id")
     .eq("device_fingerprint", fingerprint)
     .neq("lead_id", currentLeadId)
+    .is("deleted_at", null)
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();

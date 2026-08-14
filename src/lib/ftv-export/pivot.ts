@@ -34,6 +34,7 @@ export type FtvRespondentRow = {
   terminated_at?: string | null;
   duration_seconds?: number | null;
   created_at?: string | null;
+  deleted_at?: string | null;
   name?: string | null;
   email?: string | null;
   phone?: string | null;
