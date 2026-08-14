@@ -21,6 +21,7 @@ import {
   TablePagination,
   type BulkAction,
 } from "@/components/admin/bulk-selection";
+import { adminPath } from "@/lib/admin-paths";
 import { buildReferralLink } from "@/lib/referral-code";
 import { dismissToast, toastError, toastLoading, toastSuccess } from "@/lib/toast";
 import {
@@ -786,7 +787,7 @@ export function RespondentsTable({ participants }: RespondentsTableProps) {
                 <SectionTitle>Actions</SectionTitle>
                 <Button asChild size="sm" variant="outline" className="w-full">
                   <Link
-                    href={`/respondents/${encodeURIComponent(selected.leadId)}`}
+                    href={adminPath(`/respondents/${encodeURIComponent(selected.leadId)}`)}
                   >
                     View full record
                   </Link>

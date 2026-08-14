@@ -22,6 +22,7 @@ import {
   formatDuration,
   formatResponseTime,
 } from "@/lib/response-storage";
+import { adminPath } from "@/lib/admin-paths";
 import { formatAdminDateTime } from "@/lib/format-admin-datetime";
 import { toastError } from "@/lib/toast";
 import type { ScreenerSchema } from "@/types/domain";
@@ -166,7 +167,7 @@ export function ParticipantDetail({ leadId }: ParticipantDetailProps) {
     return (
       <div className="space-y-4">
         <Button asChild variant="outline" size="sm">
-          <Link href="/respondents">
+          <Link href={adminPath("/respondents")}>
             <ArrowLeft className="size-4" />
             Back to respondents
           </Link>
@@ -195,7 +196,7 @@ export function ParticipantDetail({ leadId }: ParticipantDetailProps) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Button asChild variant="outline" size="sm">
-          <Link href="/respondents">
+          <Link href={adminPath("/respondents")}>
             <ArrowLeft className="size-4" />
             Back to respondents
           </Link>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
 
+import { adminPath } from "@/lib/admin-paths";
 import { Input } from "@/components/ui/input";
 
 type SearchResult = {
@@ -66,7 +67,7 @@ export function ParticipantSearch() {
               {results.map((result) => (
                 <li key={result.leadId}>
                   <Link
-                    href={`/respondents/${encodeURIComponent(result.leadId)}`}
+                    href={adminPath(`/respondents/${encodeURIComponent(result.leadId)}`)}
                     className="block px-4 py-2.5 text-sm hover:bg-muted/60"
                   >
                     <span className="font-medium">{result.fullName}</span>

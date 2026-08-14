@@ -1270,17 +1270,19 @@
     return ageBandFromDob(dob);
   }
 
+  function formatAgeYears(n) {
+    const v = Math.round(Number(n) * 100) / 100;
+    return Number.isFinite(v) && v >= 1 ? String(v) : "";
+  }
+
   function coerceAgeBandValue(raw) {
     const value = String(raw || "").trim();
     if (/^(18|19|20|21|22|23\+)$/.test(value)) return value;
-    const years = Math.floor(Number(value));
-    if (!isFinite(years) || years < 1) return "";
-    if (years <= 18) return "18";
-    if (years === 19) return "19";
-    if (years === 20) return "20";
-    if (years === 21) return "21";
-    if (years === 22) return "22";
-    return "23+";
+    const numeric = Number(value);
+    if (Number.isFinite(numeric) && numeric >= 1 && numeric <= 120) {
+      return formatAgeYears(numeric);
+    }
+    return "";
   }
 
   function ageBandFromDob(iso) {
@@ -1288,13 +1290,8 @@
     const parts = iso.split("-").map(Number);
     const birth = new Date(parts[0], parts[1] - 1, parts[2]);
     if (Number.isNaN(birth.getTime())) return "";
-    const now = new Date();
-    let age = now.getFullYear() - birth.getFullYear();
-    const monthDiff = now.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) {
-      age -= 1;
-    }
-    return coerceAgeBandValue(String(age));
+    const age = (Date.now() - birth.getTime()) / 31557600000;
+    return formatAgeYears(age);
   }
 
   function demoContactFieldsValid() {

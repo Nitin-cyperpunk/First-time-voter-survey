@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { AGE_BAND_VALUES, coerceAgeBand } from "@/lib/study-config/gates";
+import { coerceAgeBand, parseAgeBand } from "@/lib/study-config/gates";
 import {
   isFutureDob,
   isValidDobFormat,
@@ -86,9 +86,12 @@ export const launchRegistrationSchema = z.preprocess(
     fullName: z.string().trim().max(120, "Name is too long").optional().default(""),
     mobile: optionalPhoneSchema.optional().default(""),
     dob: optionalDobSchema.optional().default(""),
-    age_band: z.enum(AGE_BAND_VALUES, {
-      message: "Please select your age.",
-    }),
+    age_band: z
+      .string()
+      .trim()
+      .refine((value) => parseAgeBand(value) !== null, {
+        message: "Please select your age.",
+      }),
   city: z
     .string()
     .trim()
