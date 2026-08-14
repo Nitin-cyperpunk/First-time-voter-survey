@@ -20,7 +20,6 @@ import type {
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   countQualifiedCompletions,
-  countResponsesForCity,
   listCities,
   listCitiesWithCapacity,
   type CityRecord,
@@ -85,24 +84,14 @@ export async function buildQuotaSnapshot(): Promise<QuotaSnapshot> {
     deltas.map((d) => [`${d.state}|${parseAreaType(d.area_type)}`, d.delta] as const),
   );
 
-  const globalAchieved = await countQualified({});
-  const achievedUrban = await countQualified({ areaType: "urban" });
-  const achievedRural = await countQualified({ areaType: "rural" });
-
-  const cityAchieved = new Map<string, number>();
-  await Promise.all(
-    cities.map(async (city) => {
-      cityAchieved.set(city.id, await countQualified({ cityId: city.id }));
-    }),
-  );
-
-  const lastCompletionByCity = await loadLastCompletionDays(cities.map((c) => c.id));
-  const hasResponses = new Map<string, boolean>();
-  await Promise.all(
-    cities.map(async (city) => {
-      hasResponses.set(city.id, (await countResponsesForCity(city.id)) > 0);
-    }),
-  );
+  const [globalAchieved, achievedUrban, achievedRural, cityStats] =
+    await Promise.all([
+      countQualified({}),
+      countQualified({ areaType: "urban" }),
+      countQualified({ areaType: "rural" }),
+      loadCityQuotaStats(cities.map((c) => c.id)),
+    ]);
+  const { cityAchieved, lastCompletionByCity, hasResponses } = cityStats;
 
   const stateRows: QuotaStateRow[] = [];
   for (const state of activeStates) {
@@ -276,27 +265,98 @@ function pct(achieved: number, cap: number): number {
   return Math.min(100, Math.round((achieved / cap) * 1000) / 10);
 }
 
-async function loadLastCompletionDays(cityIds: string[]): Promise<Map<string, number | null>> {
-  const out = new Map<string, number | null>();
-  if (cityIds.length === 0) return out;
-  const { data, error } = await getSupabaseAdmin()
-    .from("screener_responses")
-    .select("city_id, submitted_at")
-    .eq("completion_status", "Completed")
-    .in("city_id", cityIds)
-    .order("submitted_at", { ascending: false });
-  if (error) throw error;
-  const latest = new Map<string, string>();
-  for (const row of data ?? []) {
-    if (!row.city_id || latest.has(row.city_id)) continue;
-    latest.set(row.city_id, row.submitted_at);
-  }
-  const now = Date.now();
-  for (const id of cityIds) {
-    const iso = latest.get(id);
-    out.set(id, iso ? Math.floor((now - new Date(iso).getTime()) / 86_400_000) : null);
+type ScreenerCityRow = {
+  city_id: string | null;
+  submitted_at?: string;
+};
+
+const PAGE_SIZE = 1000;
+
+async function paginateScreenerRows(
+  build: (from: number, to: number) => PromiseLike<{
+    data: unknown;
+    error: unknown;
+  }>,
+): Promise<ScreenerCityRow[]> {
+  const out: ScreenerCityRow[] = [];
+  let from = 0;
+  for (;;) {
+    const { data, error } = await build(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    const rows = (data ?? []) as ScreenerCityRow[];
+    out.push(...rows);
+    if (rows.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
   }
   return out;
+}
+
+/** One paginated scan instead of N RPCs + a giant `.in()` (PostgREST 400 / timeouts). */
+async function loadCityQuotaStats(cityIds: string[]): Promise<{
+  cityAchieved: Map<string, number>;
+  lastCompletionByCity: Map<string, number | null>;
+  hasResponses: Map<string, boolean>;
+}> {
+  const cityAchieved = new Map<string, number>();
+  const lastIso = new Map<string, string>();
+  const hasResponses = new Map<string, boolean>();
+  for (const id of cityIds) {
+    cityAchieved.set(id, 0);
+    hasResponses.set(id, false);
+  }
+  if (cityIds.length === 0) {
+    return {
+      cityAchieved,
+      lastCompletionByCity: new Map(),
+      hasResponses,
+    };
+  }
+
+  const admin = getSupabaseAdmin();
+  const completes = await paginateScreenerRows((from, to) =>
+    admin
+      .from("screener_responses")
+      .select("city_id, submitted_at")
+      .eq("completion_status", "Completed")
+      .not("city_id", "is", null)
+      .order("submitted_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to),
+  );
+  for (const row of completes) {
+    if (!row.city_id) continue;
+    cityAchieved.set(row.city_id, (cityAchieved.get(row.city_id) ?? 0) + 1);
+    if (row.submitted_at) lastIso.set(row.city_id, row.submitted_at);
+    hasResponses.set(row.city_id, true);
+  }
+
+  try {
+    const otherResponses = await paginateScreenerRows((from, to) =>
+      admin
+        .from("screener_responses")
+        .select("city_id")
+        .not("city_id", "is", null)
+        .neq("completion_status", "Completed")
+        .order("id", { ascending: true })
+        .range(from, to),
+    );
+    for (const row of otherResponses) {
+      if (row.city_id) hasResponses.set(row.city_id, true);
+    }
+  } catch (error) {
+    console.warn("City has-responses scan skipped:", error);
+  }
+
+  const now = Date.now();
+  const lastCompletionByCity = new Map<string, number | null>();
+  for (const id of cityIds) {
+    const iso = lastIso.get(id);
+    lastCompletionByCity.set(
+      id,
+      iso ? Math.floor((now - new Date(iso).getTime()) / 86_400_000) : null,
+    );
+  }
+  return { cityAchieved, lastCompletionByCity, hasResponses };
 }
 
 async function listReallocationAudit(): Promise<QuotaSnapshot["reallocations"]> {

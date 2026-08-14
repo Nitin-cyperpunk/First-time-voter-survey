@@ -1,13 +1,20 @@
 "use client";
 
+import { ChevronDownIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { UnmatchedCitiesPanel } from "@/components/admin/unmatched-cities-panel";
-import type { AreaType } from "@/lib/india-states";
-import type { QuotaSnapshot, QuotaStateRow } from "@/lib/quota/types";
+import {
+  INDIA_REGIONS,
+  INDIA_STATES,
+  INDIA_UTS,
+  quotaCellId,
+  type AreaType,
+} from "@/lib/india-states";
+import type { QuotaCellRow, QuotaSnapshot, QuotaStateRow } from "@/lib/quota/types";
 import type {
   IgnoredUnmatchedRow,
   UnmatchedCityRow,
@@ -39,6 +46,10 @@ export function CityTargetsPanel({
   const [editAlloc, setEditAlloc] = useState<Record<string, string>>({});
   const [editUrbanPct, setEditUrbanPct] = useState<Record<string, string>>({});
   const [editBuffer, setEditBuffer] = useState<Record<string, string>>({});
+  const [editCapacity, setEditCapacity] = useState<Record<string, string>>({});
+  const [expandedState, setExpandedState] = useState<string | null>(null);
+  const [expandAllStates, setExpandAllStates] = useState(false);
+  const [cityFilter, setCityFilter] = useState("");
   const [reFrom, setReFrom] = useState("");
   const [reTo, setReTo] = useState("");
   const [reAmount, setReAmount] = useState(1);
@@ -76,7 +87,14 @@ export function CityTargetsPanel({
     setEditAlloc({});
     setEditUrbanPct({});
     setEditBuffer({});
+    setEditCapacity({});
     onCapacityHintChange?.(data.stateAllocationSum);
+    setExpandedState((current) => {
+      if (current && data.states.some((row) => row.state === current)) {
+        return current;
+      }
+      return data.states[0]?.state ?? null;
+    });
   }, [onCapacityHintChange]);
 
   useEffect(() => {
@@ -86,6 +104,37 @@ export function CityTargetsPanel({
       })
       .finally(() => setLoading(false));
   }, [load]);
+
+  useEffect(() => {
+    if (!payload?.states.length) return;
+    setExpandedState((current) => {
+      if (current && payload.states.some((row) => row.state === current)) {
+        return current;
+      }
+      return payload.states[0]?.state ?? null;
+    });
+  }, [payload]);
+
+  const displayStates = useMemo(
+    () => (payload ? allIndiaStateRows(payload) : []),
+    [payload],
+  );
+
+  useEffect(() => {
+    const query = cityFilter.trim().toLowerCase();
+    if (!query || displayStates.length === 0) return;
+    const match = displayStates.find(
+      (row) =>
+        row.state.toLowerCase().includes(query) ||
+        [...row.urban.cities, ...row.rural.cities].some((city) =>
+          city.name.toLowerCase().includes(query),
+        ),
+    );
+    if (match) {
+      setExpandAllStates(false);
+      setExpandedState(match.state);
+    }
+  }, [cityFilter, displayStates]);
 
   const cellOptions = useMemo(() => {
     if (!payload) return [];
@@ -222,6 +271,26 @@ export function CityTargetsPanel({
     } catch (error) {
       dismissToast(loadingId);
       toastError(error instanceof Error ? error.message : "Failed to save buffer.");
+    }
+  }
+
+  async function saveCapacity(cityId: string, current: number) {
+    const next = Math.max(0, Number(editCapacity[cityId] ?? current) || 0);
+    const loadingId = toastLoading("Saving capacity…");
+    try {
+      const response = await fetch(`/api/admin/cities/${cityId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ capacity: next }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error ?? "Failed to save capacity.");
+      await load();
+      dismissToast(loadingId);
+      toastSuccess("Closes at saved.");
+    } catch (error) {
+      dismissToast(loadingId);
+      toastError(error instanceof Error ? error.message : "Failed to save capacity.");
     }
   }
 
@@ -412,6 +481,97 @@ export function CityTargetsPanel({
         ) : null}
       </div>
 
+      {loading ? (
+        <p className="mt-6 text-sm text-text-muted">Loading City Targets…</p>
+      ) : !payload ? (
+        <p className="mt-6 text-sm text-text-muted">
+          Could not load City Targets. Retry or check the cities API error.
+        </p>
+      ) : (
+        <>
+          <div className="mt-6 flex flex-wrap items-end justify-between gap-3">
+            <div className="min-w-[220px] flex-1">
+              <p className="text-sm text-plum-muted">
+                All {INDIA_REGIONS.length} India states and UTs are listed (
+                {INDIA_STATES.length} states · {INDIA_UTS.length} UTs).{" "}
+                {payload.states.length} currently have cities — quota is split only
+                across those. Click a card to view cities.
+              </p>
+              <label className="mt-2 block">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-plum-faint">
+                  Filter states or cities
+                </span>
+                <Input
+                  className="mt-1 h-9"
+                  placeholder="Search by state or city name…"
+                  value={cityFilter}
+                  onChange={(event) => setCityFilter(event.target.value)}
+                />
+              </label>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant={expandAllStates ? "default" : "outline"}
+              onClick={() => {
+                setExpandAllStates((current) => !current);
+                if (!expandAllStates) {
+                  setExpandedState(
+                    payload.states[0]?.state ?? INDIA_REGIONS[0],
+                  );
+                }
+              }}
+            >
+              {expandAllStates ? "Accordion view" : "Expand all states"}
+            </Button>
+          </div>
+          {displayStates.map((row) => (
+            <StateBlock
+              key={row.state}
+              row={row}
+              globalUrbanPct={payload.urbanPct}
+              expanded={expandAllStates || expandedState === row.state}
+              cityFilter={cityFilter.trim().toLowerCase()}
+              editAlloc={editAlloc[row.state] ?? String(row.allocation)}
+              editUrbanPct={editUrbanPct[row.state] ?? String(row.urbanPct)}
+              editBuffer={editBuffer}
+              editCapacity={editCapacity}
+              onToggleExpand={() => {
+                setExpandAllStates(false);
+                setExpandedState(row.state);
+              }}
+              onAllocChange={(value) =>
+                setEditAlloc((current) => ({ ...current, [row.state]: value }))
+              }
+              onUrbanPctChange={(value) =>
+                setEditUrbanPct((current) => ({ ...current, [row.state]: value }))
+              }
+              onBufferChange={(cityId, value) =>
+                setEditBuffer((current) => ({ ...current, [cityId]: value }))
+              }
+              onCapacityChange={(cityId, value) =>
+                setEditCapacity((current) => ({ ...current, [cityId]: value }))
+              }
+              onSaveQuota={() => void saveStateQuota(row)}
+              onSaveBuffer={(cityId, current) => void saveBuffer(cityId, current)}
+              onSaveCapacity={(cityId, current) => void saveCapacity(cityId, current)}
+              onToggleOpen={(cityId, isOpen) =>
+                void patchCity(cityId, { isOpen }, isOpen ? "City opened." : "City closed.")
+              }
+              onToggleActive={(cityId, isActive) =>
+                void patchCity(
+                  cityId,
+                  { isActive },
+                  isActive ? "City activated." : "City deactivated. Existing responses were kept.",
+                )
+              }
+              onDelete={(cityId) => void removeCity(cityId)}
+              onRecalculate={(area) => void recalculate(row.state, area)}
+            />
+          ))}
+        </>
+      )}
+
       <UnmatchedCitiesPanel
         unmatched={payload?.unmatchedCities ?? []}
         ignored={payload?.ignoredUnmatched ?? []}
@@ -420,48 +580,6 @@ export function CityTargetsPanel({
         cities={configCityOptions}
         onRefresh={load}
       />
-
-      {loading ? (
-        <p className="mt-6 text-sm text-text-muted">Loading City Targets…</p>
-      ) : (payload?.states.length ?? 0) === 0 ? (
-        <p className="mt-6 text-sm text-text-muted">
-          No states yet. Import a city file to start a quota cell.
-        </p>
-      ) : (
-        payload?.states.map((row) => (
-          <StateBlock
-            key={row.state}
-            row={row}
-            globalUrbanPct={payload.urbanPct}
-            editAlloc={editAlloc[row.state] ?? String(row.allocation)}
-            editUrbanPct={editUrbanPct[row.state] ?? String(row.urbanPct)}
-            editBuffer={editBuffer}
-            onAllocChange={(value) =>
-              setEditAlloc((current) => ({ ...current, [row.state]: value }))
-            }
-            onUrbanPctChange={(value) =>
-              setEditUrbanPct((current) => ({ ...current, [row.state]: value }))
-            }
-            onBufferChange={(cityId, value) =>
-              setEditBuffer((current) => ({ ...current, [cityId]: value }))
-            }
-            onSaveQuota={() => void saveStateQuota(row)}
-            onSaveBuffer={(cityId, current) => void saveBuffer(cityId, current)}
-            onToggleOpen={(cityId, isOpen) =>
-              void patchCity(cityId, { isOpen }, isOpen ? "City opened." : "City closed.")
-            }
-            onToggleActive={(cityId, isActive) =>
-              void patchCity(
-                cityId,
-                { isActive },
-                isActive ? "City activated." : "City deactivated. Existing responses were kept.",
-              )
-            }
-            onDelete={(cityId) => void removeCity(cityId)}
-            onRecalculate={(area) => void recalculate(row.state, area)}
-          />
-        ))
-      )}
 
       <div className="mt-8 rounded-[12px] border border-border p-4">
         <h4 className="text-sm font-semibold text-foreground">Soft reallocation</h4>
@@ -537,17 +655,71 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
+const UT_SET = new Set<string>(INDIA_UTS);
+
+function isUnionTerritory(state: string): boolean {
+  return UT_SET.has(state);
+}
+
+function emptyCell(state: string, areaType: AreaType): QuotaCellRow {
+  return {
+    state,
+    areaType,
+    cellId: quotaCellId(state, areaType),
+    allocation: 0,
+    delta: 0,
+    achieved: 0,
+    remaining: 0,
+    pctFull: 0,
+    closesAtSum: 0,
+    daysSinceLastCompletion: null,
+    cities: [],
+  };
+}
+
+function emptyStateRow(state: string, urbanPct: number): QuotaStateRow {
+  return {
+    state,
+    allocation: 0,
+    allocationManual: false,
+    urbanPct,
+    urbanPctManual: false,
+    achieved: 0,
+    remaining: 0,
+    pctFull: 0,
+    urban: emptyCell(state, "urban"),
+    rural: emptyCell(state, "rural"),
+  };
+}
+
+function allIndiaStateRows(payload: SnapshotPayload): QuotaStateRow[] {
+  const byState = new Map(payload.states.map((row) => [row.state, row]));
+  const listed = INDIA_REGIONS.map(
+    (region) => byState.get(region) ?? emptyStateRow(region, payload.urbanPct),
+  );
+  const extras = payload.states.filter(
+    (row) => !(INDIA_REGIONS as readonly string[]).includes(row.state),
+  );
+  return [...listed, ...extras];
+}
+
 function StateBlock({
   row,
   globalUrbanPct,
+  expanded,
+  cityFilter,
   editAlloc,
   editUrbanPct,
   editBuffer,
+  editCapacity,
+  onToggleExpand,
   onAllocChange,
   onUrbanPctChange,
   onSaveQuota,
   onSaveBuffer,
+  onSaveCapacity,
   onBufferChange,
+  onCapacityChange,
   onToggleOpen,
   onToggleActive,
   onDelete,
@@ -555,14 +727,20 @@ function StateBlock({
 }: {
   row: QuotaStateRow;
   globalUrbanPct: number;
+  expanded: boolean;
+  cityFilter: string;
   editAlloc: string;
   editUrbanPct: string;
   editBuffer: Record<string, string>;
+  editCapacity: Record<string, string>;
+  onToggleExpand: () => void;
   onAllocChange: (value: string) => void;
   onUrbanPctChange: (value: string) => void;
   onSaveQuota: () => void;
   onSaveBuffer: (cityId: string, current: number) => void;
+  onSaveCapacity: (cityId: string, current: number) => void;
   onBufferChange: (cityId: string, value: string) => void;
+  onCapacityChange: (cityId: string, value: string) => void;
   onToggleOpen: (cityId: string, isOpen: boolean) => void;
   onToggleActive: (cityId: string, isActive: boolean) => void;
   onDelete: (cityId: string) => void;
@@ -574,72 +752,169 @@ function StateBlock({
       : `${row.urbanPct}/${100 - row.urbanPct}`;
   const dirty =
     Number(editAlloc) !== row.allocation || Number(editUrbanPct) !== row.urbanPct;
+  const cityCount = row.urban.cities.length + row.rural.cities.length;
+  const allCities = [...row.urban.cities, ...row.rural.cities];
+  const cityPreview = allCities
+    .slice(0, 6)
+    .map((city) => city.name)
+    .join(", ");
+  const matchesFilter =
+    !cityFilter ||
+    row.state.toLowerCase().includes(cityFilter) ||
+    [...row.urban.cities, ...row.rural.cities].some((city) =>
+      city.name.toLowerCase().includes(cityFilter),
+    );
+
+  if (cityFilter && !matchesFilter) {
+    return null;
+  }
 
   return (
-    <div className="mt-6 rounded-[12px] border border-border p-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h4 className="text-sm font-semibold text-foreground">{row.state}</h4>
+    <div
+      className={`mt-4 rounded-[12px] border p-4 transition-colors ${
+        expanded ? "border-primary/40 bg-card" : "border-border bg-accent-soft/30"
+      }`}
+    >
+      <button
+        type="button"
+        className="flex w-full cursor-pointer items-start justify-between gap-3 text-left"
+        aria-expanded={expanded}
+        onClick={onToggleExpand}
+      >
+        <div className="min-w-0 flex-1">
+          <h4 className="text-sm font-semibold text-foreground">
+            {row.state}
+            {isUnionTerritory(row.state) ? (
+              <span className="ml-2 text-[10px] font-semibold uppercase tracking-[0.06em] text-plum-faint">
+                UT
+              </span>
+            ) : null}
+          </h4>
           <p className="mt-1 text-xs text-plum-muted">
-            {row.achieved}/{row.allocation} · {row.pctFull}% · urban split {balance}
-            {row.urbanPctManual ? " (override)" : ` (global ${globalUrbanPct}%)`}
-            {row.allocationManual ? " · alloc override" : " · equal split"}
+            {cityCount === 0
+              ? "No cities imported yet · not in quota split"
+              : `${row.achieved}/${row.allocation} · ${row.pctFull}% full · ${cityCount} ${
+                  cityCount === 1 ? "city" : "cities"
+                } · urban split ${balance}${
+                  row.urbanPctManual ? " (override)" : ` (global ${globalUrbanPct}%)`
+                }${row.allocationManual ? " · alloc override" : " · equal split"}`}
           </p>
+          {!expanded && cityCount > 0 ? (
+            <p className="mt-1 text-[11px] text-text-muted">
+              Urban {row.urban.achieved}/{row.urban.allocation} · Rural{" "}
+              {row.rural.achieved}/{row.rural.allocation}
+              {cityPreview ? (
+                <>
+                  {" "}
+                  · {cityPreview}
+                  {cityCount > 6 ? ` … +${cityCount - 6} more` : ""}
+                </>
+              ) : null}
+            </p>
+          ) : null}
+          {!expanded ? (
+            <p className="mt-1 text-[11px] font-medium text-primary">
+              {cityCount > 0
+                ? `Click to view ${cityCount} ${cityCount === 1 ? "city" : "cities"}`
+                : "Click to open this state/UT"}
+            </p>
+          ) : null}
         </div>
-        <div className="flex flex-wrap items-end gap-2">
-          <label className="space-y-1">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-plum-faint">
-              Allocation
-            </span>
-            <Input
-              type="number"
-              min={0}
-              className="h-9 w-24"
-              value={editAlloc}
-              onChange={(event) => onAllocChange(event.target.value)}
-            />
-          </label>
-          <label className="space-y-1">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-plum-faint">
-              Urban %
-            </span>
-            <Input
-              type="number"
-              min={0}
-              max={100}
-              className="h-9 w-20"
-              value={editUrbanPct}
-              onChange={(event) => onUrbanPctChange(event.target.value)}
-            />
-          </label>
-          <Button type="button" size="sm" variant={dirty ? "default" : "outline"} onClick={onSaveQuota}>
-            Save quota
-          </Button>
-        </div>
-      </div>
+        <ChevronDownIcon
+          className={`mt-0.5 h-5 w-5 shrink-0 text-plum-muted transition-transform ${
+            expanded ? "rotate-180" : ""
+          }`}
+          aria-hidden
+        />
+      </button>
 
-      <CellTable
-        title="Urban"
-        cell={row.urban}
-        editBuffer={editBuffer}
-        onBufferChange={onBufferChange}
-        onSaveBuffer={onSaveBuffer}
-        onToggleOpen={onToggleOpen}
-        onToggleActive={onToggleActive}
-        onDelete={onDelete}
-        onRecalculate={() => onRecalculate("urban")}
-      />
-      <CellTable
-        title="Rural"
-        cell={row.rural}
-        editBuffer={editBuffer}
-        onBufferChange={onBufferChange}
-        onSaveBuffer={onSaveBuffer}
-        onToggleOpen={onToggleOpen}
-        onToggleActive={onToggleActive}
-        onDelete={onDelete}
-        onRecalculate={() => onRecalculate("rural")}
-      />
+      {expanded ? (
+        <div className="mt-4 border-t border-border/70 pt-4">
+          {cityCount === 0 ? (
+            <p className="text-sm text-plum-muted">
+              No cities for {row.state} yet. Import a city file or resolve an
+              unmatched city into this region to open its quota cell.
+            </p>
+          ) : (
+            <>
+          <div
+            className="flex flex-wrap items-end justify-between gap-3"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <p className="text-xs text-plum-muted">
+              Edit allocation, urban split, and city targets for this state.
+            </p>
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="space-y-1">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-plum-faint">
+                  Allocation
+                </span>
+                <Input
+                  type="number"
+                  min={0}
+                  className="h-9 w-24"
+                  value={editAlloc}
+                  onChange={(event) => onAllocChange(event.target.value)}
+                />
+              </label>
+              <label className="space-y-1">
+                <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-plum-faint">
+                  Urban %
+                </span>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  className="h-9 w-20"
+                  value={editUrbanPct}
+                  onChange={(event) => onUrbanPctChange(event.target.value)}
+                />
+              </label>
+              <Button
+                type="button"
+                size="sm"
+                variant={dirty ? "default" : "outline"}
+                onClick={onSaveQuota}
+              >
+                Save quota
+              </Button>
+            </div>
+          </div>
+
+          <CellTable
+            title="Urban"
+            cell={row.urban}
+            cityFilter={cityFilter}
+            editBuffer={editBuffer}
+            editCapacity={editCapacity}
+            onBufferChange={onBufferChange}
+            onCapacityChange={onCapacityChange}
+            onSaveBuffer={onSaveBuffer}
+            onSaveCapacity={onSaveCapacity}
+            onToggleOpen={onToggleOpen}
+            onToggleActive={onToggleActive}
+            onDelete={onDelete}
+            onRecalculate={() => onRecalculate("urban")}
+          />
+          <CellTable
+            title="Rural"
+            cell={row.rural}
+            cityFilter={cityFilter}
+            editBuffer={editBuffer}
+            editCapacity={editCapacity}
+            onBufferChange={onBufferChange}
+            onCapacityChange={onCapacityChange}
+            onSaveBuffer={onSaveBuffer}
+            onSaveCapacity={onSaveCapacity}
+            onToggleOpen={onToggleOpen}
+            onToggleActive={onToggleActive}
+            onDelete={onDelete}
+            onRecalculate={() => onRecalculate("rural")}
+          />
+            </>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -647,9 +922,13 @@ function StateBlock({
 function CellTable({
   title,
   cell,
+  cityFilter,
   editBuffer,
+  editCapacity,
   onBufferChange,
+  onCapacityChange,
   onSaveBuffer,
+  onSaveCapacity,
   onToggleOpen,
   onToggleActive,
   onDelete,
@@ -657,14 +936,22 @@ function CellTable({
 }: {
   title: string;
   cell: QuotaSnapshot["states"][number]["urban"];
+  cityFilter: string;
   editBuffer: Record<string, string>;
+  editCapacity: Record<string, string>;
   onBufferChange: (cityId: string, value: string) => void;
+  onCapacityChange: (cityId: string, value: string) => void;
   onSaveBuffer: (cityId: string, current: number) => void;
+  onSaveCapacity: (cityId: string, current: number) => void;
   onToggleOpen: (cityId: string, isOpen: boolean) => void;
   onToggleActive: (cityId: string, isActive: boolean) => void;
   onDelete: (cityId: string) => void;
   onRecalculate: () => void;
 }) {
+  const cities = cityFilter
+    ? cell.cities.filter((city) => city.name.toLowerCase().includes(cityFilter))
+    : cell.cities;
+
   return (
     <div className="mt-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -695,14 +982,16 @@ function CellTable({
             </tr>
           </thead>
           <tbody>
-            {cell.cities.length === 0 ? (
+            {cities.length === 0 ? (
               <tr>
                 <td colSpan={9} className="py-3 text-text-muted">
-                  No cities in this cell.
+                  {cell.cities.length === 0
+                    ? "No cities in this cell."
+                    : "No cities match the filter in this cell."}
                 </td>
               </tr>
             ) : (
-              cell.cities.map((city) => (
+              cities.map((city) => (
                 <tr key={city.id} className="border-b border-border/70">
                   <td className="py-3 pr-3 font-medium text-text-primary">{city.name}</td>
                   <td className="py-3 pr-3 font-mono tabular-nums">{city.target}</td>
@@ -730,7 +1019,30 @@ function CellTable({
                       </Button>
                     </div>
                   </td>
-                  <td className="py-3 pr-3 font-mono tabular-nums">{city.closesAt}</td>
+                  <td className="py-3 pr-3">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={0}
+                        className="h-9 w-20"
+                        value={editCapacity[city.id] ?? String(city.closesAt)}
+                        onChange={(event) => onCapacityChange(city.id, event.target.value)}
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={
+                          editCapacity[city.id] !== undefined &&
+                          Number(editCapacity[city.id]) !== city.closesAt
+                            ? "default"
+                            : "outline"
+                        }
+                        onClick={() => onSaveCapacity(city.id, city.closesAt)}
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  </td>
                   <td className="py-3 pr-3 font-mono tabular-nums">{city.achieved}</td>
                   <td className="py-3 pr-3 font-mono tabular-nums">{city.remaining}</td>
                   <td className="py-3 pr-3 font-mono tabular-nums">{city.pctFull}%</td>

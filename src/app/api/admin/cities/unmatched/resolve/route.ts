@@ -46,7 +46,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, preview });
   } catch (error) {
     console.error("POST /api/admin/cities/unmatched/resolve failed:", error);
-    const message = error instanceof Error ? error.message : "Resolve failed.";
+    const message =
+      error instanceof Error
+        ? error.message
+        : error && typeof error === "object" && "message" in error
+          ? String((error as { message?: string }).message ?? "Resolve failed.")
+          : "Resolve failed.";
     if (message === "OVER_QUOTA_DECISION_REQUIRED") {
       return NextResponse.json(
         {

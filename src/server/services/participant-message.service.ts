@@ -37,17 +37,18 @@ function resolveTemplateBodyForKey(templateKey: string): string {
 export async function renderParticipantMessage(
   participant: Participant,
   templateKey: string,
-  options?: { platform?: ReferralPlatform },
+  options?: { platform?: ReferralPlatform; baseUrl?: string },
 ): Promise<{ message: string; instagramDmUrl: string }> {
   if (!isAllowedTemplateKey(templateKey)) {
     throw new Error("INVALID_TEMPLATE_KEY");
   }
 
   const referralCode = normalizeReferralCode(participant.referralCode);
-  const baseReferralLink = buildReferralLink(referralCode);
+  const linkOptions = options?.baseUrl ? { baseUrl: options.baseUrl } : undefined;
+  const baseReferralLink = buildReferralLink(referralCode, linkOptions);
   const referralLink =
     options?.platform && REFERRAL_PLATFORMS.has(options.platform)
-      ? buildTrackedReferralLink(referralCode, options.platform)
+      ? buildTrackedReferralLink(referralCode, options.platform, linkOptions)
       : baseReferralLink;
 
   const context = buildParticipantTemplateContext({
@@ -70,23 +71,26 @@ export async function renderParticipantMessage(
   };
 }
 
-export async function buildRegistrationThankYouMessages(participant: Participant) {
+export async function buildRegistrationThankYouMessages(
+  participant: Participant,
+  options?: { baseUrl?: string },
+) {
   const [instagram_referral, whatsapp_referral, not_eligible_referral] =
     await Promise.all([
       renderParticipantMessage(
         participant,
         MESSAGE_TEMPLATE_KEYS.INSTAGRAM_REFERRAL,
-        { platform: "instagram" },
+        { platform: "instagram", baseUrl: options?.baseUrl },
       ),
       renderParticipantMessage(
         participant,
         MESSAGE_TEMPLATE_KEYS.WHATSAPP_REFERRAL,
-        { platform: "whatsapp" },
+        { platform: "whatsapp", baseUrl: options?.baseUrl },
       ),
       renderParticipantMessage(
         participant,
         MESSAGE_TEMPLATE_KEYS.NOT_ELIGIBLE_REFERRAL,
-        { platform: "whatsapp" },
+        { platform: "whatsapp", baseUrl: options?.baseUrl },
       ),
     ]);
 

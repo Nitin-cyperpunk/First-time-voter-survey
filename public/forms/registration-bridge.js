@@ -1541,20 +1541,8 @@
 
     const preparing = panel.querySelector("[data-rl-preparing]");
     const ctaRow = panel.querySelector("[data-rl-cta-row]");
-
-    panel._revealTimers.push(
-      window.setTimeout(function () {
-        if (preparing) preparing.classList.remove("hidden");
-        panel._revealTimers.push(
-          window.setTimeout(function () {
-            if (preparing) preparing.classList.add("hidden");
-            if (hasShareDetails && ctaRow) {
-              ctaRow.classList.remove("hidden");
-            }
-          }, 1200),
-        );
-      }, 500),
-    );
+    if (preparing) preparing.classList.add("hidden");
+    if (hasShareDetails && ctaRow) ctaRow.classList.remove("hidden");
   }
 
   function getVerificationMessageFromRegistration(registration) {
@@ -1731,10 +1719,9 @@
       '<div class="center">' +
       '<div class="big">Thank you!</div>' +
       "<p>Your referral details were saved.</p>" +
-      "<p>Share with your friends and family who may be interested in this study.</p>" +
-      '<p class="rl-preparing hidden" data-rl-preparing><strong>Preparing you for the next step…</strong></p>' +
+      '<p>Share with your friends and family who may be interested in this study.</p>' +
       (hasShareDetails
-        ? '<div class="rl-cta-row hidden" data-rl-cta-row>' +
+        ? '<div class="rl-cta-row" data-rl-cta-row>' +
           '<button type="button" class="rl-cta rl-cta-wa" data-rl-dm-wa>DM us on WhatsApp<small>to get your login details</small></button>' +
           '<button type="button" class="rl-cta rl-cta-share" data-rl-open-share>Share<small>Invite your friends</small></button>' +
           "</div>"
@@ -2789,7 +2776,14 @@
       return null;
     }
     try {
-      return await window.ConcaveDeviceFingerprint.get();
+      return await Promise.race([
+        window.ConcaveDeviceFingerprint.get(),
+        new Promise(function (resolve) {
+          window.setTimeout(function () {
+            resolve(null);
+          }, 400);
+        }),
+      ]);
     } catch (error) {
       console.warn("Device fingerprint unavailable:", error);
       return null;
@@ -2812,8 +2806,42 @@
     const container = getCtaContainer(screen);
     if (!container) return;
     container.classList.remove("hidden");
-    container.innerHTML =
-      '<p style="margin:0;padding:10px 0;text-align:center;color:#7A6E78;font-size:14px"><strong>Preparing you for the next step…</strong></p>';
+    container.innerHTML = "";
+
+    const fullName = document.querySelector("[name=name]")?.value?.trim() || "";
+    const mobile = document.querySelector("[name=phone]")?.value?.trim() || "";
+
+    container.appendChild(
+      createThankYouButton(
+        "DM us on WhatsApp",
+        "Message the study team",
+        "cta-wa",
+        function () {
+          window.open(
+            buildWhatsAppVerificationUrl(
+              buildLoginDetailsWhatsAppMessage({
+                fullName: fullName,
+                mobile: mobile,
+                leadId: "",
+              }),
+            ),
+            "_blank",
+            "noopener,noreferrer",
+          );
+        },
+      ),
+    );
+
+    const shareButton = createThankYouButton(
+      "Share",
+      "Invite your friends",
+      "cta-ref",
+      function () {},
+    );
+    shareButton.disabled = true;
+    shareButton.setAttribute("aria-busy", "true");
+    shareButton.style.opacity = "0.65";
+    container.appendChild(shareButton);
   }
 
   async function submitRegistration(referrerRef, submitOptions) {
@@ -2860,6 +2888,7 @@
 
     submitRegistration.submitted = true;
     showThankYouCtaLoading();
+    const fingerprintPromise = resolveDeviceFingerprint();
 
     try {
       const submittedAt = new Date().toISOString();
@@ -2867,7 +2896,7 @@
       const acquisition = collectAcquisition();
       var attribution = getReferrerAttribution();
       var referralPlatform = attribution.platform || "";
-      var deviceFingerprint = await resolveDeviceFingerprint();
+      var deviceFingerprint = await fingerprintPromise;
       const terminationPayload = (function () {
         const collected = collectTerminationPayload();
         if (collected.length > 0) return collected;

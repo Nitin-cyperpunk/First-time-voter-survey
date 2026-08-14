@@ -19,6 +19,24 @@ import {
 } from "@/server/services/quota.service";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
+function describeError(error: unknown): string {
+  if (error instanceof Error && error.message) return error.message;
+  if (error && typeof error === "object") {
+    const row = error as {
+      message?: string;
+      code?: string;
+      details?: string;
+      hint?: string;
+    };
+    const parts = [row.message, row.code, row.details, row.hint].filter(
+      (part): part is string => Boolean(part && part.trim()),
+    );
+    if (parts.length > 0) return parts.join(" — ");
+  }
+  return "";
+}
 
 const createSchema = z.object({
   name: z.string().trim().min(2).max(80),
@@ -38,9 +56,15 @@ export async function GET() {
 
   try {
     const snapshot = await buildQuotaSnapshot();
-    let unmatchedCities = await listUnmatchedCityRows(40);
-    let unmatchedGlobalCompletes = await countActiveUnmatchedCompletes();
+    let unmatchedCities: Awaited<ReturnType<typeof listUnmatchedCityRows>> = [];
+    let unmatchedGlobalCompletes = 0;
     let ignoredUnmatched: Awaited<ReturnType<typeof listIgnoredUnmatchedCities>> = [];
+    try {
+      unmatchedCities = await listUnmatchedCityRows(40);
+      unmatchedGlobalCompletes = await countActiveUnmatchedCompletes();
+    } catch (error) {
+      console.warn("Unmatched city list unavailable:", error);
+    }
     try {
       ignoredUnmatched = await listIgnoredUnmatchedCities();
     } catch {
@@ -58,7 +82,7 @@ export async function GET() {
     });
   } catch (error) {
     console.error("GET /api/admin/cities failed:", error);
-    const message = error instanceof Error ? error.message : "";
+    const message = describeError(error);
     if (/study_state_allocations|quota_cell|PGRST205|schema cache/i.test(message)) {
       return NextResponse.json(
         { error: "Quota migration 013 is pending. Run supabase/migrations/013_state_area_quota.sql." },
@@ -71,7 +95,19 @@ export async function GET() {
         { status: 503 },
       );
     }
-    return NextResponse.json({ error: "Failed to load cities." }, { status: 500 });
+    if (/timeout|fetch failed|UND_ERR|SocketError|ConnectTimeout/i.test(message)) {
+      return NextResponse.json(
+        {
+          error:
+            "Could not reach Supabase (timeout). Check the network and retry City Targets.",
+        },
+        { status: 504 },
+      );
+    }
+    return NextResponse.json(
+      { error: message || "Failed to load cities." },
+      { status: 500 },
+    );
   }
 }
 
