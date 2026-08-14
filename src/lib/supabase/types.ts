@@ -38,6 +38,8 @@ export type Database = {
           age_band: string | null;
           city: string | null;
           city_id: string | null;
+          city_raw: string | null;
+          city_match_type: string | null;
           email: string | null;
           area: string | null;
           pincode: string | null;
@@ -69,6 +71,8 @@ export type Database = {
           age_band?: string | null;
           city?: string | null;
           city_id?: string | null;
+          city_raw?: string | null;
+          city_match_type?: string | null;
           email?: string | null;
           area?: string | null;
           pincode?: string | null;
@@ -224,6 +228,8 @@ export type Database = {
           config_area_type: string | null;
           config_state: string | null;
           self_reported_area_type: string | null;
+          city_raw: string | null;
+          city_match_type: string | null;
         },
         {
           id?: string;
@@ -245,6 +251,8 @@ export type Database = {
           config_area_type?: string | null;
           config_state?: string | null;
           self_reported_area_type?: string | null;
+          city_raw?: string | null;
+          city_match_type?: string | null;
         }
       >;
       cities: TableDefinition<
@@ -257,6 +265,7 @@ export type Database = {
           buffer: number;
           is_open: boolean;
           is_active: boolean;
+          match_key: string | null;
           created_at: string;
           updated_at: string;
           created_by: string | null;
@@ -271,10 +280,62 @@ export type Database = {
           buffer?: number;
           is_open?: boolean;
           is_active?: boolean;
+          match_key?: string | null;
           created_at?: string;
           updated_at?: string;
           created_by?: string | null;
           updated_by?: string | null;
+        }
+      >;
+      city_aliases: TableDefinition<
+        {
+          id: string;
+          city_id: string;
+          alias: string;
+          match_key: string;
+          created_at: string;
+          created_by: string | null;
+        },
+        {
+          id?: string;
+          city_id: string;
+          alias: string;
+          match_key: string;
+          created_at?: string;
+          created_by?: string | null;
+        },
+        [
+          {
+            foreignKeyName: "city_aliases_city_id_fkey";
+            columns: ["city_id"];
+            isOneToOne: false;
+            referencedRelation: "cities";
+            referencedColumns: ["id"];
+          },
+        ]
+      >;
+      city_import_log: TableDefinition<
+        {
+          id: string;
+          actor_id: string | null;
+          actor_email: string | null;
+          file_name: string | null;
+          rows_added: number;
+          rows_updated: number;
+          rows_rejected: number;
+          details: Json | null;
+          created_at: string;
+        },
+        {
+          id?: string;
+          actor_id?: string | null;
+          actor_email?: string | null;
+          file_name?: string | null;
+          rows_added?: number;
+          rows_updated?: number;
+          rows_rejected?: number;
+          details?: Json | null;
+          created_at?: string;
         }
       >;
       study_state_allocations: TableDefinition<
@@ -596,6 +657,7 @@ export type Database = {
           answer_script: string | null;
           spoken_language: string | null;
         };
+        Relationships: [];
       };
       ftv_respondents: {
         Row: {
@@ -638,6 +700,7 @@ export type Database = {
           order_q6b: Json | null;
           order_q14: Json | null;
         };
+        Relationships: [];
       };
       ftv_field_summary: {
         Row: {
@@ -648,12 +711,13 @@ export type Database = {
           first_response: string | null;
           latest_response: string | null;
         };
+        Relationships: [];
       };
     };
     Functions: {
       count_qualified_completions: {
         Args: {
-          p_city_id?: string | null;
+          p_city_id: string | null;
           p_state?: string | null;
           p_area_type?: string | null;
         };
@@ -691,8 +755,10 @@ export type Database = {
           p_submitted_at: string | null;
           p_total_duration_sec: number | null;
           p_ip_address: string | null;
-          p_city_id: string;
+          p_city_id: string | null;
           p_self_reported_area_type: string | null;
+          p_city_raw?: string | null;
+          p_city_match_type?: string | null;
         };
         Returns: Json;
       };

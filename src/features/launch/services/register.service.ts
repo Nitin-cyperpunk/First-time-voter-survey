@@ -33,7 +33,10 @@ import {
   resolveScreenerCompletionTracking,
 } from "@/lib/registration-terminations";
 import { CapacityError } from "@/lib/capacity";
-import { getCityById } from "@/server/repositories/cities.repository";
+import {
+  checkCityAvailability,
+  resolveCityText,
+} from "@/server/services/city-resolve.service";
 import {
   createParticipant,
   deleteParticipantByLeadId,
@@ -341,12 +344,31 @@ export async function registerParticipant(
   const otherSource =
     rawSource === ACQUISITION_OTHER ? input.otherSource?.trim() || null : null;
 
-  if (!input.city_id) {
+  const cityRaw = input.city?.trim() || "";
+  if (!cityRaw) {
     throw new CapacityError("city_required");
   }
-  const city = await getCityById(input.city_id);
-  if (!city || !city.isActive) {
-    throw new CapacityError("city_inactive");
+
+  const stateLabel = extractStateLabel(input);
+  const availability = await checkCityAvailability({
+    cityRaw,
+    stateLabel,
+  });
+  if (!availability.ok) {
+    throw new CapacityError(
+      availability.code === "study_full" ? "study_full" : "city_full",
+      availability.message,
+    );
+  }
+  const resolved = availability.resolved;
+  // Re-resolve at submit so race between blur and submit is covered by RPC too.
+  const fresh = await resolveCityText({ cityRaw, stateLabel });
+  if (
+    fresh.matchType !== "unmatched" &&
+    fresh.cityId &&
+    (fresh.isFull || !fresh.isOpen || !fresh.isActive)
+  ) {
+    throw new CapacityError("city_full");
   }
 
   const referralCode = await generateUniqueReferralCode();
@@ -362,8 +384,10 @@ export async function registerParticipant(
     mobile: mobile || null,
     dob: input.dob?.trim() || null,
     ageBand: input.age_band,
-    city: city.name,
-    cityId: city.id,
+    city: fresh.name ?? cityRaw,
+    cityId: fresh.cityId,
+    cityRaw,
+    cityMatchType: fresh.matchType,
     email: input.email?.trim() || null,
     area: input.area?.trim() || null,
     pincode: input.pincode?.trim() || null,
@@ -438,7 +462,9 @@ export async function registerParticipant(
         submittedAt,
         totalDurationSec,
         ipAddress: options.ipAddress ?? null,
-        cityId: city.id,
+        cityId: fresh.cityId,
+        cityRaw,
+        cityMatchType: fresh.matchType,
       });
       screenerInserted = true;
     } catch (error) {
@@ -462,7 +488,7 @@ export async function registerParticipant(
       terminated: registrationTerminated,
       terminations: input.terminations,
       leadId: participant.leadId,
-      cityId: city.id,
+      cityId: fresh.cityId,
       startedAt,
       submittedAt,
       totalDurationSec,
@@ -514,4 +540,17 @@ export async function registerParticipant(
     referralLink: buildReferralLink(participant.referralCode),
     messages,
   };
+}
+
+function extractStateLabel(input: LaunchRegistrationInput): string | null {
+  const profile = input.answerJson?.profile as
+    | { state?: { label?: string; code?: number } }
+    | undefined;
+  if (profile?.state?.label) return String(profile.state.label);
+
+  const q151 = input.answers?.Q15_1;
+  if (typeof q151 === "string" && q151.trim()) return q151.trim();
+  if (Array.isArray(q151) && typeof q151[0] === "string") return q151[0].trim();
+
+  return null;
 }

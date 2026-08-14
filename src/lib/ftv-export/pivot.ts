@@ -27,9 +27,6 @@ export type FtvRespondentRow = {
   respondent_id?: string | null;
   lead_id?: string | null;
   city_id?: string | null;
-  city_area_type?: string | null;
-  city_state?: string | null;
-  quota_cell?: string | null;
   survey_version?: string | null;
   status?: string | null;
   started_at?: string | null;
@@ -42,6 +39,12 @@ export type FtvRespondentRow = {
   phone?: string | null;
   area?: string | null;
   city?: string | null;
+  city_raw?: string | null;
+  city_resolved?: string | null;
+  match_type?: string | null;
+  city_area_type?: string | null;
+  city_state?: string | null;
+  quota_cell?: string | null;
   age_band?: string | null;
   state_code?: number | null;
   state?: string | null;
@@ -180,6 +183,9 @@ export function pivotFtvWideRow(
   row.area = cell(respondent.area);
   row.city = cell(respondent.city);
   row.city_id = cell(respondent.city_id);
+  row.city_raw = cell(respondent.city_raw);
+  row.city_resolved = cell(respondent.city_resolved);
+  row.match_type = cell(respondent.match_type);
   row.city_area_type = cell(respondent.city_area_type);
   row.city_state = cell(respondent.city_state);
   row.quota_cell = cell(respondent.quota_cell);

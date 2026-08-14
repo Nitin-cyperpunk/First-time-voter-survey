@@ -141,8 +141,9 @@ In the Supabase SQL editor, run **in order**:
 12. `supabase/migrations/012_ftv_contract_hardening.sql`
 13. `supabase/migrations/013_state_area_quota.sql`
 14. `supabase/migrations/014_area_type_rural.sql`
+15. `supabase/migrations/015_free_text_city_resolve.sql`
 
-Already-applied DBs: do not replay 001–012. If 013 is not applied yet, run 013 then 014. If 013 already ran, run **014 only**.
+Already-applied DBs: do not replay 001–014. If 013/014 are not applied yet, run them in order, then **015**. If only 015 is pending, run **015 only**.
 
 Then:
 
@@ -159,24 +160,25 @@ There is no SQL city seed. After login as superadmin:
 
 1. Open **Config** (`/admin-ftv/settings`).
 2. Set **Total capacity** (default 200).
-3. Add cities with a Q15_1 State/UT, **urban or rural**, and an optional buffer. Recalculate cell targets. Keep Unallocated ≥ 0.
-4. Only **open, active** cities with remaining room at city / cell / state / study appear on the respondent selector (city name only).
+3. **Bulk-import** cities (CSV/XLSX: `city`, `state`, `area_type`; optional `capacity`, `aliases`). Recalculate cell targets. Keep Unallocated ≥ 0.
+4. Respondents type a free-text city. The server resolves exact → alias → unmatched (global cap only).
 
-Optional concurrency check (after 013–014 are applied): `pnpm test:capacity`.
+Optional concurrency check (after 013–015 are applied): `pnpm test:capacity`.
 
 ## Deployment
 
-1. Create a new Supabase project and run migrations 001–014.
+1. Create a new Supabase project and run migrations 001–015.
 2. Set the env vars above on the host (never commit real keys).
 3. `pnpm build` then `pnpm start`, or connect the repo to Vercel/Netlify with the same env.
 4. Set `NEXT_PUBLIC_APP_URL` to the production origin.
-5. Seed superadmin (`pnpm seed:admin` with production env) and add cities in Config.
+5. Seed superadmin (`pnpm seed:admin` with production env) and import cities in Config.
 
 ## Data export
 
 Admin **Respondents** export (CSV / Excel) includes:
 
 - Lead ID (`CI_FTV_…`), name, mobile, DOB, city, status, timestamps
+- Free-text resolve: `city_raw`, `city_resolved`, `match_type` (exact / alias / unmatched)
 - Config geography independent of Q15: `city_area_type`, `city_state`, `quota_cell`
 - Screener answers keyed as Q1…Q17 (plus contact fields)
 - Completion status (`Completed` / `Terminated`) and pipe-separated `termination_reason`

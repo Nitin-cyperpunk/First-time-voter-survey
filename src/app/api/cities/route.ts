@@ -4,7 +4,10 @@ import { listSelectableCities } from "@/server/services/quota.service";
 
 export const dynamic = "force-dynamic";
 
-/** Public: active, non-full cities for the respondent city selector. */
+/**
+ * Kept for admin/legacy. Respondent form no longer uses a city dropdown.
+ * Prefer POST /api/cities/check for free-text capacity feedback.
+ */
 export async function GET() {
   try {
     const cities = await listSelectableCities();

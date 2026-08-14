@@ -54,8 +54,12 @@ export const launchRegistrationSchema = z.object({
   age_band: z.enum(AGE_BAND_VALUES, {
     message: "Please select your age.",
   }),
-  city_id: z.string().uuid("Please select a city from the list."),
-  city: z.string().trim().max(80).optional(),
+  city: z
+    .string()
+    .trim()
+    .min(2, "Please enter your city.")
+    .max(80, "City name is too long."),
+  city_id: z.string().uuid().optional().or(z.literal("")),
   email: z
     .union([
       z.literal(""),

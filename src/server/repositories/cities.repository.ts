@@ -1,3 +1,4 @@
+import { cityMatchKey } from "@/lib/city-resolve";
 import { parseAreaType, type AreaType } from "@/lib/india-states";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -63,19 +64,21 @@ export async function countQualifiedCompletions(filter?: {
   areaType?: AreaType | null;
 }): Promise<number> {
   const admin = getSupabaseAdmin();
-  const full = await admin.rpc("count_qualified_completions", {
+  type RpcCount = { data: number | null; error: { message: string } | null };
+
+  const full = (await admin.rpc("count_qualified_completions", {
     p_city_id: filter?.cityId ?? null,
     p_state: filter?.state ?? null,
     p_area_type: filter?.areaType ?? null,
-  });
+  })) as RpcCount;
   if (!full.error) {
     return typeof full.data === "number" ? full.data : Number(full.data ?? 0);
   }
   if (filter?.state || filter?.areaType) throw full.error;
 
-  const legacy = await admin.rpc("count_qualified_completions", {
+  const legacy = (await admin.rpc("count_qualified_completions", {
     p_city_id: filter?.cityId ?? null,
-  });
+  })) as RpcCount;
   if (legacy.error) throw legacy.error;
   return typeof legacy.data === "number" ? legacy.data : Number(legacy.data ?? 0);
 }
@@ -153,6 +156,7 @@ export async function createCity(input: {
       area_type: input.areaType,
       capacity: input.capacity ?? 0,
       buffer: input.buffer ?? 0,
+      match_key: cityMatchKey(input.name),
       is_open: input.isOpen ?? true,
       is_active: input.isActive ?? true,
       created_by: input.actorId,
@@ -188,7 +192,10 @@ export async function updateCity(
     is_open?: boolean;
     is_active?: boolean;
   } = { updated_by: input.actorId };
-  if (input.name !== undefined) patch.name = input.name.trim();
+  if (input.name !== undefined) {
+    patch.name = input.name.trim();
+    (patch as { match_key?: string }).match_key = cityMatchKey(input.name);
+  }
   if (input.state !== undefined) patch.state = input.state.trim();
   if (input.areaType !== undefined) patch.area_type = input.areaType;
   if (input.capacity !== undefined) patch.capacity = input.capacity;

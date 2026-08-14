@@ -1249,11 +1249,9 @@
   }
 
   function demoContactFieldsValid() {
-    const cityId =
-      document.querySelector("[name=city_id]")?.value?.trim() || "";
     const city = document.querySelector("[name=city]")?.value?.trim() || "";
     const ageBand = readAgeBand();
-    return Boolean((cityId || city) && ageBand);
+    return Boolean(city && ageBand);
   }
 
   function showScreenById(screenId) {
@@ -2761,19 +2759,14 @@
 
     const fullName = document.querySelector("[name=name]")?.value?.trim() || "";
     const mobile = document.querySelector("[name=phone]")?.value?.trim() || "";
-    const citySelect = document.querySelector("[name=city_id]");
-    const cityId = citySelect?.value?.trim() || "";
-    const cityName =
-      citySelect?.options?.[citySelect.selectedIndex]?.text?.trim() ||
-      document.querySelector("[name=city]")?.value?.trim() ||
-      "";
+    const city = document.querySelector("[name=city]")?.value?.trim() || "";
     const email = document.querySelector("[name=email]")?.value?.trim() || "";
     const area = document.querySelector("[name=area]")?.value?.trim() || "";
     const pincode = document.querySelector("[name=zip]")?.value?.trim() || "";
     const dob = buildDobIso();
     const ageBand = readAgeBand();
 
-    if (!cityId || !ageBand) {
+    if (!city || !ageBand) {
       showRegistrationError(
         "Please complete your city and age before submitting.",
       );
@@ -2799,8 +2792,7 @@
           mobile: mobile || undefined,
           dob: dob || undefined,
           age_band: ageBand,
-          city_id: cityId,
-          city: cityName || undefined,
+          city: city,
           email: email || undefined,
           area: area || undefined,
           pincode: pincode || undefined,

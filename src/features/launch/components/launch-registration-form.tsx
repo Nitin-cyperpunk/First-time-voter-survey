@@ -31,8 +31,6 @@ import {
 import { getReferralAttribution } from "@/lib/referral-attribution";
 import type { ScreenerSchema } from "@/types/domain";
 
-type SelectableCity = { id: string; name: string; state: string };
-
 const baseSchema = z.object({
   fullName: z.string().trim().min(2, "Full name is required"),
   mobile: z
@@ -44,7 +42,11 @@ const baseSchema = z.object({
     .string()
     .trim()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Enter a valid date of birth"),
-  city_id: z.string().uuid("Please select a city from the list."),
+  city: z
+    .string()
+    .trim()
+    .min(2, "Please enter your city.")
+    .max(80, "City name is too long."),
 });
 
 type BaseFormValues = z.infer<typeof baseSchema>;
@@ -67,7 +69,6 @@ export function LaunchRegistrationForm() {
   >({});
   const [startedAt] = useState(() => new Date().toISOString());
   const [loadingForm, setLoadingForm] = useState(true);
-  const [cities, setCities] = useState<SelectableCity[]>([]);
   const [duplicateMobile, setDuplicateMobile] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const lastCheckedMobile = useRef<string>("");
@@ -143,11 +144,8 @@ export function LaunchRegistrationForm() {
       }
     });
 
-    const selectedCity = cities.find((city) => city.id === values.city_id);
-
     return {
       ...values,
-      city: selectedCity?.name,
       referrerCode: referrerCode || undefined,
       referralPlatform: referralPlatform || undefined,
       acquisitionSource: acquisitionSource || undefined,
@@ -168,19 +166,14 @@ export function LaunchRegistrationForm() {
     formState: { errors, isSubmitting },
   } = useForm<BaseFormValues>({
     resolver: zodResolver(baseSchema),
-    defaultValues: { fullName: "", mobile: "", dob: "", city_id: "" },
+    defaultValues: { fullName: "", mobile: "", dob: "", city: "" },
   });
 
   useEffect(() => {
-    void Promise.all([
-      fetch("/api/form/active").then((res) => res.json()),
-      fetch("/api/cities").then((res) => res.json()),
-    ])
-      .then(([formData, citiesData]) => {
+    void fetch("/api/form/active")
+      .then((res) => res.json())
+      .then((formData) => {
         if (formData.schema) setFormSchema(formData.schema as ScreenerSchema);
-        if (Array.isArray(citiesData.cities)) {
-          setCities(citiesData.cities as SelectableCity[]);
-        }
       })
       .catch(() => toastNetworkError())
       .finally(() => setLoadingForm(false));
@@ -349,24 +342,20 @@ export function LaunchRegistrationForm() {
 
           <div>
             <label
-              htmlFor="city_id"
+              htmlFor="city"
               className="text-sm font-semibold text-plum-muted"
             >
               City
             </label>
-            <Select id="city_id" className="mt-1" {...register("city_id")}>
-              <option value="">Select city</option>
-              {cities.map((city) => (
-                <option key={city.id} value={city.id}>
-                  {city.name}
-                  {city.state ? ` (${city.state})` : ""}
-                </option>
-              ))}
-            </Select>
-            {errors.city_id && (
-              <p className="mt-1 text-sm text-error">
-                {errors.city_id.message}
-              </p>
+            <Input
+              id="city"
+              className="mt-1"
+              placeholder="Type your city"
+              autoComplete="address-level2"
+              {...register("city")}
+            />
+            {errors.city && (
+              <p className="mt-1 text-sm text-error">{errors.city.message}</p>
             )}
           </div>
 

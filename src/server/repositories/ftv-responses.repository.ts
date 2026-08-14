@@ -178,7 +178,7 @@ export async function persistFtvAnalysisResponse(input: {
   terminated?: boolean;
   terminations?: Array<{ ruleKey?: string | null }>;
   leadId: string;
-  cityId: string;
+  cityId?: string | null;
   startedAt?: Date | null;
   submittedAt?: Date | null;
   totalDurationSec?: number | null;

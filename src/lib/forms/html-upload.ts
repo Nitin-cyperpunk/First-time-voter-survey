@@ -3,12 +3,7 @@
  *
  * This study is NOT Enamor. Do not require lingerie-era PII or wizard APIs.
  *
- * REQUIRED (capacity + live submit path):
- *   - name="city_id"     FK to public.cities. Capacity (global 200 + per-city) cannot
- *                        be enforced without it. Free-text `city` / `#fCity` is a
- *                        separate locality string and does not satisfy this.
- *                        Detected via per-tag attribute parse (select/input/any), not
- *                        attribute-order regex.
+ * REQUIRED (live submit path):
  *   - showResult(id)     Real screen navigation. ConcaveRegistrationBridge.attach wraps
  *                        it to POST /api/register. Accepts `function showResult(`,
  *                        `const/let/var showResult = function`, `showResult = function`,
@@ -18,14 +13,13 @@
  *                        regardless of class/quote/attribute order.
  *
  * OPTIONAL / NOT REQUIRED:
+ *   - city_id            Removed. City is free-text; server resolves to config cities.
+ *   - city / #fCity      Free-text city for server-side resolve (recommended).
  *   - age_band           Age lives on profile (age_band and/or dob + derived ages).
- *                        Export already maps age_band, dob, age_today, age_at_poll,
- *                        age_at_qualifying_date.
  *   - name, phone, DOB   Anonymous study. Referral attribution is referral code → lead_id.
  *   - s-terminate        Not required. Bridge treats any id containing "terminate" as a
- *                        screen-out. Same id parser; include id="s-terminate" for Q1/Q2.
- *   - showScreen(0)      Enamor wizard boot. FTV uses go(0). Bridge attach accepts either
- *                        plus a closing </script></body>.
+ *                        screen-out.
+ *   - showScreen(0)      Enamor wizard boot. FTV uses go(0).
  *
  * cities.area_type (urban|rural) ≠ Q15_2 (5-point self-reported area). Never merge.
  */
@@ -267,13 +261,6 @@ export function hasShowResultFunction(html: string): boolean {
 export function inspectRegistrationContract(html: string): ContractCheck[] {
   return [
     {
-      key: "city_id",
-      kind: "field",
-      required: true,
-      found: hasFieldName(html, "city_id"),
-      note: "name= city_id on any control (select/input/hidden). Capacity FK.",
-    },
-    {
       key: "showResult",
       kind: "function",
       required: true,
@@ -286,6 +273,20 @@ export function inspectRegistrationContract(html: string): ContractCheck[] {
       required: true,
       found: hasElementId(html, "s-thankyou"),
       note: "id=s-thankyou on any element, any attribute order.",
+    },
+    {
+      key: "city_id",
+      kind: "field",
+      required: false,
+      found: hasFieldName(html, "city_id"),
+      note: "Not required. City is free-text; server resolves to config cities.",
+    },
+    {
+      key: "city",
+      kind: "field",
+      required: false,
+      found: hasFieldName(html, "city") || /id=["']fCity["']/i.test(html),
+      note: "Free-text city (name=city or #fCity). Recommended.",
     },
     {
       key: "s-terminate",
@@ -345,7 +346,6 @@ export function inspectRegistrationContract(html: string): ContractCheck[] {
 export function looksLikeStandaloneFtvOriginal(html: string): boolean {
   return (
     /id=["']fCity["']/i.test(html) &&
-    !hasFieldName(html, "city_id") &&
     !hasShowResultFunction(html) &&
     !hasElementId(html, "s-thankyou") &&
     /function\s+finish\s*\(/.test(html) &&

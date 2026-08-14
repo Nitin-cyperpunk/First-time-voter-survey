@@ -38,7 +38,9 @@ export async function createResponse(input: {
   submittedAt?: Date | null;
   totalDurationSec?: number | null;
   ipAddress?: string | null;
-  cityId: string;
+  cityId?: string | null;
+  cityRaw?: string | null;
+  cityMatchType?: "exact" | "alias" | "unmatched" | null;
   selfReportedAreaType?: string | null;
 }) {
   /**
@@ -71,8 +73,10 @@ export async function createResponse(input: {
       p_submitted_at: input.submittedAt?.toISOString() ?? new Date().toISOString(),
       p_total_duration_sec: input.totalDurationSec ?? null,
       p_ip_address: input.ipAddress ?? null,
-      p_city_id: input.cityId,
+      p_city_id: input.cityId ?? null,
       p_self_reported_area_type: selfReported,
+      p_city_raw: input.cityRaw ?? null,
+      p_city_match_type: input.cityMatchType ?? null,
     },
   );
 

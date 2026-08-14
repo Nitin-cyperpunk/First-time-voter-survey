@@ -409,12 +409,11 @@ pre{
 <div class="shell" id="shell"></div>
 
 <div id="bridge-fields" hidden>
-  <select name="city_id" id="city_id"><option value="">Select city</option></select>
+  <input type="hidden" name="city" id="bridge_city" value="">
   <input type="hidden" name="age_band" id="age_band" value="">
   <input type="hidden" name="name" id="bridge_name" value="">
   <input type="hidden" name="phone" id="bridge_phone" value="">
   <input type="hidden" name="dob_date" id="bridge_dob" value="">
-  <input type="hidden" name="city" id="bridge_city" value="">
   <input type="hidden" name="email" id="email" value="">
   <input type="hidden" name="area" id="area" value="">
   <input type="hidden" name="zip" id="zip" value="">
@@ -757,13 +756,13 @@ S.push({ id:"QA", html:function(){
   opt += '</optgroup><optgroup label="Union Territories">';
   for(var j=0;j<UTS.length;j++) opt += '<option value="'+(29+j)+'">'+esc(UTS[j])+'</option>';
   opt += '</optgroup>';
-  /* Paired two per row: City, Name | Phone, Email | Area, State | Zip, DOB. */
+  /* Paired two per row: Name | Phone, Email | Area, City | State, Zip | DOB. */
   var f = '<div class="fields">' +
-    '<div class="field wide"><label class="lbl" for="fCityId">City</label><select id="fCityId"><option value="">Select city</option></select></div>' +
     '<div class="field"><label class="lbl" for="fName">Name</label><input type="text" id="fName" autocomplete="name"></div>' +
     '<div class="field"><label class="lbl" for="fPhone">Phone Number</label><input type="tel" id="fPhone" inputmode="numeric" autocomplete="tel" maxlength="16" placeholder="10-digit mobile number"></div>' +
     '<div class="field"><label class="lbl" for="fEmail">Email</label><input type="email" id="fEmail" autocomplete="email"></div>' +
     '<div class="field"><label class="lbl" for="fArea">Area you reside</label><input type="text" id="fArea"></div>' +
+    '<div class="field"><label class="lbl" for="fCity">City</label><input type="text" id="fCity" autocomplete="address-level2"><div class="err-msg" id="fCityErr" hidden></div></div>' +
     '<div class="field"><label class="lbl" for="fState">State</label><select id="fState">'+opt+'</select></div>' +
     '<div class="field"><label class="lbl" for="fZip">Zip</label><input type="text" id="fZip" inputmode="numeric" autocomplete="postal-code" maxlength="6" placeholder="6-digit PIN code"></div>' +
     '<div class="field dobfield"><label class="lbl" for="dDOB">Date of Birth</label><input type="date" id="dDOB" max="'+today+'"></div>' +
@@ -773,27 +772,43 @@ S.push({ id:"QA", html:function(){
   var p = A.profile || {};
   function set(id,v){ if(v) document.getElementById(id).value = v; }
   set("fName",p.name); set("fEmail",p.email); set("fPhone",p.phone);
-  set("fArea",p.area); set("fZip",p.zip);
+  set("fArea",p.area); set("fCity",p.city); set("fZip",p.zip);
   if(p.state) document.getElementById("fState").value = p.state.code;
   if(p.dob) document.getElementById("dDOB").value = p.dob;
 
-  var visibleCity = document.getElementById("fCityId");
-  var bridgeCity = document.getElementById("city_id");
-  if(typeof window.__concaveFillCitySelect === "function"){
-    window.__concaveFillCitySelect(bridgeCity);
-  } else if(!(window.__concaveSelectableCities && window.__concaveSelectableCities.length)){
-    fetch("/api/cities").then(function(r){ return r.json(); }).then(function(data){
-      window.__concaveSelectableCities = (data && data.cities) || [];
-      fillVisibleCitySelect(visibleCity, p.city_id);
-      if(bridgeCity) fillVisibleCitySelect(bridgeCity, p.city_id);
-    }).catch(function(){});
+  var cityInput = document.getElementById("fCity");
+  var cityErr = document.getElementById("fCityErr");
+  function clearCityErr(){
+    if(cityErr){ cityErr.hidden = true; cityErr.textContent = ""; }
+    if(cityInput) cityInput.classList.remove("invalid");
+    A._cityBlocked = false;
   }
-  fillVisibleCitySelect(visibleCity, p.city_id);
-  if(bridgeCity && visibleCity){
-    visibleCity.addEventListener("change", function(){ bridgeCity.value = visibleCity.value; });
+  function showCityErr(msg){
+    if(cityErr){ cityErr.hidden = false; cityErr.textContent = msg; }
+    if(cityInput) cityInput.classList.add("invalid");
+    A._cityBlocked = true;
+  }
+  if(cityInput){
+    cityInput.addEventListener("input", clearCityErr);
+    cityInput.addEventListener("blur", function(){
+      var city = cityInput.value.trim();
+      var stEl = document.getElementById("fState");
+      var stLabel = stEl && stEl.value ? (stEl.options[stEl.selectedIndex].text || "") : "";
+      if(!city){ clearCityErr(); return; }
+      fetch("/api/cities/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ city: city, state: stLabel || undefined })
+      }).then(function(r){ return r.json(); }).then(function(data){
+        if(data && data.ok === false && data.message){
+          showCityErr(data.message);
+        } else {
+          clearCityErr();
+        }
+      }).catch(function(){ clearCityErr(); });
+    });
   }
 
-  /* Live masking: digits only, prefixes peeled, hard-capped at 10 / 6. */
   var ph = document.getElementById("fPhone");
   ph.addEventListener("input", function(){ ph.value = normPhone(ph.value); clearErr(); });
   ph.addEventListener("blur",  function(){ ph.value = normPhone(ph.value); });
@@ -802,24 +817,19 @@ S.push({ id:"QA", html:function(){
 }, validate:function(){
   var g = function(id){ return document.getElementById(id).value.trim(); };
   var name=g("fName"), email=g("fEmail"),
-      area=g("fArea"), st=document.getElementById("fState").value;
-  var cityId = g("fCityId");
+      area=g("fArea"), city=g("fCity"), st=document.getElementById("fState").value;
   var phone = normPhone(g("fPhone"));
   var zip   = normZip(g("fZip"));
-  if(!cityId) return err("QA","Please select your city.");
   if(!name) return err("QA","Please enter your name.");
-
-  /* Phone: exactly 10 digits, Indian mobile series (starts 6-9). */
   if(!phone) return err("QA","Please enter your phone number.");
   if(phone.length < 10) return err("QA","Phone number is too short. Please enter all 10 digits.");
   if(!/^[6-9]/.test(phone)) return err("QA","Please enter a valid 10-digit mobile number starting with 6, 7, 8 or 9.");
   if(!/^[6-9]\d{9}$/.test(phone)) return err("QA","Please enter a valid 10-digit mobile number.");
-
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)) return err("QA","Please enter a valid email address.");
   if(!area) return err("QA","Please enter the area you reside in.");
+  if(!city) return err("QA","Please enter your city.");
+  if(A._cityBlocked) return err("QA", (document.getElementById("fCityErr") && document.getElementById("fCityErr").textContent) || "This city is not accepting responses.");
   if(!st) return err("QA","Please select your state or union territory.");
-
-  /* Zip: exactly 6 digits, Indian PIN codes never start with 0. */
   if(!zip) return err("QA","Please enter your PIN code.");
   if(zip.length < 6) return err("QA","PIN code is too short. Please enter all 6 digits.");
   if(!/^[1-9]\d{5}$/.test(zip)) return err("QA","Please enter a valid 6-digit PIN code.");
@@ -832,28 +842,24 @@ S.push({ id:"QA", html:function(){
   if(dt > new Date()) return err("QA","Date of birth cannot be in the future.");
   if(y < 1900) return err("QA","Please check the year of birth.");
 
-  var citySel = document.getElementById("fCityId");
-  var cityLabel = citySel.options[citySel.selectedIndex] ? citySel.options[citySel.selectedIndex].text : "";
   A.profile = A.profile || {};
   A.profile.name=name; A.profile.email=email; A.profile.phone=phone;
-  A.profile.area=area; A.profile.city=cityLabel; A.profile.city_id=cityId; A.profile.zip=zip;
+  A.profile.area=area; A.profile.city=city; A.profile.zip=zip;
   A.profile.state = { code:+st, label:stateLabel(+st) };
   A.profile.dob = y + "-" + pad(mo) + "-" + pad(dy);
   A.profile.age_at_poll = yrs(dt, POLL_DATE);
   A.profile.age_at_qualifying_date = yrs(dt, QUAL_DATE);
   A.profile.age_today = yrs(dt, new Date());
   A.profile.age_band = ageBandFromYears(A.profile.age_today);
-  document.getElementById("city_id").value = cityId;
   document.getElementById("age_band").value = A.profile.age_band || "";
   document.getElementById("bridge_name").value = name;
   document.getElementById("bridge_phone").value = phone;
   document.getElementById("bridge_dob").value = A.profile.dob;
-  document.getElementById("bridge_city").value = cityLabel;
+  document.getElementById("bridge_city").value = city;
   document.getElementById("email").value = email;
   document.getElementById("area").value = area;
   document.getElementById("zip").value = zip;
 
-  /* T04 age gate */
   if(dt < DOB_MIN || dt > DOB_MAX) return stop("TERMINATE_AGE_OUT_OF_RANGE");
   return true;
 }});
@@ -1449,22 +1455,6 @@ function wireQ8(){
 var shell = document.getElementById("shell");
 var terminated = null;
 
-function fillVisibleCitySelect(sel, current){
-  if(!sel) return;
-  var cities = window.__concaveSelectableCities || [];
-  if(!cities.length && sel.options.length > 1) return;
-  var keep = current || sel.value || "";
-  sel.innerHTML = '<option value="">Select city</option>';
-  for(var i=0;i<cities.length;i++){
-    var c = cities[i];
-    var o = document.createElement("option");
-    o.value = c.id;
-    o.textContent = c.name;
-    sel.appendChild(o);
-  }
-  if(keep) sel.value = keep;
-}
-
 function setBridgeField(name, value){
   var host = document.getElementById("bridge-fields");
   if(!host) return;
@@ -1480,8 +1470,7 @@ function setBridgeField(name, value){
 
 function syncBridgeFields(){
   var p = A.profile || {};
-  var citySel = document.getElementById("city_id");
-  if(citySel && p.city_id) citySel.value = p.city_id;
+  setBridgeField("city", p.city || "");
   setBridgeField("age_band", p.age_band || "");
   setBridgeField("name", p.name || "");
   setBridgeField("phone", p.phone || "");

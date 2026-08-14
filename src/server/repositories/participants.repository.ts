@@ -13,6 +13,8 @@ export type ParticipantCreateInput = {
   ageBand?: string | null;
   city: string;
   cityId?: string | null;
+  cityRaw?: string | null;
+  cityMatchType?: "exact" | "alias" | "unmatched" | null;
   email?: string | null;
   area?: string | null;
   pincode?: string | null;
@@ -73,6 +75,12 @@ function toInsert(input: ParticipantCreateInput): ParticipantInsert {
     age_band: input.ageBand?.trim() || null,
     city: input.city.trim(),
     ...(input.cityId !== undefined ? { city_id: input.cityId } : {}),
+    ...(input.cityRaw !== undefined
+      ? { city_raw: input.cityRaw?.trim() || null }
+      : {}),
+    ...(input.cityMatchType !== undefined
+      ? { city_match_type: input.cityMatchType }
+      : {}),
     ...(input.email !== undefined ? { email: input.email?.trim() || null } : {}),
     ...(input.area !== undefined ? { area: input.area?.trim() || null } : {}),
     ...(input.pincode !== undefined
