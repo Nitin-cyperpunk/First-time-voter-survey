@@ -5,7 +5,10 @@ export {
   getAgeYears,
   isAgeBandWithinStudyRule,
   isAgeWithinStudyRule,
+  isCapacityEnforced,
+  isFormClosedForNewRespondents,
   isRegistrationAccepting,
+  maySubmitWhileFormClosed,
   parseAgeBand,
 } from "@/lib/study-config/gates";
 export type { AgeBandValue } from "@/lib/study-config/gates";

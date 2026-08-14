@@ -130,13 +130,13 @@ export async function listCitiesWithCapacity(): Promise<CityWithCapacity[]> {
   const withCounts = await Promise.all(
     cities.map(async (city) => {
       const achieved = await countQualifiedCompletions({ cityId: city.id });
-      const remaining = Math.max(0, city.capacity - achieved);
+      const remaining = city.capacity - achieved;
       const pctFull =
         city.capacity <= 0
           ? achieved > 0
             ? 100
             : 0
-          : Math.min(100, Math.round((achieved / city.capacity) * 1000) / 10);
+          : Math.round((achieved / city.capacity) * 1000) / 10;
       return {
         ...city,
         achieved,

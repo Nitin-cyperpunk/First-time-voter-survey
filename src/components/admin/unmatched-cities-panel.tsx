@@ -49,6 +49,7 @@ export function UnmatchedCitiesPanel({
   unmatchedGlobal,
   regions,
   cities,
+  enforceCapacity = false,
   onRefresh,
 }: {
   unmatched: UnmatchedCityRow[];
@@ -56,6 +57,7 @@ export function UnmatchedCitiesPanel({
   unmatchedGlobal: number;
   regions: string[];
   cities: CityOption[];
+  enforceCapacity?: boolean;
   onRefresh: () => Promise<void>;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -312,8 +314,8 @@ export function UnmatchedCitiesPanel({
         <div>
           <h4 className="text-sm font-semibold text-foreground">Unmatched cities</h4>
           <p className="mt-1 text-xs leading-relaxed text-plum-muted">
-            Completes that typed a city not in config. They count toward the{" "}
-            <strong>global cap only</strong> ({unmatchedGlobal} unmatched completes).
+            Completes that typed a city not in config. They still count toward the{" "}
+            <strong>study total</strong> ({unmatchedGlobal} unmatched completes).
             Resolve inline to recount into the correct cell.
           </p>
         </div>
@@ -510,7 +512,7 @@ export function UnmatchedCitiesPanel({
                     </Select>
                   </label>
                   <label className="flex flex-col gap-1">
-                    <span>Closes at (optional)</span>
+                    <span>Reference (optional)</span>
                     <Input
                       type="number"
                       min={0}
@@ -666,7 +668,11 @@ export function UnmatchedCitiesPanel({
                     {preview.cells.map((cell) => (
                       <li
                         key={cell.cellId}
-                        className={cell.overBy > 0 ? "text-destructive" : "text-plum-muted"}
+                        className={
+                          enforceCapacity && cell.overBy > 0
+                            ? "text-destructive"
+                            : "text-plum-muted"
+                        }
                       >
                         {cell.state} · {cell.areaType}: {cell.currentAchieved} +{" "}
                         {cell.incoming} = {cell.afterAchieved} / {cell.allocation}
@@ -684,7 +690,11 @@ export function UnmatchedCitiesPanel({
                     {preview.cities.map((city) => (
                       <li
                         key={city.cityId}
-                        className={city.overBy > 0 ? "text-destructive" : "text-plum-muted"}
+                        className={
+                          enforceCapacity && city.overBy > 0
+                            ? "text-destructive"
+                            : "text-plum-muted"
+                        }
                       >
                         {city.cityName}: {city.currentAchieved} + {city.incoming} ={" "}
                         {city.afterAchieved}
@@ -696,7 +706,7 @@ export function UnmatchedCitiesPanel({
                 </div>
               ) : null}
 
-              {preview.hasOverage ? (
+              {preview.hasOverage && enforceCapacity ? (
                 <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3">
                   <p className="font-medium text-destructive">
                     This resolution exceeds at least one allocation.
@@ -732,6 +742,13 @@ export function UnmatchedCitiesPanel({
                 </div>
               ) : (
                 <div className="flex gap-2 pt-2">
+                  {preview.hasOverage && !enforceCapacity ? (
+                    <p className="mb-2 w-full text-plum-muted">
+                      After recount, at least one cell or city will be over its
+                      reference number. That is expected while enforcement is
+                      off.
+                    </p>
+                  ) : null}
                   <Button type="button" size="sm" onClick={() => void commitResolve()}>
                     Confirm &amp; recount
                   </Button>

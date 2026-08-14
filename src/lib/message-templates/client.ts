@@ -1,4 +1,8 @@
 import { DEFAULT_MESSAGE_TEMPLATES } from "@/lib/message-templates/defaults";
+import {
+  MESSAGE_TEMPLATE_KEYS,
+  resolveWhatsAppSubmissionConfirmationKey,
+} from "@/lib/message-templates/keys";
 import { resolveTemplateBody } from "@/lib/message-templates/resolve-template-body";
 import {
   expandTemplateContext,
@@ -45,10 +49,14 @@ export async function getRenderedMessage(
 ): Promise<string> {
   const templates = await loadMessageTemplates();
   const expandedContext = expandTemplateContext(context);
-  const entry = templates[templateKey];
-  if (entry?.enabled) {
+  const resolvedKey =
+    templateKey === MESSAGE_TEMPLATE_KEYS.WHATSAPP_SUBMISSION_CONFIRMATION
+      ? resolveWhatsAppSubmissionConfirmationKey(templates)
+      : templateKey;
+  const entry = templates[resolvedKey] ?? templates[templateKey];
+  if (entry?.enabled && entry.template.trim()) {
     return renderMessageTemplate(
-      resolveTemplateBody(templateKey, entry.template),
+      resolveTemplateBody(resolvedKey, entry.template),
       expandedContext,
     );
   }

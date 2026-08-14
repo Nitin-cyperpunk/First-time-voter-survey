@@ -27,6 +27,8 @@ import {
   validateCityClosesAt,
 } from "@/server/services/quota.service";
 import type { AreaType } from "@/lib/india-states";
+import { isCapacityEnforced } from "@/lib/study-config/gates";
+import { getStudyConfig } from "@/server/repositories/form-settings.repository";
 
 type ScreenerUnmatchedRow = {
   lead_id: string;
@@ -367,8 +369,10 @@ export async function commitUnmatchedResolve(input: {
   overQuotaDecision?: OverQuotaDecision;
 }) {
   const preview = await previewUnmatchedResolve({ resolutions: input.resolutions });
+  const config = await getStudyConfig();
+  const enforce = isCapacityEnforced(config);
 
-  if (preview.hasOverage) {
+  if (enforce && preview.hasOverage) {
     if (!input.overQuotaDecision || input.overQuotaDecision === "cancel") {
       throw new Error("OVER_QUOTA_DECISION_REQUIRED");
     }
@@ -378,7 +382,7 @@ export async function commitUnmatchedResolve(input: {
     input.resolutions.map((r) => r.matchKey),
   );
 
-  if (preview.hasOverage && input.overQuotaDecision === "raise_city_capacity") {
+  if (enforce && preview.hasOverage && input.overQuotaDecision === "raise_city_capacity") {
     for (const cityPreview of preview.cities) {
       if (cityPreview.overBy <= 0 || cityPreview.cityId.startsWith("new:")) continue;
       const city = await getCityById(cityPreview.cityId);
@@ -399,7 +403,7 @@ export async function commitUnmatchedResolve(input: {
     }
   }
 
-  if (preview.hasOverage && input.overQuotaDecision === "proceed_over_quota") {
+  if (enforce && preview.hasOverage && input.overQuotaDecision === "proceed_over_quota") {
     for (const cell of preview.cells.filter((c) => c.overBy > 0)) {
       await getSupabaseAdmin().from("quota_cell_over_quota").upsert(
         {

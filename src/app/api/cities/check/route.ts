@@ -31,8 +31,10 @@ export async function POST(request: Request) {
       code: result.code,
       message: result.message,
       matchType: result.resolved.matchType,
-      // Never expose remaining slots — open/closed only.
-      closed: Boolean(result.resolved.isFull || !result.resolved.isOpen),
+      // Capacity-full is never exposed when enforcement is off (ok is always true).
+      closed: result.ok
+        ? false
+        : Boolean(result.resolved.isFull || !result.resolved.isOpen),
     });
   } catch (error) {
     console.error("POST /api/cities/check failed:", error);

@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * Kept for admin/legacy. Respondent form no longer uses a city dropdown.
- * Prefer POST /api/cities/check for free-text capacity feedback.
+ * Cities at or over a reference target are listed unless enforce_capacity is on.
  */
 export async function GET() {
   try {

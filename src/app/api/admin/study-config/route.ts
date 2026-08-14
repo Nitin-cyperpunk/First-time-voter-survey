@@ -63,6 +63,16 @@ export async function PUT(request: Request) {
 
     const saved = await updateStudyConfig(config);
 
+    if (previous.enforce_capacity !== saved.enforce_capacity) {
+      await logConfigChange({
+        actorId: admin.id,
+        actorEmail: admin.email,
+        entityType: "study_config",
+        field: "enforce_capacity",
+        oldValue: previous.enforce_capacity,
+        newValue: saved.enforce_capacity,
+      });
+    }
     if (previous.form_status !== saved.form_status) {
       await logConfigChange({
         actorId: admin.id,

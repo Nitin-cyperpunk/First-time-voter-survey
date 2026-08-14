@@ -24,6 +24,7 @@ import {
   listCitiesWithCapacity,
   type CityRecord,
 } from "@/server/repositories/cities.repository";
+import { isCapacityEnforced } from "@/lib/study-config/gates";
 import { getStudyConfig } from "@/server/repositories/form-settings.repository";
 
 type StateAllocRow = {
@@ -262,7 +263,7 @@ function buildCell(input: {
 
 function pct(achieved: number, cap: number): number {
   if (cap <= 0) return achieved > 0 ? 100 : 0;
-  return Math.min(100, Math.round((achieved / cap) * 1000) / 10);
+  return Math.round((achieved / cap) * 1000) / 10;
 }
 
 type ScreenerCityRow = {
@@ -391,29 +392,33 @@ async function listReallocationAudit(): Promise<QuotaSnapshot["reallocations"]> 
   }));
 }
 
-/** Dropdown: open + active + room at city, cell, state, and study. Labels are city names only. */
+/** Dropdown: active cities. Full cities are hidden only when enforce_capacity is on. */
 export async function listSelectableCities(): Promise<
   Array<{ id: string; name: string; state: string }>
 > {
+  const config = await getStudyConfig();
+  const enforce = isCapacityEnforced(config);
+
   let snapshot: QuotaSnapshot;
   try {
     snapshot = await buildQuotaSnapshot();
   } catch {
     const cities = await listCitiesWithCapacity();
     return cities
-      .filter((city) => city.isActive && city.remaining > 0)
+      .filter((city) => city.isActive && (enforce ? city.remaining > 0 : true))
       .map(({ id, name, state }) => ({ id, name, state }))
       .sort((a, b) => a.name.localeCompare(b.name, "en"));
   }
-  if (snapshot.achievedGlobal >= snapshot.totalCapacity) return [];
+  if (enforce && snapshot.achievedGlobal >= snapshot.totalCapacity) return [];
 
   const out: Array<{ id: string; name: string; state: string }> = [];
   for (const state of snapshot.states) {
-    if (state.remaining <= 0) continue;
+    if (enforce && state.remaining <= 0) continue;
     for (const cell of [state.urban, state.rural]) {
-      if (cell.remaining <= 0) continue;
+      if (enforce && cell.remaining <= 0) continue;
       for (const city of cell.cities) {
-        if (!city.isActive || !city.isOpen || city.remaining <= 0) continue;
+        if (!city.isActive) continue;
+        if (enforce && (!city.isOpen || city.remaining <= 0)) continue;
         out.push({ id: city.id, name: city.name, state: city.state });
       }
     }

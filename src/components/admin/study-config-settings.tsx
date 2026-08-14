@@ -8,7 +8,7 @@ import { CityTargetsPanel } from "@/components/admin/city-targets-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { closesAt } from "@/lib/study-config/defaults";
-import { isRegistrationAccepting } from "@/lib/study-config/gates";
+import { isCapacityEnforced, isRegistrationAccepting } from "@/lib/study-config/gates";
 import type { StudyConfig } from "@/lib/study-config/types";
 import {
   dismissToast,
@@ -84,6 +84,7 @@ export function StudyConfigSettings({ initialConfig }: StudyConfigSettingsProps)
   const [activeCitySum, setActiveCitySum] = useState(0);
   const cap = useMemo(() => closesAt(config), [config]);
   const unallocated = config.total_capacity - activeCitySum;
+  const enforcing = isCapacityEnforced(config);
 
   function patch(partial: Partial<StudyConfig>) {
     setConfig((current) => ({ ...current, ...partial }));
@@ -144,14 +145,38 @@ export function StudyConfigSettings({ initialConfig }: StudyConfigSettingsProps)
               Config
             </h2>
             <p className="mt-1 max-w-2xl text-sm text-plum-muted">
-              Form open/close, global capacity, city quotas, and study gates.
-              Superadmin only. Saved on the registration{" "}
-              <span className="font-mono text-xs">form_settings</span> row.
+              Form open/close is the only way to stop new respondents. Targets
+              are reference numbers for monitoring. Superadmin only.
             </p>
           </div>
           <StatusBadge config={config} />
         </div>
       </div>
+
+      {!enforcing ? (
+        <div
+          className="rounded-[14px] border border-primary/30 bg-accent-soft px-5 py-4 text-sm leading-relaxed text-text-primary"
+          role="status"
+        >
+          <p className="font-semibold text-foreground">
+            Capacity enforcement is OFF. No respondent will be turned away.
+            Close the form manually when the sample is sufficient.
+          </p>
+          <p className="mt-1 text-plum-muted">
+            Qualified completes still count by city, state, and area type. Use
+            those live totals — not a hard cap — to decide when to close
+            (around 200–230).
+          </p>
+        </div>
+      ) : (
+        <div
+          className="rounded-[14px] border border-destructive/40 bg-destructive/10 px-5 py-4 text-sm leading-relaxed text-destructive"
+          role="status"
+        >
+          Capacity enforcement is ON. Respondents can be rejected at city, cell,
+          state, or study reference limits.
+        </div>
+      )}
 
       <section className="rounded-[14px] border border-border bg-card p-6 shadow-sm">
         <h3 className="flex items-center gap-2 text-base font-semibold text-foreground">
@@ -163,10 +188,10 @@ export function StudyConfigSettings({ initialConfig }: StudyConfigSettingsProps)
         </h3>
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-plum-muted">
           Closed: the respondent route shows the closed screen (questions are
-          not mounted) and submit APIs reject with{" "}
-          <span className="font-mono">form_closed</span>. In-progress tabs are
-          blocked at submit. Referral links still resolve to the same closed
-          screen.
+          not mounted) and a direct submit without a start time is rejected with{" "}
+          <span className="font-mono">form_closed</span>. Respondents already
+          mid-survey may finish so partial data is not discarded. Referral
+          links still resolve to the same closed screen.
         </p>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-border px-4 py-3">
           <div>
@@ -183,20 +208,42 @@ export function StudyConfigSettings({ initialConfig }: StudyConfigSettingsProps)
             label="Form status"
           />
         </div>
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-border px-4 py-3">
+        <div
+          className={`mt-3 flex flex-wrap items-center justify-between gap-3 rounded-[12px] border px-4 py-3 ${
+            enforcing ? "border-border" : "border-border opacity-60"
+          }`}
+        >
           <div>
             <p className="text-sm font-semibold text-foreground">
               Auto-close when full
             </p>
             <p className="text-xs text-plum-muted">
-              Sets form_status to closed when qualified completions reach total
-              capacity.
+              {enforcing
+                ? "Sets form_status to closed when qualified completions reach the study reference."
+                : "Inactive while enforcement is off. The form closes only when you toggle Accept responses."}
             </p>
           </div>
           <Toggle
-            checked={config.auto_close_on_full}
+            checked={enforcing && config.auto_close_on_full}
             onChange={(next) => patch({ auto_close_on_full: next })}
             label="Auto-close on full"
+            disabled={!enforcing}
+          />
+        </div>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-border px-4 py-3">
+          <div>
+            <p className="text-sm font-semibold text-foreground">
+              Enforce capacity
+            </p>
+            <p className="text-xs text-plum-muted">
+              Single switch. Off (default): count and report only. On: restores
+              city → cell → state → study rejects without new development.
+            </p>
+          </div>
+          <Toggle
+            checked={config.enforce_capacity}
+            onChange={(next) => patch({ enforce_capacity: next })}
+            label="Enforce capacity"
           />
         </div>
       </section>
@@ -207,17 +254,16 @@ export function StudyConfigSettings({ initialConfig }: StudyConfigSettingsProps)
             className="size-2 shrink-0 rounded-full bg-primary"
             aria-hidden
           />
-          Global capacity
+          Global reference
         </h3>
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-plum-muted">
-          Hard cap on <strong>qualified completions</strong> only (passed
+          Reference N for <strong>qualified completions</strong> only (passed
           terminate gates and submitted). Terminated and abandoned responses do
-          not count. Sum of <strong>state allocations</strong> cannot exceed this
-          number. City Closes At sums cannot exceed their urban / rural cell.
+          not count. This is not a hard cap unless enforcement is on.
         </p>
         <label className="mt-4 block max-w-xs space-y-1.5">
           <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-plum-faint">
-            Total capacity
+            Study reference
           </span>
           <Input
             type="number"
@@ -246,6 +292,7 @@ export function StudyConfigSettings({ initialConfig }: StudyConfigSettingsProps)
 
       <CityTargetsPanel
         totalCapacity={config.total_capacity}
+        enforceCapacity={enforcing}
         onCapacityHintChange={setActiveCitySum}
       />
 
@@ -335,14 +382,14 @@ export function StudyConfigSettings({ initialConfig }: StudyConfigSettingsProps)
               {cap}
             </p>
             <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-primary">
-              Closes at
+              Funnel N
             </p>
           </div>
         </div>
 
         <div className="mt-4 rounded-[12px] border border-border bg-accent-soft px-4 py-3 text-sm leading-relaxed text-text-primary">
-          Funnel metrics still use target + buffer. Enforcement of new
-          completions uses total capacity and city quotas.
+          Funnel metrics still use target + buffer. Live qualified counts use
+          the study reference and city/state/area-type breakdowns below.
         </div>
       </section>
 
@@ -577,10 +624,12 @@ function Toggle({
   checked,
   onChange,
   label,
+  disabled,
 }: {
   checked: boolean;
   onChange: (next: boolean) => void;
   label: string;
+  disabled?: boolean;
 }) {
   return (
     <button
@@ -588,9 +637,14 @@ function Toggle({
       role="switch"
       aria-checked={checked}
       aria-label={label}
-      onClick={() => onChange(!checked)}
+      disabled={disabled}
+      onClick={() => {
+        if (disabled) return;
+        onChange(!checked);
+      }}
       className={cn(
         "relative h-7 w-12 shrink-0 rounded-full border transition-colors",
+        disabled ? "cursor-not-allowed opacity-50" : "",
         checked
           ? "border-primary bg-primary"
           : "border-border bg-rose-tint",

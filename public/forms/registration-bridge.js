@@ -365,7 +365,15 @@
     WHATSAPP_REFERRAL: "whatsapp_referral",
     INSTAGRAM_REFERRAL: "instagram_referral",
     NOT_ELIGIBLE_REFERRAL: "not_eligible_referral",
+    WHATSAPP_SUBMISSION_CONFIRMATION: "whatsapp_submission_confirmation",
   };
+
+  const SUBMISSION_CONFIRMATION_ALIASES = [
+    "whatsapp_submission_confirmation",
+    "submission_confirmation",
+    "submission_confirm",
+    "whatsapp_verification",
+  ];
 
   const REFERRAL_REWARD_AMOUNT = 50;
 
@@ -408,6 +416,13 @@
     }
     if (templateKey === TEMPLATE_KEYS.NOT_ELIGIBLE_REFERRAL) {
       return registrationMessageCache.not_eligible_referral || null;
+    }
+    if (templateKey === TEMPLATE_KEYS.WHATSAPP_SUBMISSION_CONFIRMATION) {
+      return (
+        registrationMessageCache.whatsapp_submission_confirmation ||
+        registrationMessageCache.submission_confirmation ||
+        null
+      );
     }
 
     return null;
@@ -1549,23 +1564,11 @@
     return (
       (registration &&
         registration.messages &&
-        registration.messages.instagram_verification &&
-        registration.messages.instagram_verification.message) ||
+        (registration.messages.whatsapp_submission_confirmation ||
+          registration.messages.submission_confirmation) &&
+        (registration.messages.whatsapp_submission_confirmation ||
+          registration.messages.submission_confirmation).message) ||
       ""
-    );
-  }
-
-  function buildLoginDetailsWhatsAppMessage(context) {
-    const name = String((context && context.fullName) || "").trim();
-    const mobile = String((context && context.mobile) || "").trim();
-    const leadId = String((context && context.leadId) || "").trim();
-    return (
-      "Hi!\n\n" +
-      "I completed my registration.\n\n" +
-      (name ? "Name: " + name + "\n" : "") +
-      (mobile ? "Mobile: " + mobile + "\n" : "") +
-      (leadId ? "Lead ID: " + leadId + "\n" : "") +
-      "\nPlease send my login details."
     );
   }
 
@@ -1577,12 +1580,10 @@
     if (message) return message;
 
     const cached = resolveCachedRenderedMessage(
-      TEMPLATE_KEYS.INSTAGRAM_VERIFICATION,
+      TEMPLATE_KEYS.WHATSAPP_SUBMISSION_CONFIRMATION,
     );
     if (cached && cached.message) return String(cached.message);
 
-    // Registration clears the participant session, so /api/participant/render-message
-    // cannot be used here. Wait briefly for the in-flight consent termination instead.
     if (submitConsentDeclineTermination.promise) {
       try {
         registration =
@@ -1597,11 +1598,13 @@
       }
     }
 
-    return buildLoginDetailsWhatsAppMessage({
+    return renderSubmissionConfirmationMessage({
       fullName:
         (registration && registration.fullName) || details.fullName || "",
       mobile: (registration && registration.mobile) || details.mobile || "",
       leadId: (registration && registration.leadId) || "",
+      referralLink:
+        (registration && registration.referralLink) || details.referralLink || "",
     });
   }
 
@@ -2399,6 +2402,96 @@
     };
   }
 
+  function fillMessageTemplate(template, context) {
+    return String(template || "").replace(
+      /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g,
+      function (_, key) {
+        const value = context[key];
+        return value == null ? "" : String(value);
+      },
+    );
+  }
+
+  function resolveSubmissionConfirmationKey(templates) {
+    for (var i = 0; i < SUBMISSION_CONFIRMATION_ALIASES.length; i++) {
+      var alias = SUBMISSION_CONFIRMATION_ALIASES[i];
+      var aliased = templates[alias];
+      if (
+        aliased &&
+        aliased.enabled !== false &&
+        String(aliased.template || "").trim()
+      ) {
+        return alias;
+      }
+    }
+    var keys = Object.keys(templates || {});
+    for (var j = 0; j < keys.length; j++) {
+      var item = templates[keys[j]];
+      var title = String((item && item.title) || "").toLowerCase();
+      if (
+        item &&
+        item.enabled !== false &&
+        item.channel === "whatsapp" &&
+        String(item.template || "").trim() &&
+        /submission\s*confirm/.test(title)
+      ) {
+        return keys[j];
+      }
+    }
+    return TEMPLATE_KEYS.WHATSAPP_SUBMISSION_CONFIRMATION;
+  }
+
+  function submissionConfirmationContext(details) {
+    const fullName = String((details && details.fullName) || "").trim();
+    const mobile = String((details && details.mobile) || "").trim();
+    const leadId = String((details && details.leadId) || "").trim();
+    const referralLink = String((details && details.referralLink) || "").trim();
+    return {
+      participant_name: fullName,
+      name: fullName,
+      full_name: fullName,
+      mobile: mobile,
+      phone: mobile,
+      lead_id: leadId,
+      leadId: leadId,
+      referral_link: referralLink,
+    };
+  }
+
+  async function renderSubmissionConfirmationMessage(details) {
+    const cached = resolveCachedRenderedMessage(
+      TEMPLATE_KEYS.WHATSAPP_SUBMISSION_CONFIRMATION,
+    );
+    if (cached && cached.message) return String(cached.message);
+
+    try {
+      const loaded = await loadMessageTemplates();
+      const templates = loaded.templates || {};
+      const key = resolveSubmissionConfirmationKey(templates);
+      const entry = templates[key];
+      if (!entry || !String(entry.template || "").trim()) return "";
+      return fillMessageTemplate(
+        entry.template,
+        submissionConfirmationContext(details || {}),
+      );
+    } catch (error) {
+      console.warn("Submission confirmation template unavailable:", error);
+      return "";
+    }
+  }
+
+  function openWhatsAppWithTemplateMessage(message) {
+    if (!String(message || "").trim()) {
+      showCopiedToast("Could not prepare your message.");
+      return;
+    }
+    window.open(
+      buildWhatsAppVerificationUrl(message),
+      "_blank",
+      "noopener,noreferrer",
+    );
+  }
+
   function normalizeRegistrationStatus(status) {
     return String(status || "")
       .trim()
@@ -2542,16 +2635,12 @@
       "Message the study team",
       "cta-wa",
       function () {
-        const message = buildLoginDetailsWhatsAppMessage({
+        void renderSubmissionConfirmationMessage({
           fullName: registration.fullName,
           mobile: registration.mobile,
           leadId: registration.leadId,
-        });
-        window.open(
-          buildWhatsAppVerificationUrl(message),
-          "_blank",
-          "noopener,noreferrer",
-        );
+          referralLink: registration.referralLink,
+        }).then(openWhatsAppWithTemplateMessage);
       },
     );
 
@@ -3125,6 +3214,72 @@
     installMobileExistenceCheck.observer = observer;
   }
 
+  function disableCapacityCityBlock() {
+    var cfg = window.__concaveStudyConfig;
+    if (cfg && cfg.enforce_capacity === true) return;
+
+    function clearBlock() {
+      if (window.A) window.A._cityBlocked = false;
+      var err = document.getElementById("fCityErr");
+      if (
+        err &&
+        /no longer accepting|not accepting responses|reached its respondent/i.test(
+          err.textContent || "",
+        )
+      ) {
+        err.hidden = true;
+        err.textContent = "";
+      }
+      var input = document.getElementById("fCity");
+      if (input) input.classList.remove("invalid");
+    }
+
+    clearBlock();
+    document.addEventListener("focusout", function (event) {
+      if (event.target && event.target.id === "fCity") {
+        setTimeout(clearBlock, 50);
+      }
+    });
+
+    if (window.__concaveCapacityFetchPatched) return;
+    window.__concaveCapacityFetchPatched = true;
+    var origFetch = window.fetch;
+    if (typeof origFetch !== "function") return;
+    window.fetch = function (input, init) {
+      var url = typeof input === "string" ? input : (input && input.url) || "";
+      return origFetch.apply(this, arguments).then(function (res) {
+        if (String(url).indexOf("/api/cities/check") === -1) return res;
+        return res
+          .clone()
+          .json()
+          .then(function (data) {
+            var code = data && data.code;
+            if (
+              data &&
+              data.ok === false &&
+              (code === "city_full" ||
+                code === "cell_full" ||
+                code === "state_full" ||
+                code === "study_full")
+            ) {
+              return new Response(
+                JSON.stringify({
+                  ok: true,
+                  closed: false,
+                  matchType: data.matchType,
+                }),
+                { headers: { "Content-Type": "application/json" } },
+              );
+            }
+            return res;
+          })
+          .catch(function () {
+            return res;
+          });
+      });
+    };
+  }
+
   window.ConcaveRegistrationBridge = {
     collectScreenerAnswers,
     collectResponseTimes,
@@ -3146,6 +3301,7 @@
       }
       installMobileExistenceCheck();
       installDobDateConstraints();
+      disableCapacityCityBlock();
       installConsentReferInterceptor(
         showResultFn,
         getReferrerAttribution().code || "",

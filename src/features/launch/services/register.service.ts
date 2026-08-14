@@ -56,7 +56,9 @@ import { syncIpDuplicateFlag } from "@/lib/eligibility";
 import {
   ageOutOfRangeMessage,
   isAgeBandWithinStudyRule,
+  isCapacityEnforced,
   isRegistrationAccepting,
+  maySubmitWhileFormClosed,
 } from "@/lib/study-config/gates";
 import { getStudyConfig } from "@/server/repositories/form-settings.repository";
 import { buildResponseExportArtifacts } from "@/lib/form-export/persist-export";
@@ -293,7 +295,10 @@ export async function registerParticipant(
   },
 ) {
   const studyConfig = await getStudyConfig();
-  if (!isRegistrationAccepting(studyConfig)) {
+  if (
+    !isRegistrationAccepting(studyConfig) &&
+    !maySubmitWhileFormClosed(input.startedAt)
+  ) {
     throw new CapacityError("form_closed");
   }
 
@@ -395,15 +400,17 @@ export async function registerParticipant(
       throw new CapacityError("city_required");
     }
 
-    const availability = await checkCityAvailability({
-      cityRaw,
-      stateLabel,
-    });
-    if (!availability.ok) {
-      throw new CapacityError(
-        availability.code === "study_full" ? "study_full" : "city_full",
-        availability.message,
-      );
+    if (isCapacityEnforced(studyConfig)) {
+      const availability = await checkCityAvailability({
+        cityRaw,
+        stateLabel,
+      });
+      if (!availability.ok) {
+        throw new CapacityError(
+          availability.code === "study_full" ? "study_full" : "city_full",
+          availability.message,
+        );
+      }
     }
   }
 
@@ -423,6 +430,7 @@ export async function registerParticipant(
       };
 
   if (
+    isCapacityEnforced(studyConfig) &&
     !registrationTerminated &&
     fresh.matchType !== "unmatched" &&
     fresh.cityId &&
