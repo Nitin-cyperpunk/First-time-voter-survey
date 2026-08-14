@@ -2994,11 +2994,16 @@
     }
   }
 
-  async function checkMobileExistsAndPrompt() {
+  async function checkMobileExistsAndPrompt(sourceInput) {
     if (submitRegistration.submitted) return;
     if (window.__concaveRefillMode) return;
 
-    const rawMobile = document.querySelector("[name=phone]")?.value || "";
+    const rawMobile =
+      (sourceInput && sourceInput.value) ||
+      document.getElementById("fPhone")?.value ||
+      document.querySelector('[name="phone"]:not([type="hidden"])')?.value ||
+      document.querySelector("[name=phone]")?.value ||
+      "";
     const mobile = normalizeMobile(rawMobile);
 
     if (mobile.length < 10) return;
@@ -3008,6 +3013,33 @@
     if (await checkParticipantMobileExists(mobile)) {
       showAlreadyRegisteredDialog(rawMobile.trim());
     }
+  }
+
+  function bindMobileExistenceCheck(input) {
+    if (!input || input.dataset.existenceCheckBound === "1") return;
+    if (String(input.type || "").toLowerCase() === "hidden") return;
+    input.dataset.existenceCheckBound = "1";
+
+    function runCheck() {
+      void checkMobileExistsAndPrompt(input);
+    }
+
+    input.addEventListener("blur", runCheck);
+    input.addEventListener("change", runCheck);
+    input.addEventListener("input", function () {
+      const mobile = normalizeMobile(input.value || "");
+      if (mobile.length >= 10) runCheck();
+    });
+  }
+
+  function scanMobileExistenceInputs() {
+    ["#fPhone", 'input[name="phone"]', '[data-rl-field="mobile"]'].forEach(
+      function (selector) {
+        document.querySelectorAll(selector).forEach(function (input) {
+          bindMobileExistenceCheck(input);
+        });
+      },
+    );
   }
 
   function installReferralLeadMobileCheck(panel) {
@@ -3053,16 +3085,15 @@
   }
 
   function installMobileExistenceCheck() {
-    const phone = document.querySelector("[name=phone]");
-    if (!phone || phone.dataset.existenceCheckBound === "1") return;
-    phone.dataset.existenceCheckBound = "1";
+    scanMobileExistenceInputs();
 
-    phone.addEventListener("blur", function () {
-      void checkMobileExistsAndPrompt();
+    if (installMobileExistenceCheck.observer) return;
+
+    const observer = new MutationObserver(function () {
+      scanMobileExistenceInputs();
     });
-    phone.addEventListener("change", function () {
-      void checkMobileExistsAndPrompt();
-    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    installMobileExistenceCheck.observer = observer;
   }
 
   window.ConcaveRegistrationBridge = {

@@ -1,6 +1,9 @@
 type TerminationLike = {
   ruleKey: string;
   ruleLabel?: string | null;
+  questionKey?: string | null;
+  questionLabel?: string | null;
+  answerValue?: string | null;
   reasonText?: string | null;
 };
 

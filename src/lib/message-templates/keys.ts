@@ -8,3 +8,12 @@ export const MESSAGE_TEMPLATE_KEYS = {
 export const REQUIRED_MESSAGE_TEMPLATE_KEYS = Object.values(
   MESSAGE_TEMPLATE_KEYS,
 );
+
+/** Old Enamor / verification-era templates — not used by FTV; hidden from admin list. */
+export const LEGACY_MESSAGE_TEMPLATE_KEYS = [
+  "instagram_verification",
+  "whatsapp_verification",
+  "survey_access",
+  "enamor_referral",
+  "apparel_referral",
+] as const;
