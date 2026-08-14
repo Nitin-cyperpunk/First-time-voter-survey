@@ -4,7 +4,10 @@ export type ConfigAuditEntityType =
   | "study_config"
   | "city"
   | "state_quota"
-  | "quota_reallocation";
+  | "quota_reallocation"
+  | "city_import"
+  | "city_alias"
+  | "city_unmatched_resolve";
 
 export type ConfigAuditEntry = {
   id: string;
@@ -68,7 +71,10 @@ export async function listConfigAuditLog(limit = 100): Promise<ConfigAuditEntry[
     entityType:
       row.entity_type === "city" ||
       row.entity_type === "state_quota" ||
-      row.entity_type === "quota_reallocation"
+      row.entity_type === "quota_reallocation" ||
+      row.entity_type === "city_import" ||
+      row.entity_type === "city_alias" ||
+      row.entity_type === "city_unmatched_resolve"
         ? row.entity_type
         : "study_config",
     entityId: row.entity_id,

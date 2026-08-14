@@ -58,6 +58,19 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("POST /api/admin/cities/import failed:", error);
+    const pgCode =
+      error && typeof error === "object" && "code" in error
+        ? String((error as { code: string }).code)
+        : "";
+    if (pgCode === "23505") {
+      return NextResponse.json(
+        {
+          error:
+            "Import hit a duplicate city for the same state. Re-upload the file for a fresh preview, or remove the duplicate row.",
+        },
+        { status: 409 },
+      );
+    }
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Import failed." },
       { status: 400 },

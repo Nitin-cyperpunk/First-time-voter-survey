@@ -105,6 +105,26 @@ export async function getCityById(id: string): Promise<CityRecord | null> {
   return data ? mapCity(data as CityRow) : null;
 }
 
+/** Matches idx_cities_name_state_unique (lower name + lower state). */
+export async function findCityByNameAndState(
+  name: string,
+  state: string,
+): Promise<CityRecord | null> {
+  const trimmedName = name.trim();
+  const trimmedState = state.trim();
+  if (!trimmedName || !trimmedState) return null;
+
+  const { data, error } = await getSupabaseAdmin()
+    .from("cities")
+    .select("*")
+    .ilike("name", trimmedName)
+    .ilike("state", trimmedState)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data ? mapCity(data as CityRow) : null;
+}
+
 export async function listCitiesWithCapacity(): Promise<CityWithCapacity[]> {
   const cities = await listCities();
   const withCounts = await Promise.all(

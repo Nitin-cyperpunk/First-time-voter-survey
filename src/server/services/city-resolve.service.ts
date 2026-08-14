@@ -11,6 +11,27 @@ import {
   getCityById,
 } from "@/server/repositories/cities.repository";
 import { buildQuotaSnapshot } from "@/server/services/quota.service";
+import {
+  countActiveUnmatchedCompletes,
+  listUnmatchedCityRows,
+} from "@/server/services/unmatched-city-resolve.service";
+
+export type { UnmatchedCityRow } from "@/lib/unmatched-city-types";
+
+/** @deprecated Use listUnmatchedCityRows */
+export async function listUnmatchedCityCounts(limit = 50) {
+  const rows = await listUnmatchedCityRows(limit);
+  return rows.map((row) => ({
+    raw: row.raw,
+    count: row.count,
+    latestAt: row.latestAt,
+  }));
+}
+
+/** @deprecated Use countActiveUnmatchedCompletes */
+export async function countUnmatchedCompletions() {
+  return countActiveUnmatchedCompletes();
+}
 
 type CityRow = {
   id: string;
@@ -202,49 +223,4 @@ export async function checkCityAvailability(input: {
   }
 
   return { ok: true, resolved };
-}
-
-export async function listUnmatchedCityCounts(limit = 50): Promise<
-  Array<{ raw: string; count: number; latestAt: string }>
-> {
-  const { data, error } = await getSupabaseAdmin()
-    .from("screener_responses")
-    .select("city_raw, submitted_at")
-    .eq("city_match_type", "unmatched")
-    .eq("completion_status", "Completed")
-    .not("city_raw", "is", null)
-    .order("submitted_at", { ascending: false })
-    .limit(5000);
-
-  if (error) throw error;
-
-  const byKey = new Map<
-    string,
-    { raw: string; count: number; latestAt: string }
-  >();
-  for (const row of data ?? []) {
-    const raw = String(row.city_raw ?? "").trim();
-    if (!raw) continue;
-    const key = cityMatchKey(raw) || raw.toLowerCase();
-    const existing = byKey.get(key);
-    if (!existing) {
-      byKey.set(key, { raw, count: 1, latestAt: row.submitted_at });
-    } else {
-      existing.count += 1;
-    }
-  }
-
-  return [...byKey.values()]
-    .sort((a, b) => b.count - a.count)
-    .slice(0, limit);
-}
-
-export async function countUnmatchedCompletions(): Promise<number> {
-  const { count, error } = await getSupabaseAdmin()
-    .from("screener_responses")
-    .select("*", { count: "exact", head: true })
-    .eq("completion_status", "Completed")
-    .eq("city_match_type", "unmatched");
-  if (error) throw error;
-  return count ?? 0;
 }

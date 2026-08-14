@@ -5,8 +5,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { UnmatchedCitiesPanel } from "@/components/admin/unmatched-cities-panel";
 import type { AreaType } from "@/lib/india-states";
 import type { QuotaSnapshot, QuotaStateRow } from "@/lib/quota/types";
+import type {
+  IgnoredUnmatchedRow,
+  UnmatchedCityRow,
+} from "@/lib/unmatched-city-types";
 import {
   dismissToast,
   toastError,
@@ -17,8 +22,9 @@ import {
 type SnapshotPayload = QuotaSnapshot & {
   regions?: string[];
   error?: string;
-  unmatchedCities?: Array<{ raw: string; count: number; latestAt: string }>;
+  unmatchedCities?: UnmatchedCityRow[];
   unmatchedGlobalCompletes?: number;
+  ignoredUnmatched?: IgnoredUnmatchedRow[];
 };
 
 export function CityTargetsPanel({
@@ -61,18 +67,12 @@ export function CityTargetsPanel({
     fileName: string;
     counts: { add: number; update: number; reject: number };
   } | null>(null);
-  const [unmatched, setUnmatched] = useState<
-    Array<{ raw: string; count: number; latestAt: string }>
-  >([]);
-  const [unmatchedGlobal, setUnmatchedGlobal] = useState(0);
 
   const load = useCallback(async () => {
     const response = await fetch("/api/admin/cities");
     const data = (await response.json()) as SnapshotPayload;
     if (!response.ok) throw new Error(data.error ?? "Failed to load City Targets.");
     setPayload(data);
-    setUnmatched(data.unmatchedCities ?? []);
-    setUnmatchedGlobal(data.unmatchedGlobalCompletes ?? 0);
     setEditAlloc({});
     setEditUrbanPct({});
     setEditBuffer({});
@@ -93,6 +93,18 @@ export function CityTargetsPanel({
       `${row.state}|urban`,
       `${row.state}|rural`,
     ]);
+  }, [payload]);
+
+  const configCityOptions = useMemo(() => {
+    if (!payload) return [];
+    return payload.states.flatMap((row) =>
+      [...row.urban.cities, ...row.rural.cities].map((city) => ({
+        id: city.id,
+        name: city.name,
+        state: city.state,
+        areaType: city.areaType,
+      })),
+    );
   }, [payload]);
 
   async function previewImport(file: File) {
@@ -400,26 +412,14 @@ export function CityTargetsPanel({
         ) : null}
       </div>
 
-      <div className="mt-5 rounded-[12px] border border-border p-4">
-        <h4 className="text-sm font-semibold text-foreground">Unmatched cities</h4>
-        <p className="mt-1 text-xs leading-relaxed text-plum-muted">
-          Completes that typed a city not in this list. They consume global capacity
-          only ({unmatchedGlobal} unmatched completes). Add them via import or aliases
-          if they should fill a cell.
-        </p>
-        {unmatched.length === 0 ? (
-          <p className="mt-2 text-xs text-text-muted">No unmatched completes yet.</p>
-        ) : (
-          <ul className="mt-3 max-h-48 space-y-1 overflow-y-auto text-xs text-plum-muted">
-            {unmatched.map((row) => (
-              <li key={row.raw}>
-                <span className="font-medium text-foreground">{row.raw}</span> ·{" "}
-                {row.count} complete{row.count === 1 ? "" : "s"}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <UnmatchedCitiesPanel
+        unmatched={payload?.unmatchedCities ?? []}
+        ignored={payload?.ignoredUnmatched ?? []}
+        unmatchedGlobal={payload?.unmatchedGlobalCompletes ?? 0}
+        regions={payload?.regions ?? []}
+        cities={configCityOptions}
+        onRefresh={load}
+      />
 
       {loading ? (
         <p className="mt-6 text-sm text-text-muted">Loading City Targets…</p>
