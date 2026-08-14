@@ -7,6 +7,12 @@ import {
   type FtvCodebookRow,
   type FtvRespondentRow,
 } from "@/lib/ftv-export";
+import {
+  recoverFtvAnswers,
+  recoverFtvRespondent,
+  type RecoveredParticipant,
+  type RecoveredScreener,
+} from "@/lib/ftv-export/recover";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { backfillMissingFtvFromScreener } from "@/server/repositories/ftv-responses.repository";
 
@@ -39,6 +45,69 @@ async function fetchAll<T>(
   return all;
 }
 
+async function loadMissingCompletedForExport(
+  existing: FtvRespondentRow[],
+  leadIdsFilter?: string[],
+): Promise<{ respondents: FtvRespondentRow[]; answers: FtvAnswerRow[] }> {
+  const have = new Set<string>();
+  for (const row of existing) {
+    if (row.lead_id) have.add(row.lead_id);
+    if (row.respondent_id) have.add(row.respondent_id);
+  }
+  const filter = leadIdsFilter?.length ? new Set(leadIdsFilter) : null;
+
+  const supabase = getSupabaseAdmin();
+  const screeners = await fetchAll(async (from, to) => {
+    const { data, error } = await supabase
+      .from("screener_responses")
+      .select(
+        "lead_id, city_id, city_raw, city_match_type, answers, analytics, started_at, submitted_at, total_duration_sec",
+      )
+      .eq("completion_status", "Completed")
+      .order("submitted_at", { ascending: false })
+      .range(from, to);
+    if (error) throw error;
+    return (data ?? []) as RecoveredScreener[];
+  });
+
+  const missing = screeners.filter((row) => {
+    if (!row.lead_id || have.has(row.lead_id)) return false;
+    if (filter && !filter.has(row.lead_id)) return false;
+    return true;
+  });
+  if (missing.length === 0) return { respondents: [], answers: [] };
+
+  const missingIds = missing.map((row) => row.lead_id);
+  const participants = await fetchAll(async (from, to) => {
+    const { data, error } = await supabase
+      .from("participants")
+      .select(
+        "lead_id, full_name, email, mobile, city, city_id, area, pincode, dob, created_at",
+      )
+      .in("lead_id", missingIds)
+      .range(from, to);
+    if (error) throw error;
+    return (data ?? []) as RecoveredParticipant[];
+  });
+  const participantByLead = new Map(
+    participants.map((row) => [row.lead_id, row]),
+  );
+
+  const respondents: FtvRespondentRow[] = [];
+  const answers: FtvAnswerRow[] = [];
+  for (const screener of missing) {
+    const respondent = recoverFtvRespondent({
+      screener,
+      participant: participantByLead.get(screener.lead_id) ?? null,
+    });
+    respondents.push(respondent);
+    if (respondent.respondent_id) {
+      answers.push(...recoverFtvAnswers(respondent.respondent_id, screener));
+    }
+  }
+  return { respondents, answers };
+}
+
 export async function listFtvExportBundle(
   leadIdsFilter?: string[],
 ): Promise<FtvExportBundle> {
@@ -68,6 +137,8 @@ export async function listFtvExportBundle(
   if (respondentError) throw respondentError;
 
   const respondents = (respondentRows ?? []) as FtvRespondentRow[];
+  const overlay = await loadMissingCompletedForExport(respondents, leadIdsFilter);
+  respondents.push(...overlay.respondents);
   const cityIds = [
     ...new Set(respondents.map((row) => row.city_id).filter(Boolean)),
   ] as string[];
@@ -149,6 +220,7 @@ export async function listFtvExportBundle(
     });
     answers.push(...page);
   }
+  answers.push(...overlay.answers);
 
   const { data: summaryRows, error: summaryError } = await supabase
     .from("ftv_field_summary")

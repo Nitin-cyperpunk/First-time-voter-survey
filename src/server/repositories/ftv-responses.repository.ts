@@ -1,4 +1,6 @@
 import {
+  extractStoredFtvPayload,
+  padFtvResponsesForContract,
   readFtvPayloadDuration,
   readFtvPayloadString,
   readFtvPayloadTimestamp,
@@ -52,22 +54,7 @@ export function isMissingReferralCodeColumn(error: {
   );
 }
 
-export function extractStoredFtvPayload(source: unknown): Record<string, unknown> | null {
-  if (!source || typeof source !== "object" || Array.isArray(source)) return null;
-  const record = source as Record<string, unknown>;
-  const nested = record.__ftv_payload;
-  if (nested && typeof nested === "object" && !Array.isArray(nested)) {
-    const payload = nested as Record<string, unknown>;
-    if (Array.isArray(payload.responses)) return payload;
-  }
-  if (Array.isArray(record.responses)) return record;
-  const inner = record.payload;
-  if (inner && typeof inner === "object" && !Array.isArray(inner)) {
-    const payload = inner as Record<string, unknown>;
-    if (Array.isArray(payload.responses)) return payload;
-  }
-  return null;
-}
+export { extractStoredFtvPayload };
 
 async function rpcInsertFtv(args: InsertFtvArgs) {
   return getSupabaseAdmin().rpc("insert_ftv_response", args);
@@ -227,7 +214,9 @@ export async function persistFtvAnalysisResponse(input: {
   const durationSeconds =
     readFtvPayloadDuration(answerJson) ?? input.totalDurationSec ?? null;
 
-  const stamped = stampFtvRespondentId(answerJson, input.leadId);
+  const stamped = padFtvResponsesForContract(
+    stampFtvRespondentId(answerJson, input.leadId),
+  );
   const result = await insertFtvResponse({
     respondentId: input.leadId,
     surveyVersion,
@@ -238,7 +227,7 @@ export async function persistFtvAnalysisResponse(input: {
     terminatedAt,
     durationSeconds,
     leadId: input.leadId,
-    cityId: input.cityId,
+    cityId: input.cityId?.trim() || null,
     referralCode: input.referralCode ?? null,
   });
   if (result.ok) return true;
@@ -247,20 +236,45 @@ export async function persistFtvAnalysisResponse(input: {
   return false;
 }
 
+async function fetchAllScreenerBackfillRows() {
+  const supabase = getSupabaseAdmin();
+  const pageSize = 1000;
+  const rows: Array<{
+    lead_id: string | null;
+    city_id: string | null;
+    answers: unknown;
+    analytics: unknown;
+    started_at: string | null;
+    submitted_at: string | null;
+    total_duration_sec: number | null;
+    completion_status: string | null;
+    termination_reason: string | null;
+  }> = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from("screener_responses")
+      .select(
+        "lead_id, city_id, answers, analytics, started_at, submitted_at, total_duration_sec, completion_status, termination_reason",
+      )
+      .order("submitted_at", { ascending: false })
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    const page = data ?? [];
+    rows.push(...page);
+    if (page.length < pageSize) break;
+    from += pageSize;
+  }
+  return rows;
+}
+
 /** Recover FTV analysis rows when screener succeeded but insert_ftv_response missed. */
 export async function backfillMissingFtvFromScreener(): Promise<{
   inserted: number;
   skipped: number;
 }> {
   const supabase = getSupabaseAdmin();
-  const { data: screeners, error: screenerError } = await supabase
-    .from("screener_responses")
-    .select(
-      "lead_id, city_id, answers, analytics, started_at, submitted_at, total_duration_sec, completion_status, termination_reason",
-    )
-    .order("submitted_at", { ascending: false })
-    .limit(500);
-  if (screenerError) throw screenerError;
+  const screeners = await fetchAllScreenerBackfillRows();
 
   const { data: existing, error: existingError } = await supabase
     .from("ftv_responses")
@@ -275,26 +289,28 @@ export async function backfillMissingFtvFromScreener(): Promise<{
 
   let inserted = 0;
   let skipped = 0;
-  for (const row of screeners ?? []) {
+  for (const row of screeners) {
     if (!row.lead_id || have.has(row.lead_id)) continue;
     const payload =
       extractStoredFtvPayload(row.analytics) ?? extractStoredFtvPayload(row.answers);
-    if (!payload || (row.completion_status === "Completed" && !row.city_id)) {
+    if (!payload) {
       skipped += 1;
       continue;
     }
     const ok = await persistFtvAnalysisResponse({
-      answerJson: payload,
+      answerJson: padFtvResponsesForContract(payload),
       terminated: row.completion_status === "Terminated",
       terminations: row.termination_reason
         ? [{ ruleKey: row.termination_reason }]
         : [],
       leadId: row.lead_id,
-      cityId: row.city_id ?? "",
+      cityId: row.city_id?.trim() || null,
       startedAt: row.started_at ? new Date(row.started_at) : null,
       submittedAt: row.submitted_at ? new Date(row.submitted_at) : null,
       totalDurationSec: row.total_duration_sec,
-      screenerInserted: row.completion_status === "Completed",
+      screenerInserted:
+        row.completion_status === "Completed" ||
+        row.completion_status === "Terminated",
     });
     if (!ok) {
       skipped += 1;
