@@ -15,6 +15,8 @@ test("coerceAgeBand maps DOB decimals and 23+", () => {
   assert.equal(coerceAgeBand("18"), "18");
   assert.equal(coerceAgeBand(16), "18");
 });
+
+test("parseAgeBand reads discrete years and 23+", () => {
   assert.deepEqual(parseAgeBand("18"), { min: 18, max: 18 });
   assert.deepEqual(parseAgeBand("23+"), {
     min: 23,
