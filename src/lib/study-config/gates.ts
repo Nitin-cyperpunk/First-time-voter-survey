@@ -40,6 +40,42 @@ export function isAgeWithinStudyRule(
 export const AGE_BAND_VALUES = ["18", "19", "20", "21", "22", "23+"] as const;
 export type AgeBandValue = (typeof AGE_BAND_VALUES)[number];
 
+/** Map a whole-year age (or DOB) to the discrete FTV bands. */
+export function ageBandFromYears(years: number): AgeBandValue | "" {
+  const age = Math.floor(years);
+  if (!Number.isFinite(age) || age < 1) return "";
+  if (age <= 18) return "18";
+  if (age === 19) return "19";
+  if (age === 20) return "20";
+  if (age === 21) return "21";
+  if (age === 22) return "22";
+  return "23+";
+}
+
+export function coerceAgeBand(
+  raw: unknown,
+  dob?: string | null,
+): AgeBandValue | "" {
+  if (typeof raw === "number") {
+    const fromNumber = ageBandFromYears(raw);
+    if (fromNumber) return fromNumber;
+  }
+  const text = String(raw ?? "").trim();
+  if ((AGE_BAND_VALUES as readonly string[]).includes(text)) {
+    return text as AgeBandValue;
+  }
+  const numeric = Number(text);
+  if (text && Number.isFinite(numeric)) {
+    const fromNumber = ageBandFromYears(numeric);
+    if (fromNumber) return fromNumber;
+  }
+  if (dob) {
+    const years = getAgeYears(dob);
+    if (years != null) return ageBandFromYears(years);
+  }
+  return "";
+}
+
 /** Discrete years 18–22, or 23+ (open-ended). */
 export function parseAgeBand(
   band: string,

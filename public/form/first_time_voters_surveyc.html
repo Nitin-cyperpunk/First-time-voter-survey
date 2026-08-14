@@ -1276,7 +1276,7 @@ function normZip(v){
 function yrs(from, to){ return Math.round(((to - from) / 31557600000) * 100) / 100; }
 function ageBandFromYears(n){
   var age = Math.floor(+n);
-  if(!isFinite(age) || age < 18) return "";
+  if(!isFinite(age) || age < 1) return "";
   if(age <= 18) return "18";
   if(age === 19) return "19";
   if(age === 20) return "20";
