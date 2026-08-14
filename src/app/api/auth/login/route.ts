@@ -6,6 +6,8 @@ import { normalizePhone } from "@/features/referrals/lib/registration";
 import { findByMobileAndDob } from "@/server/repositories/participants.repository";
 import { establishParticipantSession } from "@/lib/auth/participant-session";
 
+export const dynamic = "force-dynamic";
+
 function formatZodError(error: ZodError) {
   return error.issues.map((issue) => issue.message).join(". ");
 }
