@@ -121,12 +121,12 @@ function respondentFromPayload(payload: SamplePayload): FtvRespondentRow {
   };
 }
 
-test("FTV export header count is 16 + 24 + 89 = 129", () => {
+test("FTV export header count is 16 + 24 + 89 + 3 = 132", () => {
   assert.equal(FTV_METADATA_HEADERS.length, 16);
   assert.equal(FTV_PROFILE_HEADERS.length, 24);
   assert.equal(FTV_ANSWER_HEADERS.length, 89);
-  assert.equal(FTV_EXPORT_HEADERS.length, 129);
-  assert.equal(new Set(FTV_EXPORT_HEADERS).size, 129);
+  assert.equal(FTV_EXPORT_HEADERS.length, 132);
+  assert.equal(new Set(FTV_EXPORT_HEADERS).size, 132);
 });
 
 test("Q6b_10 header keys on item_code text after typo fix", () => {

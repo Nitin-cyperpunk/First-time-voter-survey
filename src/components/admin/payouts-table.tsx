@@ -44,13 +44,11 @@ import {
 } from "@/components/ui/table";
 import { useBulkTableState } from "@/hooks/use-bulk-table-state";
 import {
-  downloadCsv,
   downloadRazorpayPayoutCsv,
   downloadRazorpayPayoutExcel,
 } from "@/lib/export";
 import {
-  classifyPayoutExportRows,
-  toExcludedExportRows,
+  buildPayoutExportRows,
   type PayoutExportSourceRow,
 } from "@/lib/payout-export";
 import { formatAdminDate } from "@/lib/format-admin-datetime";
@@ -298,51 +296,40 @@ export function PayoutsTable() {
       return;
     }
 
-    const { payable, excluded } = classifyPayoutExportRows(
+    const { rows: payoutRows, summary } = buildPayoutExportRows(
       toRazorpaySourceRows(candidates, mode),
     );
     const stamp = new Date().toISOString().slice(0, 10);
-    const excludedRows = toExcludedExportRows(excluded);
-
-    if (payable.length === 0) {
-      toastError(
-        `No payable rows with valid UPI + amount. ${excluded.length} excluded (see Needs UPI / incomplete).`,
-      );
-      if (format === "xlsx" && excludedRows.length > 0) {
-        downloadRazorpayPayoutExcel({
-          filename: `razorpayx-upi-payout-${mode}-${stamp}.xlsx`,
-          payableRows: [],
-          excludedRows,
-        });
-      } else if (format === "csv" && excludedRows.length > 0) {
-        downloadCsv(
-          `razorpayx-upi-payout-${mode}-incomplete-${stamp}.csv`,
-          excludedRows,
-        );
-      }
-      return;
-    }
 
     if (format === "xlsx") {
       downloadRazorpayPayoutExcel({
         filename: `razorpayx-upi-payout-${mode}-${stamp}.xlsx`,
-        payableRows: payable,
-        excludedRows,
+        payoutRows,
       });
     } else {
       downloadRazorpayPayoutCsv({
         filename: `razorpayx-upi-payout-${mode}-${stamp}.csv`,
-        payableRows: payable,
-        excludedFilename: `razorpayx-upi-payout-${mode}-incomplete-${stamp}.csv`,
-        excludedRows,
+        payoutRows,
       });
     }
 
-    const summary =
-      excluded.length > 0
-        ? `${payable.length} payable, ${excluded.length} excluded — missing/invalid UPI or amount`
-        : `${payable.length} payable row(s)`;
-    toastSuccess(`Export Payout File: ${summary}.`);
+    const parts = [`${summary.total} row(s) exported`];
+    if (summary.ready > 0) {
+      parts.push(`${summary.ready} ready for payout`);
+    }
+    if (summary.missingUpi > 0) {
+      parts.push(`${summary.missingUpi} missing UPI`);
+    }
+    if (summary.invalidUpi > 0) {
+      parts.push(`${summary.invalidUpi} invalid UPI`);
+    }
+    if (summary.invalidAmount > 0) {
+      parts.push(`${summary.invalidAmount} invalid amount`);
+    }
+    if (summary.invalidName > 0) {
+      parts.push(`${summary.invalidName} invalid name`);
+    }
+    toastSuccess(`Export Payout File: ${parts.join("; ")}.`);
   }
 
   function updateRowUpi(leadId: string, upiId: string | null) {

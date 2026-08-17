@@ -5,7 +5,8 @@ import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 import {
   RAZORPAY_UPI_COLUMN_VALIDATIONS,
   RAZORPAY_UPI_HEADERS,
-  type RazorpayUpiExportRow,
+  PAYOUT_READINESS_HEADER,
+  type PayoutExportRow,
 } from "@/lib/payout-export/razorpay-upi-format";
 
 export type ExportRow = Record<string, string | number>;
@@ -244,29 +245,31 @@ function injectDataValidations(
   return zipSync(unzipped, { level: 6 });
 }
 
-function emptyRazorpayRows(): RazorpayUpiExportRow[] {
+function emptyPayoutExportRows(): PayoutExportRow[] {
   const blank = Object.fromEntries(
-    RAZORPAY_UPI_HEADERS.map((header) => [header, ""]),
-  ) as RazorpayUpiExportRow;
+    [...RAZORPAY_UPI_HEADERS, PAYOUT_READINESS_HEADER].map((header) => [
+      header,
+      "",
+    ]),
+  ) as PayoutExportRow;
   return [blank];
 }
 
 /**
- * RazorpayX UPI bulk-payout workbook: payable sheet + optional excluded sheet,
- * with Excel data-validation prompts/errors injected into the payout sheet.
+ * RazorpayX UPI bulk-payout workbook with readiness flag appended after the
+ * nine template columns. All payout candidates export; missing UPI cells stay empty.
  */
 export function downloadRazorpayPayoutExcel(input: {
   filename: string;
-  payableRows: RazorpayUpiExportRow[];
-  excludedRows?: ExportRow[];
+  payoutRows: PayoutExportRow[];
 }) {
-  const payable =
-    input.payableRows.length > 0 ? input.payableRows : emptyRazorpayRows();
-  const headers = [...RAZORPAY_UPI_HEADERS];
+  const rows =
+    input.payoutRows.length > 0 ? input.payoutRows : emptyPayoutExportRows();
+  const headers = [...RAZORPAY_UPI_HEADERS, PAYOUT_READINESS_HEADER];
 
-  const payoutSheet = XLSXStyle.utils.json_to_sheet(payable, { header: headers });
+  const payoutSheet = XLSXStyle.utils.json_to_sheet(rows, { header: headers });
   applyFormattedHeaderStyles(payoutSheet, headers, true);
-  payoutSheet["!cols"] = autoColumnWidths(payable, headers);
+  payoutSheet["!cols"] = autoColumnWidths(rows, headers);
   payoutSheet["!freeze"] = {
     xSplit: 0,
     ySplit: 1,
@@ -291,28 +294,11 @@ export function downloadRazorpayPayoutExcel(input: {
   const workbook = XLSXStyle.utils.book_new();
   XLSXStyle.utils.book_append_sheet(workbook, payoutSheet, "Payouts");
 
-  if (input.excludedRows && input.excludedRows.length > 0) {
-    const excludedHeaders = Object.keys(input.excludedRows[0]!);
-    const excludedSheet = XLSXStyle.utils.json_to_sheet(input.excludedRows, {
-      header: excludedHeaders,
-    });
-    applyFormattedHeaderStyles(excludedSheet, excludedHeaders, true);
-    excludedSheet["!cols"] = autoColumnWidths(
-      input.excludedRows,
-      excludedHeaders,
-    );
-    XLSXStyle.utils.book_append_sheet(
-      workbook,
-      excludedSheet,
-      "Needs UPI incomplete",
-    );
-  }
-
   const raw = XLSXStyle.write(workbook, {
     bookType: "xlsx",
     type: "array",
   }) as ArrayBuffer;
-  const endRow = Math.max(payable.length + 1, 2);
+  const endRow = Math.max(rows.length + 1, 2);
   const withValidations = injectDataValidations(
     new Uint8Array(raw),
     "xl/worksheets/sheet1.xml",
@@ -328,23 +314,13 @@ export function downloadRazorpayPayoutExcel(input: {
 
 export function downloadRazorpayPayoutCsv(input: {
   filename: string;
-  payableRows: RazorpayUpiExportRow[];
-  excludedFilename?: string;
-  excludedRows?: ExportRow[];
+  payoutRows: PayoutExportRow[];
 }) {
-  const headers = [...RAZORPAY_UPI_HEADERS];
-  const payable =
-    input.payableRows.length > 0 ? input.payableRows : emptyRazorpayRows();
-  const worksheet = XLSX.utils.json_to_sheet(payable, { header: headers });
+  const headers = [...RAZORPAY_UPI_HEADERS, PAYOUT_READINESS_HEADER];
+  const rows =
+    input.payoutRows.length > 0 ? input.payoutRows : emptyPayoutExportRows();
+  const worksheet = XLSX.utils.json_to_sheet(rows, { header: headers });
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Payouts");
+  XLSXStyle.utils.book_append_sheet(workbook, worksheet, "Payouts");
   XLSX.writeFile(workbook, input.filename, { bookType: "csv" });
-
-  if (
-    input.excludedRows &&
-    input.excludedRows.length > 0 &&
-    input.excludedFilename
-  ) {
-    downloadCsv(input.excludedFilename, input.excludedRows);
-  }
 }

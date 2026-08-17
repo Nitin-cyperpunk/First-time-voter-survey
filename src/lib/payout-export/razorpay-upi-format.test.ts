@@ -3,6 +3,8 @@ import { test } from "node:test";
 
 import {
   RAZORPAY_UPI_HEADERS,
+  PAYOUT_READINESS_HEADER,
+  buildPayoutExportRows,
   classifyPayoutExportRows,
   mapPayoutToRazorpayRow,
   normalizeExportPhone,
@@ -40,7 +42,7 @@ test("maps a payable row to RazorpayX format", () => {
   assert.equal(row["Beneficiary Name (Mandatory)"], "Its Singh");
   assert.equal(row["Beneficiary's UPI ID (Mandatory)"], "its.singh@okhdfc");
   assert.equal(row["Payout Amount (Mandatory)"], 50);
-  assert.equal(row["Payout Narration (Optional)"], "First-Time Voters Study 2024 FTV-v1");
+  assert.equal(row["Payout Narration (Optional)"], "First Time Voters Study 2024 F");
   assert.equal(row["Notes (Optional)"], "Priya Sharma, Ananya");
   assert.equal(row["Phone Number (Optional)"], "+919876543210");
   assert.equal(row["Email ID (Optional)"], "its@example.com");
@@ -82,6 +84,53 @@ test("classify excludes missing UPI and keeps valid payable", () => {
   assert.equal(result.excluded.length, 2);
   assert.equal(result.excluded[0]?.reason, "missing_upi");
   assert.equal(result.excluded[1]?.reason, "invalid_amount");
+});
+
+test("buildPayoutExportRows includes all rows with readiness flag", () => {
+  const { rows, summary } = buildPayoutExportRows([
+    {
+      leadId: "A1",
+      fullName: "Valid User",
+      mobile: "9876543210",
+      email: null,
+      upiId: "valid@okhdfc",
+      amount: 50,
+      surveyName: "Survey",
+      referralsName: "Friend",
+    },
+    {
+      leadId: "A2",
+      fullName: "No Upi",
+      mobile: "9876543211",
+      upiId: null,
+      amount: 50,
+      surveyName: "Survey",
+    },
+    {
+      leadId: "A3",
+      fullName: "Zero Amount",
+      mobile: "9876543212",
+      upiId: "zero@okhdfc",
+      amount: 0,
+      surveyName: "Survey",
+    },
+  ]);
+
+  assert.equal(summary.total, 3);
+  assert.equal(summary.ready, 1);
+  assert.equal(summary.missingUpi, 1);
+  assert.equal(summary.invalidAmount, 1);
+  assert.equal(rows.length, 3);
+  assert.equal(rows[0]?.[PAYOUT_READINESS_HEADER], "Ready for payout");
+  assert.equal(rows[1]?.["Beneficiary's UPI ID (Mandatory)"], "");
+  assert.equal(rows[1]?.[PAYOUT_READINESS_HEADER], "Missing UPI");
+  assert.equal(rows[2]?.[PAYOUT_READINESS_HEADER], "Amount not in Rs 1–100000");
+});
+
+test("buildPayoutExportRows returns headers-only row when empty", () => {
+  const { rows, summary } = buildPayoutExportRows([]);
+  assert.equal(summary.total, 0);
+  assert.equal(rows.length, 0);
 });
 
 test("sanitize helpers enforce Razorpay constraints", () => {

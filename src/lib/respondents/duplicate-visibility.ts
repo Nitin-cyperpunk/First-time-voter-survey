@@ -55,3 +55,35 @@ export function formatDuplicateStatusLabel(row: DuplicateSignals): string {
   if (matchType === "none") return "No";
   return `Yes (${DUPLICATE_MATCH_LABELS[matchType]})`;
 }
+
+/** Human-readable match type for spreadsheets (empty when not a duplicate). */
+export function formatDuplicateMatchTypeExport(
+  row: DuplicateSignals,
+): string {
+  const matchType = deriveDuplicateMatchType(row);
+  if (matchType === "none") return "";
+  if (matchType === "both") return "Fingerprint + IP";
+  if (matchType === "ip") return "IP";
+  return "Fingerprint";
+}
+
+export function formatDuplicateFlagExport(row: DuplicateSignals): string {
+  return isAnyDuplicate(row) ? "Yes" : "";
+}
+
+export type DuplicateExportFields = {
+  duplicate_flag: string;
+  duplicate_match_type: string;
+  duplicate_matched_lead_id: string;
+};
+
+export function buildDuplicateExportFields(
+  row: DuplicateSignals,
+): DuplicateExportFields {
+  const matched = row.originalParticipantLeadId?.trim() ?? "";
+  return {
+    duplicate_flag: formatDuplicateFlagExport(row),
+    duplicate_match_type: formatDuplicateMatchTypeExport(row),
+    duplicate_matched_lead_id: isAnyDuplicate(row) ? matched : "",
+  };
+}

@@ -35,6 +35,21 @@ export type PayoutExportExcludeReason =
   | "invalid_amount"
   | "invalid_name";
 
+export const PAYOUT_READINESS_HEADER = "Payout readiness" as const;
+
+export type PayoutExportRow = RazorpayUpiExportRow & {
+  [PAYOUT_READINESS_HEADER]: string;
+};
+
+export type PayoutExportSummary = {
+  total: number;
+  ready: number;
+  missingUpi: number;
+  invalidUpi: number;
+  invalidAmount: number;
+  invalidName: number;
+};
+
 export type ClassifiedPayoutExport = {
   payable: RazorpayUpiExportRow[];
   excluded: Array<{
@@ -77,11 +92,12 @@ export const RAZORPAY_UPI_COLUMN_VALIDATIONS: Array<{
     col: "B",
     type: "custom",
     formula1: 'AND(ISNUMBER(FIND("@",B2)),LEN(B2)>=5,LEN(B2)<=320)',
-    allowBlank: false,
+    allowBlank: true,
     promptTitle: "Beneficiary's UPI ID",
-    prompt: "Mandatory. Format name@bank (e.g. sample@okhdfc).",
+    prompt:
+      "Required for payout. Format name@bank (e.g. sample@okhdfc). Leave blank if filling manually.",
     errorTitle: "Invalid UPI ID",
-    error: "Enter a valid UPI ID like name@bank.",
+    error: "Enter a valid UPI ID like name@bank, or leave blank to fill later.",
   },
   {
     header: "Payout Amount (Mandatory)",
@@ -246,7 +262,7 @@ export function mapPayoutToRazorpayRow(
     "Payout Amount (Mandatory)": amount,
     "Payout Narration (Optional)": sanitizeNarration(row.surveyName ?? ""),
     "Notes (Optional)": sanitizeNotes(row.referralsName ?? ""),
-    "Phone Number (Optional)": normalizeExportPhone(row.mobile),
+    "Phone Number (Optional)": normalizeExportPhone(row.mobile ?? ""),
     "Email ID (Optional)": sanitizeEmail(row.email ?? ""),
     "Contact Reference ID (Optional)": sanitizeRefId(row.leadId),
     "Payout Reference ID (Optional)": sanitizeRefId(
@@ -314,6 +330,75 @@ export function classifyPayoutExportRows(
   }
 
   return { payable, excluded };
+}
+
+function assessPayoutReadiness(
+  row: PayoutExportSourceRow,
+): PayoutExportExcludeReason | "ready" {
+  const name = sanitizeBeneficiaryName(row.fullName);
+  const upi = row.upiId?.trim() ?? "";
+  const amount = Math.round(Number(row.amount));
+
+  if (!name) return "invalid_name";
+  if (!upi) return "missing_upi";
+  if (!isValidUpiId(upi)) return "invalid_upi";
+  if (!isValidPayoutAmount(amount)) return "invalid_amount";
+  return "ready";
+}
+
+/** All rows export — missing UPI stays in the file with an empty UPI cell + readiness flag. */
+export function buildPayoutExportRows(rows: PayoutExportSourceRow[]): {
+  rows: PayoutExportRow[];
+  summary: PayoutExportSummary;
+} {
+  const summary: PayoutExportSummary = {
+    total: rows.length,
+    ready: 0,
+    missingUpi: 0,
+    invalidUpi: 0,
+    invalidAmount: 0,
+    invalidName: 0,
+  };
+
+  const exportRows: PayoutExportRow[] = rows.map((row) => {
+    const readiness = assessPayoutReadiness(row);
+    switch (readiness) {
+      case "ready":
+        summary.ready += 1;
+        break;
+      case "missing_upi":
+        summary.missingUpi += 1;
+        break;
+      case "invalid_upi":
+        summary.invalidUpi += 1;
+        break;
+      case "invalid_amount":
+        summary.invalidAmount += 1;
+        break;
+      case "invalid_name":
+        summary.invalidName += 1;
+        break;
+    }
+
+    const upi = row.upiId?.trim() ?? "";
+    const mapped = mapPayoutToRazorpayRow({
+      ...row,
+      upiId:
+        readiness === "missing_upi"
+          ? null
+          : upi || null,
+    });
+
+    return {
+      ...mapped,
+      [PAYOUT_READINESS_HEADER]:
+        readiness === "ready"
+          ? "Ready for payout"
+          : excludedReasonLabel(readiness),
+    };
+  });
+
+  return { rows: exportRows, summary };
 }
 
 export function excludedReasonLabel(reason: PayoutExportExcludeReason): string {
