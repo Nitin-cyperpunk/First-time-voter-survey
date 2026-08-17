@@ -1,5 +1,17 @@
-import { downloadCsv } from "@/lib/export";
+import { downloadCsv, downloadExcel } from "@/lib/export";
 import { buildDuplicateExportFields } from "@/lib/respondents/duplicate-visibility";
+
+export const PARTICIPANT_LIST_EXPORT_HEADERS = [
+  "Lead_ID",
+  "Name",
+  "Mobile",
+  "City",
+  "Status",
+  "Registered",
+  "duplicate_flag",
+  "duplicate_match_type",
+  "duplicate_matched_lead_id",
+] as const;
 
 export function rowsToParticipantExport(
   rows: Array<{
@@ -38,5 +50,19 @@ export function exportParticipantRows(
   rows: Record<string, string | number>[],
   filename: string,
 ) {
-  downloadCsv(filename, rows);
+  downloadCsv(filename, rows, [...PARTICIPANT_LIST_EXPORT_HEADERS]);
+}
+
+export function exportParticipantList(
+  rows: Parameters<typeof rowsToParticipantExport>[0],
+  format: "csv" | "excel",
+  filenameBase: string,
+) {
+  const exportRows = rowsToParticipantExport(rows);
+  const headers = [...PARTICIPANT_LIST_EXPORT_HEADERS];
+  if (format === "csv") {
+    downloadCsv(`${filenameBase}.csv`, exportRows, headers);
+    return;
+  }
+  downloadExcel(`${filenameBase}.xlsx`, "Respondents", exportRows, headers);
 }
