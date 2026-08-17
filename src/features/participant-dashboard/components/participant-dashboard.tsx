@@ -1,8 +1,11 @@
 "use client";
 
+import { useState } from "react";
+
 import { DashboardHeader } from "@/features/participant-dashboard/components/dashboard-header";
 import { DashboardLayout } from "@/features/participant-dashboard/components/dashboard-layout";
 import { NotEligibleDashboard } from "@/features/participant-dashboard/components/not-eligible-dashboard";
+import { ReferEarnUpiCard } from "@/features/participant-dashboard/components/refer-earn-upi-card";
 import { ReferralCard } from "@/features/participant-dashboard/components/referral-card";
 import { StatusCard } from "@/features/participant-dashboard/components/status-card";
 import { getDashboardStatusConfig } from "@/features/participant-dashboard/lib/dashboard-states";
@@ -16,6 +19,7 @@ type ParticipantDashboardProps = {
 
 export function ParticipantDashboard({ data }: ParticipantDashboardProps) {
   const view = resolveDashboardView(data);
+  const [upiId, setUpiId] = useState(data.upiId);
 
   switch (view) {
     case "upi":
@@ -27,6 +31,13 @@ export function ParticipantDashboard({ data }: ParticipantDashboardProps) {
             title="Payment details needed"
             message="Please provide your UPI ID so we can process your reward."
             tone="review"
+          />
+          <ReferEarnUpiCard
+            totalEarned={0}
+            qualifiedCount={0}
+            upiId={upiId}
+            onSaved={setUpiId}
+            variant="survey"
           />
         </DashboardLayout>
       );

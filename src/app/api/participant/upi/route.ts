@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
-import { getAuthenticatedParticipant } from "@/lib/auth/participant-session";
+import {
+  getAuthenticatedParticipant,
+  participantUnauthorizedResponse,
+} from "@/lib/auth/participant-session";
 import { isValidUpiId, normalizeUpiId } from "@/lib/upi";
 import { updateParticipantUpi } from "@/server/repositories/participants.repository";
 
@@ -15,7 +18,9 @@ export async function POST(request: NextRequest) {
   try {
     const participant = await getAuthenticatedParticipant();
     if (!participant) {
-      return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+      return participantUnauthorizedResponse(
+        "Please log in to save your UPI ID.",
+      );
     }
 
     const body = await request.json();
