@@ -123,7 +123,7 @@ export function ReferEarnUpiCard({
 
   const description =
     variant === "survey"
-      ? "We will send your survey incentive via UPI after your response is verified. You can skip and add it later."
+      ? "We will send your survey incentive and any referral rewards via UPI. You can skip and add it later from this page."
       : `${qualifiedCount} friend${qualifiedCount === 1 ? "" : "s"} you referred qualified. Add your UPI and we'll send your reward via Razorpay.`;
 
   return (

@@ -10,12 +10,12 @@ export type DashboardView =
 
 /**
  * Single visible dashboard state — priority order from product spec.
+ * Completed users keep the thank-you view so referral counts stay visible;
+ * UPI is collected on that screen rather than replacing it.
  */
 export function resolveDashboardView(
   data: ParticipantDashboardData,
 ): DashboardView {
-  if (data.upiRequired) return "upi";
-
   const status = normalizeParticipantStatus(data.status);
 
   if (status === "terminated") return "terminated";
@@ -23,10 +23,13 @@ export function resolveDashboardView(
   if (
     status === "completed" ||
     status === "review_pass" ||
-    status === "review_fail"
+    status === "review_fail" ||
+    status === "successful"
   ) {
     return "survey_completed";
   }
+
+  if (data.upiRequired) return "upi";
 
   return "default";
 }
