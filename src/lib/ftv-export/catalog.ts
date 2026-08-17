@@ -315,10 +315,18 @@ export const FTV_ANSWER_HEADERS = [
   "Q17_spoken_language",
 ] as const;
 
+/** Appended last — do not reorder columns above. */
+export const FTV_DUPLICATE_EXPORT_HEADERS = [
+  "duplicate_flag",
+  "duplicate_match_type",
+  "duplicate_matched_lead_id",
+] as const;
+
 export const FTV_EXPORT_HEADERS: string[] = [
   ...FTV_METADATA_HEADERS,
   ...FTV_PROFILE_HEADERS,
   ...FTV_ANSWER_HEADERS,
+  ...FTV_DUPLICATE_EXPORT_HEADERS,
 ];
 
 export type FtvCodebookRow = {

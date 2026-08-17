@@ -7,6 +7,7 @@ import {
   type FtvCodebookRow,
   type FtvRespondentRow,
 } from "@/lib/ftv-export";
+import { buildDuplicateExportFields } from "@/lib/respondents/duplicate-visibility";
 import {
   recoverFtvAnswers,
   recoverFtvRespondent,
@@ -243,6 +244,58 @@ export async function listFtvExportBundle(
   }));
 
   const wide = pivotFtvWideRows(respondentsWithCity, answers);
+
+  const leadIdsForDuplicate = [
+    ...new Set(
+      wide
+        .map((row) => String(row.lead_id ?? row.respondent_id ?? ""))
+        .filter(Boolean),
+    ),
+  ];
+  const duplicateByLead = new Map<
+    string,
+    ReturnType<typeof buildDuplicateExportFields>
+  >();
+  if (leadIdsForDuplicate.length > 0) {
+    for (let i = 0; i < leadIdsForDuplicate.length; i += 200) {
+      const chunk = leadIdsForDuplicate.slice(i, i + 200);
+      const { data: participantRows, error: participantError } = await supabase
+        .from("participants")
+        .select(
+          "lead_id, is_flagged_duplicate, duplicate_flag, original_participant_lead_id",
+        )
+        .in("lead_id", chunk)
+        .is("deleted_at", null);
+      if (participantError) throw participantError;
+      for (const participant of participantRows ?? []) {
+        duplicateByLead.set(
+          participant.lead_id,
+          buildDuplicateExportFields({
+            isFlaggedDuplicate: Boolean(participant.is_flagged_duplicate),
+            duplicateFlag: Boolean(participant.duplicate_flag),
+            originalParticipantLeadId:
+              participant.original_participant_lead_id ?? null,
+          }),
+        );
+      }
+    }
+  }
+
+  const wideWithDuplicate: ExportRow[] = wide.map((row) => {
+    const leadId = String(row.lead_id ?? row.respondent_id ?? "");
+    const duplicate =
+      duplicateByLead.get(leadId) ??
+      buildDuplicateExportFields({
+        isFlaggedDuplicate: false,
+        duplicateFlag: false,
+        originalParticipantLeadId: null,
+      });
+    return {
+      ...row,
+      ...duplicate,
+    };
+  });
+
   const headers = includeDeleted
     ? [...FTV_EXPORT_HEADERS, "deleted_at"]
     : [...FTV_EXPORT_HEADERS];
@@ -255,14 +308,14 @@ export async function listFtvExportBundle(
     }
   }
   const rows = includeDeleted
-    ? wide.map((row) => {
+    ? wideWithDuplicate.map((row) => {
         const leadId = String(row.lead_id ?? row.respondent_id ?? "");
         return {
           ...row,
           deleted_at: deletedAtByLead.get(leadId) ?? "",
         };
       })
-    : wide;
+    : wideWithDuplicate;
 
   return {
     headers,
