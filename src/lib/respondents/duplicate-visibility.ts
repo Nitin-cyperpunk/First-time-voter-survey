@@ -11,6 +11,27 @@ export const DUPLICATE_FILTER_OPTIONS: Array<{
   { value: "non_duplicates", label: "Non-Duplicates" },
 ];
 
+/** Payout-tab labels: a flag for review, not an accusation. */
+export type PayoutDuplicateFilter = "all" | "flagged" | "clean";
+
+export const PAYOUT_DUPLICATE_FILTER_OPTIONS: Array<{
+  value: PayoutDuplicateFilter;
+  label: string;
+}> = [
+  { value: "all", label: "All" },
+  { value: "flagged", label: "Flagged" },
+  { value: "clean", label: "Clean" },
+];
+
+export function payoutDuplicateFilterLabel(
+  filter: PayoutDuplicateFilter,
+): string {
+  return (
+    PAYOUT_DUPLICATE_FILTER_OPTIONS.find((option) => option.value === filter)
+      ?.label ?? "All"
+  );
+}
+
 export const DUPLICATE_MATCH_LABELS: Record<DuplicateMatchType, string> = {
   none: "No",
   ip: "IP",
@@ -48,6 +69,20 @@ export function matchesDuplicateFilter(
   const duplicate = isAnyDuplicate(row);
   if (filter === "duplicates") return duplicate;
   return !duplicate;
+}
+
+/**
+ * Payout duplicate filter. NULL/false on both signals is Clean — older rows
+ * that predate fingerprinting must not fall through Flagged and Clean.
+ */
+export function matchesPayoutDuplicateFilter(
+  row: DuplicateSignals,
+  filter: PayoutDuplicateFilter,
+): boolean {
+  if (filter === "all") return true;
+  const flagged = isAnyDuplicate(row);
+  if (filter === "flagged") return flagged;
+  return !flagged;
 }
 
 export function formatDuplicateStatusLabel(row: DuplicateSignals): string {

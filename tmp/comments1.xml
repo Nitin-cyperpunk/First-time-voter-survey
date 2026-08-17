@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<comments xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><authors><author>RazorpayX</author></authors><commentList><comment ref="A1" authorId="0"><text><t xml:space="preserve">Beneficiary Name
+Mandatory. A-Z a-z 0-9 and spaces only. No special characters.</t></text></comment><comment ref="B1" authorId="0"><text><t xml:space="preserve">Beneficiary&apos;s UPI ID
+Required for payout. Format name@bank (e.g. sample@okhdfc). Leave blank if filling manually.</t></text></comment><comment ref="C1" authorId="0"><text><t xml:space="preserve">Payout Amount
+Mandatory. Amount in rupees from Rs 1 to Rs 1,00,000.</t></text></comment><comment ref="D1" authorId="0"><text><t xml:space="preserve">Payout Narration
+Optional. Max 30 characters. No special characters.</t></text></comment><comment ref="E1" authorId="0"><text><t xml:space="preserve">Notes
+Optional. Internal notes (referrals names).</t></text></comment><comment ref="F1" authorId="0"><text><t xml:space="preserve">Phone Number
+Optional. 10-digit mobile, or +91XXXXXXXXXX (max 13 chars).</t></text></comment><comment ref="G1" authorId="0"><text><t xml:space="preserve">Email ID
+Optional. Valid email address.</t></text></comment><comment ref="H1" authorId="0"><text><t xml:space="preserve">Contact Reference ID
+Optional. Max 40 characters (lead ID).</t></text></comment><comment ref="I1" authorId="0"><text><t xml:space="preserve">Payout Reference ID
+Optional. Max 40 characters. Leave blank if none.</t></text></comment></commentList></comments>
