@@ -3,11 +3,11 @@
 import {
   useCallback,
   useEffect,
-  useMemo,
   useState,
   type ReactNode,
 } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import {
   BulkActionToolbar,
@@ -53,8 +53,11 @@ import {
 } from "@/lib/payout-export";
 import { formatAdminDate } from "@/lib/format-admin-datetime";
 import {
+  PAYOUT_DUPLICATE_FILTER_OPTIONS,
   formatDuplicateStatusLabel,
   isAnyDuplicate,
+  payoutDuplicateFilterLabel,
+  type PayoutDuplicateFilter,
 } from "@/lib/respondents/duplicate-visibility";
 import { toastError, toastSuccess } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -94,26 +97,47 @@ type SortBy =
   | "paymentStatus"
   | "paymentDate";
 
-/** Survey-completion / QC outcomes — excludes terminated & pre-survey statuses. */
-const SURVEY_PAYOUT_STATUSES = new Set([
-  "completed",
-  "review_pass",
-  "review_fail",
-  "successful",
-  "unsuccessful",
-  "paid",
-]);
+type PayoutCounts = {
+  mode: { referral: number; survey: number };
+  duplicate: { all: number; flagged: number; clean: number };
+};
+
+const EMPTY_COUNTS: PayoutCounts = {
+  mode: { referral: 0, survey: 0 },
+  duplicate: { all: 0, flagged: 0, clean: 0 },
+};
+
+function parseModeParam(value: string | null): PayoutMode {
+  return value === "survey" ? "survey" : "referral";
+}
+
+function parseDuplicateParam(value: string | null): PayoutDuplicateFilter {
+  if (value === "flagged" || value === "clean") return value;
+  return "all";
+}
+
+function parseStatusParam(
+  value: string | null,
+): "all" | "pending" | "ready" | "paid" {
+  if (value === "pending" || value === "ready" || value === "paid") return value;
+  return "all";
+}
+
+function parseSortByParam(value: string | null): SortBy {
+  if (
+    value === "leadId" ||
+    value === "fullName" ||
+    value === "totalAmount" ||
+    value === "paymentStatus" ||
+    value === "paymentDate"
+  ) {
+    return value;
+  }
+  return "leadId";
+}
 
 function amountForMode(row: PayoutApiRow, mode: PayoutMode) {
   return mode === "referral" ? row.referralEarnings : row.surveyEarnings;
-}
-
-function matchesPayoutMode(row: PayoutApiRow, mode: PayoutMode) {
-  if (mode === "referral") {
-    // Referral view keeps the full roster (incl. terminated referrers).
-    return true;
-  }
-  return SURVEY_PAYOUT_STATUSES.has(row.qcStatus.toLowerCase());
 }
 
 function paymentVariant(status: string): StatusPillVariant {
@@ -141,47 +165,6 @@ function formatDate(value: string | null) {
   return formatAdminDate(value);
 }
 
-function matchesSearch(row: PayoutApiRow, search: string): boolean {
-  const needle = search.toLowerCase();
-  return (
-    row.leadId.toLowerCase().includes(needle) ||
-    row.fullName.toLowerCase().includes(needle) ||
-    row.mobile.includes(needle) ||
-    row.referralCode.toLowerCase().includes(needle) ||
-    (row.ipAddress ?? "").toLowerCase().includes(needle)
-  );
-}
-
-function compareRows(
-  a: PayoutApiRow,
-  b: PayoutApiRow,
-  sortBy: SortBy,
-  sortDir: "asc" | "desc",
-  mode: PayoutMode,
-): number {
-  let cmp = 0;
-  switch (sortBy) {
-    case "fullName":
-      cmp = a.fullName.localeCompare(b.fullName);
-      break;
-    case "totalAmount":
-      cmp = amountForMode(a, mode) - amountForMode(b, mode);
-      break;
-    case "paymentStatus":
-      cmp = a.paymentStatus.localeCompare(b.paymentStatus);
-      break;
-    case "paymentDate": {
-      const aTime = a.paymentDate ? new Date(a.paymentDate).getTime() : 0;
-      const bTime = b.paymentDate ? new Date(b.paymentDate).getTime() : 0;
-      cmp = aTime - bTime;
-      break;
-    }
-    default:
-      cmp = a.leadId.localeCompare(b.leadId);
-  }
-  return sortDir === "asc" ? cmp : -cmp;
-}
-
 function toRazorpaySourceRows(
   rows: PayoutApiRow[],
   mode: PayoutMode,
@@ -200,16 +183,40 @@ function toRazorpaySourceRows(
 }
 
 export function PayoutsTable() {
-  const [mode, setMode] = useState<PayoutMode>("referral");
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<"all" | "pending" | "ready" | "paid">(
-    "all",
-  );
-  const [sortBy, setSortBy] = useState<SortBy>("leadId");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const mode = parseModeParam(searchParams.get("mode"));
+  const duplicateFilter = parseDuplicateParam(searchParams.get("duplicate"));
+  const search = searchParams.get("search") ?? "";
+  const status = parseStatusParam(searchParams.get("status"));
+  const sortBy = parseSortByParam(searchParams.get("sortBy"));
+  const sortDir = searchParams.get("sortDir") === "asc" ? "asc" : "desc";
+
   const [rows, setRows] = useState<PayoutApiRow[]>([]);
+  const [counts, setCounts] = useState<PayoutCounts>(EMPTY_COUNTS);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<PayoutApiRow | null>(null);
+
+  function patchParams(patch: Record<string, string | null>) {
+    const next = new URLSearchParams(searchParams.toString());
+    for (const [key, value] of Object.entries(patch)) {
+      const omitDefault =
+        value === null ||
+        value === "" ||
+        (key === "mode" && value === "referral") ||
+        (key === "duplicate" && value === "all") ||
+        (key === "status" && value === "all") ||
+        (key === "sortBy" && value === "leadId") ||
+        (key === "sortDir" && value === "desc");
+      if (omitDefault) next.delete(key);
+      else next.set(key, value);
+    }
+    const query = next.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }
 
   const loadPayouts = useCallback(async () => {
     setLoading(true);
@@ -217,15 +224,21 @@ export function PayoutsTable() {
       const params = new URLSearchParams({
         page: "1",
         pageSize: "10000",
-        sortBy: "leadId",
-        sortDir: "desc",
+        sortBy,
+        sortDir,
+        mode,
+        duplicate: duplicateFilter,
+        status,
       });
+      if (search.trim()) params.set("search", search.trim());
       const response = await fetch(`/api/admin/payouts?${params.toString()}`);
       const payload = await response.json();
       if (!response.ok) {
         throw new Error(payload.error ?? "Failed to load payouts.");
       }
       setRows((payload.rows ?? []) as PayoutApiRow[]);
+      setTotal(typeof payload.total === "number" ? payload.total : 0);
+      setCounts(payload.counts ?? EMPTY_COUNTS);
     } catch (fetchError) {
       toastError(
         fetchError instanceof Error
@@ -235,33 +248,13 @@ export function PayoutsTable() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [duplicateFilter, mode, search, sortBy, sortDir, status]);
 
   useEffect(() => {
     void loadPayouts();
   }, [loadPayouts]);
 
-  const modeCounts = useMemo(
-    () => ({
-      referral: rows.filter((row) => matchesPayoutMode(row, "referral")).length,
-      survey: rows.filter((row) => matchesPayoutMode(row, "survey")).length,
-    }),
-    [rows],
-  );
-
-  const filteredRows = useMemo(() => {
-    const needle = search.trim();
-    let next = rows.filter((row) => matchesPayoutMode(row, mode));
-    if (needle) {
-      next = next.filter((row) => matchesSearch(row, needle));
-    }
-    if (status !== "all") {
-      next = next.filter((row) => row.paymentStatus === status);
-    }
-    return [...next].sort((a, b) =>
-      compareRows(a, b, sortBy, sortDir, mode),
-    );
-  }, [mode, rows, search, sortBy, sortDir, status]);
+  const filteredRows = rows;
 
   const {
     bulk,
@@ -277,11 +270,11 @@ export function PayoutsTable() {
 
   useEffect(() => {
     resetPage();
-  }, [mode, search, status, sortBy, sortDir, resetPage]);
+  }, [mode, search, status, sortBy, sortDir, duplicateFilter, resetPage]);
 
   useEffect(() => {
     clearSelection();
-  }, [mode, clearSelection]);
+  }, [mode, duplicateFilter, clearSelection]);
 
   function exportRazorpayPayoutFile(format: "csv" | "xlsx") {
     const candidates =
@@ -300,20 +293,38 @@ export function PayoutsTable() {
       toRazorpaySourceRows(candidates, mode),
     );
     const stamp = new Date().toISOString().slice(0, 10);
+    const duplicateLabel = payoutDuplicateFilterLabel(duplicateFilter);
+    const modeLabel = mode === "referral" ? "Referral" : "Survey";
+    const filterSuffix =
+      duplicateFilter === "all" ? "" : `-${duplicateFilter}`;
+    const filterMeta = {
+      payoutType: modeLabel,
+      duplicateStatus: duplicateLabel,
+      rowCount: payoutRows.length,
+      note:
+        duplicateFilter === "all"
+          ? "Duplicate status filter: All (complete list for this payout type)."
+          : `Filtered to ${duplicateLabel} rows only — not the full ${modeLabel} payout list.`,
+    };
 
     if (format === "xlsx") {
       downloadRazorpayPayoutExcel({
-        filename: `razorpayx-upi-payout-${mode}-${stamp}.xlsx`,
+        filename: `razorpayx-upi-payout-${mode}${filterSuffix}-${stamp}.xlsx`,
         payoutRows,
+        filterMeta,
       });
     } else {
       downloadRazorpayPayoutCsv({
-        filename: `razorpayx-upi-payout-${mode}-${stamp}.csv`,
+        filename: `razorpayx-upi-payout-${mode}${filterSuffix}-${stamp}.csv`,
         payoutRows,
+        filterMeta,
       });
     }
 
-    const parts = [`${summary.total} row(s) exported`];
+    const parts = [
+      `${summary.total} row(s) exported`,
+      `${modeLabel} · ${duplicateLabel}`,
+    ];
     if (summary.ready > 0) {
       parts.push(`${summary.ready} ready for payout`);
     }
@@ -380,12 +391,12 @@ export function PayoutsTable() {
               {
                 id: "referral" as const,
                 label: "Referral",
-                count: modeCounts.referral,
+                count: counts.mode.referral,
               },
               {
                 id: "survey" as const,
                 label: "Survey",
-                count: modeCounts.survey,
+                count: counts.mode.survey,
               },
             ] as const
           ).map((item) => {
@@ -396,7 +407,7 @@ export function PayoutsTable() {
                 type="button"
                 role="tab"
                 aria-selected={active}
-                onClick={() => setMode(item.id)}
+                onClick={() => patchParams({ mode: item.id })}
                 className={cn(
                   "rounded-[10px] px-4 py-2 text-sm font-semibold transition-colors",
                   active
@@ -427,7 +438,9 @@ export function PayoutsTable() {
           <Input
             placeholder="Lead ID, name, mobile, referral code, IP…"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) =>
+              patchParams({ search: event.target.value })
+            }
           />
         </div>
         <div className="space-y-1">
@@ -438,7 +451,7 @@ export function PayoutsTable() {
             className="w-[160px]"
             value={status}
             onChange={(event) =>
-              setStatus(event.target.value as typeof status)
+              patchParams({ status: event.target.value })
             }
           >
             <option value="all">All</option>
@@ -449,12 +462,30 @@ export function PayoutsTable() {
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground">
+            Duplicate status
+          </label>
+          <Select
+            className="w-[180px]"
+            value={duplicateFilter}
+            onChange={(event) =>
+              patchParams({ duplicate: event.target.value })
+            }
+          >
+            {PAYOUT_DUPLICATE_FILTER_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label} ({counts.duplicate[option.value]})
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">
             Sort by
           </label>
           <Select
             className="w-[160px]"
             value={sortBy}
-            onChange={(event) => setSortBy(event.target.value as SortBy)}
+            onChange={(event) => patchParams({ sortBy: event.target.value })}
           >
             <option value="leadId">Lead ID</option>
             <option value="fullName">Name</option>
@@ -472,9 +503,7 @@ export function PayoutsTable() {
           <Select
             className="w-[120px]"
             value={sortDir}
-            onChange={(event) =>
-              setSortDir(event.target.value as typeof sortDir)
-            }
+            onChange={(event) => patchParams({ sortDir: event.target.value })}
           >
             <option value="asc">Ascending</option>
             <option value="desc">Descending</option>
@@ -495,6 +524,20 @@ export function PayoutsTable() {
           </Button>
         </div>
       </div>
+
+      <p className="text-sm text-plum-muted">
+        Showing{" "}
+        <span className="font-mono font-semibold text-foreground">{total}</span>{" "}
+        {mode === "referral" ? "referral" : "survey"} row
+        {total === 1 ? "" : "s"}
+        {duplicateFilter === "all"
+          ? ""
+          : ` · ${payoutDuplicateFilterLabel(duplicateFilter).toLowerCase()}`}
+        {search.trim() ? ` · search “${search.trim()}”` : ""}
+        {status !== "all" ? ` · payment ${status}` : ""}. Fingerprint matches
+        are stronger than IP-only matches — IP can be shared Wi‑Fi or carrier
+        NAT.
+      </p>
 
       {showSelectAllFilteredBanner ? (
         <SelectAllFilteredBanner
@@ -527,7 +570,7 @@ export function PayoutsTable() {
               <TableHead>Date</TableHead>
               <TableHead>UPI</TableHead>
               <TableHead>QC</TableHead>
-              <TableHead>Duplicate IP</TableHead>
+              <TableHead>Duplicate</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

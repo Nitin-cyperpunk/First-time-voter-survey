@@ -1,8 +1,13 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getRewardAmounts } from "@/lib/study-config/rewards";
+import {
+  matchesPayoutDuplicateFilter,
+  type PayoutDuplicateFilter,
+} from "@/lib/respondents/duplicate-visibility";
 import { getActivePublishedForm } from "@/server/repositories/forms.repository";
 
 export type PaymentStatus = "pending" | "ready" | "paid";
+export type PayoutMode = "referral" | "survey";
 
 export type PayoutRow = {
   leadId: string;
@@ -37,6 +42,8 @@ export type PayoutRow = {
 export type PayoutListParams = {
   search?: string;
   paymentStatus?: PaymentStatus | "all";
+  mode?: PayoutMode;
+  duplicateFilter?: PayoutDuplicateFilter;
   sortBy:
     | "leadId"
     | "fullName"
@@ -46,6 +53,11 @@ export type PayoutListParams = {
   sortDir: "asc" | "desc";
   page: number;
   pageSize: number;
+};
+
+export type PayoutListCounts = {
+  mode: { referral: number; survey: number };
+  duplicate: { all: number; flagged: number; clean: number };
 };
 
 type ParticipantPayoutRow = {
@@ -94,10 +106,10 @@ function normalizePayoutJoin(
 function matchesSearch(row: ParticipantPayoutRow, search: string): boolean {
   const needle = search.toLowerCase();
   return (
-    row.lead_id.toLowerCase().includes(needle) ||
-    row.full_name.toLowerCase().includes(needle) ||
-    row.mobile.includes(needle) ||
-    row.referral_code.toLowerCase().includes(needle) ||
+    (row.lead_id ?? "").toLowerCase().includes(needle) ||
+    (row.full_name ?? "").toLowerCase().includes(needle) ||
+    (row.mobile ?? "").includes(needle) ||
+    (row.referral_code ?? "").toLowerCase().includes(needle) ||
     (row.ip_address ?? "").toLowerCase().includes(needle)
   );
 }
@@ -107,15 +119,19 @@ function compareRows(
   b: PayoutRow,
   sortBy: PayoutListParams["sortBy"],
   sortDir: PayoutListParams["sortDir"],
+  mode: PayoutMode,
 ): number {
   let cmp = 0;
   switch (sortBy) {
     case "fullName":
       cmp = a.fullName.localeCompare(b.fullName);
       break;
-    case "totalAmount":
-      cmp = a.totalAmount - b.totalAmount;
+    case "totalAmount": {
+      const aAmount = mode === "referral" ? a.referralEarnings : a.surveyEarnings;
+      const bAmount = mode === "referral" ? b.referralEarnings : b.surveyEarnings;
+      cmp = aAmount - bAmount;
       break;
+    }
     case "paymentStatus":
       cmp = a.paymentStatus.localeCompare(b.paymentStatus);
       break;
@@ -129,6 +145,21 @@ function compareRows(
       cmp = a.leadId.localeCompare(b.leadId);
   }
   return sortDir === "asc" ? cmp : -cmp;
+}
+
+/** Survey-completion / QC outcomes — excludes terminated & pre-survey statuses. */
+export const SURVEY_PAYOUT_STATUSES = new Set([
+  "completed",
+  "review_pass",
+  "review_fail",
+  "successful",
+  "unsuccessful",
+  "paid",
+]);
+
+export function matchesPayoutMode(row: { qcStatus: string }, mode: PayoutMode) {
+  if (mode === "referral") return true;
+  return SURVEY_PAYOUT_STATUSES.has(row.qcStatus.toLowerCase());
 }
 
 export async function listPayouts(params: PayoutListParams) {
@@ -256,8 +287,45 @@ export async function listPayouts(params: PayoutListParams) {
     );
   }
 
+  const mode: PayoutMode = params.mode === "survey" ? "survey" : "referral";
+  const duplicateFilter: PayoutDuplicateFilter =
+    params.duplicateFilter === "flagged" || params.duplicateFilter === "clean"
+      ? params.duplicateFilter
+      : "all";
+
+  const afterDuplicate = payoutRows.filter((row) =>
+    matchesPayoutDuplicateFilter(row, duplicateFilter),
+  );
+  const afterMode = payoutRows.filter((row) => matchesPayoutMode(row, mode));
+
+  const counts: PayoutListCounts = {
+    mode: {
+      referral: afterDuplicate.filter((row) =>
+        matchesPayoutMode(row, "referral"),
+      ).length,
+      survey: afterDuplicate.filter((row) =>
+        matchesPayoutMode(row, "survey"),
+      ).length,
+    },
+    duplicate: {
+      all: afterMode.length,
+      flagged: afterMode.filter((row) =>
+        matchesPayoutDuplicateFilter(row, "flagged"),
+      ).length,
+      clean: afterMode.filter((row) =>
+        matchesPayoutDuplicateFilter(row, "clean"),
+      ).length,
+    },
+  };
+
+  payoutRows = payoutRows.filter(
+    (row) =>
+      matchesPayoutMode(row, mode) &&
+      matchesPayoutDuplicateFilter(row, duplicateFilter),
+  );
+
   payoutRows.sort((a, b) =>
-    compareRows(a, b, params.sortBy, params.sortDir),
+    compareRows(a, b, params.sortBy, params.sortDir, mode),
   );
 
   const total = payoutRows.length;
@@ -268,5 +336,6 @@ export async function listPayouts(params: PayoutListParams) {
     total,
     page,
     pageSize,
+    counts,
   };
 }
