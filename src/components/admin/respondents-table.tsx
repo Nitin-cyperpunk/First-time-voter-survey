@@ -810,7 +810,7 @@ export function RespondentsTable({
                   </div>
                   {isTerminatedStatus(selected.status) ? (
                     <Button asChild size="sm" variant="outline" className="w-full">
-                      <Link href="/terminations">View termination log</Link>
+                      <Link href={adminPath("/terminations")}>View termination log</Link>
                     </Button>
                   ) : null}
                 </div>

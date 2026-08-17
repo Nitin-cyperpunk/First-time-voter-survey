@@ -127,7 +127,21 @@ export function toastUpiSaved() {
 }
 
 export function toastUpiInvalid() {
-  toastError("❌ Invalid UPI ID");
+  toastError("❌ Invalid UPI ID", {
+    description: "Use the format name@bank (e.g. name@okhdfcbank).",
+  });
+}
+
+export function toastUpiSaveFailed(message?: string, code?: string) {
+  if (code === "SESSION_EXPIRED") {
+    toastError("Please log in to save your UPI ID.", {
+      description: "Use the login page with your mobile and date of birth.",
+    });
+    return;
+  }
+  toastError("Could not save your UPI ID.", {
+    description: message ?? "Please try again in a moment.",
+  });
 }
 
 export function toastReferralLinkCopied() {

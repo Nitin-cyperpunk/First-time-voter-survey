@@ -462,6 +462,7 @@
       ".ty-upi-card p{margin:8px 0 0;font-size:13.5px;line-height:1.45;color:#3E8E7E}" +
       ".ty-upi-card input{width:100%;margin-top:14px;padding:12px 14px;border:1px solid #C9E5DE;border-radius:10px;font-size:15px}" +
       ".ty-upi-card button{width:100%;margin-top:10px;padding:13px;border:none;border-radius:12px;background:#3FA76F;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}" +
+      ".ty-upi-card button[data-upi-skip]{margin-top:8px;background:transparent;color:#7A6E78;border:1px solid #C9E5DE;font-weight:600}" +
       ".ty-upi-card button:disabled{opacity:.55;cursor:not-allowed}" +
       ".ty-upi-success{background:#E2F0EC;border:1px solid #C9E5DE;border-radius:14px;padding:18px}" +
       ".ty-upi-success strong{color:#3E8E7E;font-size:14px}" +
@@ -915,7 +916,9 @@
   }
 
   async function fetchParticipantProfile() {
-    const response = await fetch("/api/participant/me");
+    const response = await fetch("/api/participant/me", {
+      credentials: "include",
+    });
     const payload = await response.json().catch(function () {
       return {};
     });
@@ -928,6 +931,7 @@
   async function saveParticipantUpi(upiId) {
     const response = await fetch("/api/participant/upi", {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ upiId: upiId }),
     });
@@ -937,6 +941,7 @@
     if (!response.ok) {
       const error = new Error(payload.error || "Failed to save UPI ID.");
       error.code = payload.code;
+      error.status = response.status;
       throw error;
     }
     return payload;
@@ -947,6 +952,20 @@
       '<div class="ty-upi-success">' +
       "<strong>✅ UPI Added Successfully</strong>" +
       "<p>We'll process your payment shortly.</p>" +
+      "</div>"
+    );
+  }
+
+  function renderSurveyUpiPromptCard(upiId) {
+    if (upiId && String(upiId).trim()) return renderUpiSuccessCard();
+
+    return (
+      '<div class="ty-upi-card" data-upi-card="1">' +
+      "<h3>💳 Add your UPI ID</h3>" +
+      "<p>We'll send your survey incentive via UPI after your response is verified. You can skip and add it later from your dashboard.</p>" +
+      '<input type="text" placeholder="yourname@upi" aria-label="UPI ID" data-upi-input />' +
+      '<button type="button" data-upi-submit>Save UPI ID</button>' +
+      '<button type="button" data-upi-skip>Skip for now</button>' +
       "</div>"
     );
   }
@@ -1100,17 +1119,38 @@
           })
           .catch(function (error) {
             upiSubmit.disabled = false;
+            console.error("[ConcaveRegistrationBridge] UPI save failed:", error);
             if (error && error.code === "INVALID_UPI") {
-              showCopiedToast("Please enter a valid UPI ID.");
+              showCopiedToast("Please enter a valid UPI ID (e.g. name@bank).");
               return;
             }
-            showCopiedToast("Could not save your UPI ID.");
+            if (
+              error &&
+              (error.status === 401 || error.code === "SESSION_EXPIRED")
+            ) {
+              showCopiedToast(
+                "Please log in to save your UPI ID.",
+                "Use the login link if you already registered.",
+              );
+              return;
+            }
+            showCopiedToast(
+              (error && error.message) || "Could not save your UPI ID.",
+            );
           });
+      });
+    }
+
+    const upiSkip = container.querySelector("[data-upi-skip]");
+    if (upiSkip) {
+      upiSkip.addEventListener("click", function () {
+        const upiCard = container.querySelector("[data-upi-card]");
+        if (upiCard) upiCard.remove();
       });
     }
   }
 
-  function renderReferEarnPanel(profile) {
+  function renderReferEarnPanel(profile, options) {
     const stats = profile.referralStats || {
       referredCount: 0,
       qualifiedCount: 0,
@@ -1118,15 +1158,20 @@
     };
     const referralLink = profile.referralLink || "";
     const upiId = profile.upiId || null;
+    const terminated = options && options.terminated;
+
+    const upiBlock = terminated
+      ? renderUpiPromptCard(stats, upiId)
+      : renderSurveyUpiPromptCard(upiId);
 
     return (
-      renderUpiPromptCard(stats, upiId) +
+      upiBlock +
       renderStatsRow(stats) +
       renderKeepEarningCard(referralLink)
     );
   }
 
-  async function mountTerminatedReferEarnPanel(registration) {
+  async function mountPostSurveyReferEarnPanel(registration) {
     const screen = getVisibleScreen();
     const container = getReferEarnContainer(screen);
     if (!container) return;
@@ -1160,8 +1205,14 @@
       console.warn("Could not refresh participant profile:", error);
     }
 
-    container.innerHTML = renderReferEarnPanel(profile);
+    container.innerHTML = renderReferEarnPanel(profile, {
+      terminated: isTerminatedRegistrationStatus(registration.status),
+    });
     bindReferEarnPanel(container, profile);
+  }
+
+  async function mountTerminatedReferEarnPanel(registration) {
+    return mountPostSurveyReferEarnPanel(registration);
   }
 
   function renderMessageTemplate(template, context) {
@@ -2634,8 +2685,9 @@
 
     const referEarn = getReferEarnContainer(screen);
     if (referEarn) {
-      referEarn.classList.add("hidden");
-      referEarn.innerHTML = "";
+      referEarn.classList.remove("hidden");
+      referEarn.innerHTML =
+        '<p class="ty-refer-earn-loading"><strong>Preparing your next steps…</strong></p>';
     }
 
     const channelNote = host.querySelector("[data-concave-channel-note]");
@@ -2680,6 +2732,8 @@
 
     container.appendChild(whatsappContactButton);
     container.appendChild(referralButton);
+
+    await mountPostSurveyReferEarnPanel(registration);
   }
 
   async function mountThankYouCtas(registration) {
@@ -3097,8 +3151,7 @@
 
       clearRegistrationDraft(mobile);
 
-      // Registration does not create a session; user stays on thank-you with
-      // pre-rendered messages from the response for login + share CTAs.
+      // Registration establishes a short session so thank-you UPI can save.
       await completeRegistrationOnForm(data, submitOptions);
       return true;
     } catch (err) {

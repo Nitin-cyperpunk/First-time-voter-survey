@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 
 import { handleSubmissionRouteError } from "@/lib/api/submission-route";
-import {
-  clearSessionCookie,
-  revokeCurrentSession,
-} from "@/lib/auth/participant-session";
+import { establishParticipantSession } from "@/lib/auth/participant-session";
 import { originFromRequest } from "@/lib/app-url";
 import { registerParticipant } from "@/features/launch/services/register.service";
 import { launchRegistrationSchema } from "@/features/launch/schemas/registration";
@@ -40,10 +37,8 @@ export async function POST(request: NextRequest) {
       baseUrl: originFromRequest(request) ?? undefined,
     });
 
-    await revokeCurrentSession();
-
     const response = NextResponse.json(result, { status: 201 });
-    return clearSessionCookie(response);
+    return await establishParticipantSession(response, result.leadId, false);
   } catch (error) {
     return handleSubmissionRouteError(error, "POST /api/screener");
   }
