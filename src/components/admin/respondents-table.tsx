@@ -49,7 +49,9 @@ import {
 } from "@/components/ui/table";
 import { useBulkTableState } from "@/hooks/use-bulk-table-state";
 import { fetchFtvExportBundle } from "@/lib/bulk-selection/bulk-actions-client";
+import { GridExportButtons } from "@/components/admin/grid-export-buttons";
 import {
+  exportParticipantList,
   exportParticipantRows,
   rowsToParticipantExport,
 } from "@/lib/bulk-selection/participant-export";
@@ -394,6 +396,24 @@ export function RespondentsTable({
     }
   }
 
+  const listFiltersActive =
+    statusFilter !== "all" ||
+    acquisitionTypeFilter !== "all" ||
+    sourceFilter !== "all" ||
+    platformFilter !== "all" ||
+    screenerOutcomeFilter !== "all" ||
+    duplicateFilter !== "all";
+
+  function exportFilteredList(format: "csv" | "excel") {
+    if (filteredRows.length === 0) {
+      toastError("Nothing to export.");
+      return;
+    }
+    const stamp = new Date().toISOString().slice(0, 10);
+    const suffix = listFiltersActive ? "-filtered" : "";
+    exportParticipantList(filteredRows, format, `respondents${suffix}-${stamp}`);
+  }
+
   async function handleExportParticipantsSelected() {
     try {
       const selectedRows = filteredRows.filter((row) =>
@@ -549,6 +569,17 @@ export function RespondentsTable({
             ))}
           </select>
         </label>
+
+        <div className="ml-auto flex flex-col items-start gap-1 sm:items-end">
+          <p className="text-xs font-medium text-plum-muted">
+            List export (current filters)
+          </p>
+          <GridExportButtons
+            disabled={filteredRows.length === 0}
+            onExportCsv={async () => exportFilteredList("csv")}
+            onExportExcel={async () => exportFilteredList("excel")}
+          />
+        </div>
       </div>
 
       {showSelectAllFilteredBanner ? (

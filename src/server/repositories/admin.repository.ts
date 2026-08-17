@@ -1,4 +1,5 @@
 import { isTerminatedStatus } from "@/lib/participant-lifecycle";
+import { pendingRewardReason } from "@/lib/referrals/pending-reward-reason";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { Json } from "@/lib/supabase/types";
 import type { Participant } from "@/types/domain";
@@ -12,14 +13,40 @@ export type AdminParticipantRow = Participant & {
 
 export type AdminReferralRow = {
   id: string;
+  referrerLeadId: string | null;
+  referredLeadId: string | null;
   referrerName: string;
   referrerMobile: string;
   referredName: string;
   referredMobile: string;
   rewardStatus: string;
+  rewardAmount: number | null;
+  pendingReason: string | null;
+  referredStatus: string | null;
+  terminationReason: string | null;
   earnedAt: Date | null;
   createdAt: Date;
 };
+
+/** Match the REFERRER only — never the referred participant. */
+function matchesReferrerSearch(
+  row: Pick<
+    AdminReferralRow,
+    "referrerName" | "referrerMobile" | "referrerLeadId"
+  >,
+  search: string,
+): boolean {
+  const needle = search.trim().toLowerCase();
+  if (!needle) return true;
+  const displayName = (row.referrerName.trim() || "Anonymous").toLowerCase();
+  const mobile = row.referrerMobile.toLowerCase();
+  const leadId = (row.referrerLeadId ?? "").toLowerCase();
+  return (
+    displayName.includes(needle) ||
+    mobile.includes(needle) ||
+    leadId.includes(needle)
+  );
+}
 
 export async function listParticipants(limit = 200) {
   const { data, error } = await getSupabaseAdmin()
@@ -180,7 +207,11 @@ async function backfillMissingScreenerRows(
   return recovered;
 }
 
-export async function listReferrals(limit = 200) {
+export async function listReferrals(options?: {
+  referrerSearch?: string;
+  limit?: number;
+}) {
+  const limit = Math.min(10_000, Math.max(1, options?.limit ?? 10_000));
   const { data, error } = await getSupabaseAdmin()
     .from("referrals")
     .select("*")
@@ -191,14 +222,18 @@ export async function listReferrals(limit = 200) {
 
   const referralRows = data ?? [];
   const leadIds = new Set<string>();
+  const referredLeadIds: string[] = [];
   for (const row of referralRows) {
     if (row.referrer_lead_id) leadIds.add(row.referrer_lead_id);
-    if (row.referred_lead_id) leadIds.add(row.referred_lead_id);
+    if (row.referred_lead_id) {
+      leadIds.add(row.referred_lead_id);
+      referredLeadIds.push(row.referred_lead_id);
+    }
   }
 
   const { data: participants, error: participantsError } = await getSupabaseAdmin()
     .from("participants")
-    .select("lead_id, full_name, mobile")
+    .select("lead_id, full_name, mobile, status")
     .in("lead_id", leadIds.size ? Array.from(leadIds) : ["__none__"]);
 
   if (participantsError) throw participantsError;
@@ -207,23 +242,61 @@ export async function listReferrals(limit = 200) {
     (participants ?? []).map((row) => [row.lead_id, row]),
   );
 
-  return referralRows.map((row) => {
+  const uniqueReferred = [...new Set(referredLeadIds)];
+  const { data: screeners, error: screenersError } = await getSupabaseAdmin()
+    .from("screener_responses")
+    .select("lead_id, termination_reason")
+    .in("lead_id", uniqueReferred.length ? uniqueReferred : ["__none__"]);
+
+  if (screenersError) throw screenersError;
+
+  const terminationByLead = new Map<string, string | null>();
+  for (const row of screeners ?? []) {
+    terminationByLead.set(row.lead_id, row.termination_reason ?? null);
+  }
+
+  const mapped = referralRows.map((row) => {
     const referrer = row.referrer_lead_id
       ? participantMap.get(row.referrer_lead_id)
-      : null;
+      : undefined;
     const referred = row.referred_lead_id
       ? participantMap.get(row.referred_lead_id)
-      : null;
+      : undefined;
+    const referredFound = Boolean(row.referred_lead_id && referred);
+    const parsedAmount =
+      row.reward_amount == null ? null : Number(row.reward_amount);
+    const rewardAmount =
+      parsedAmount != null && Number.isFinite(parsedAmount) ? parsedAmount : null;
 
     return {
       id: row.id,
-      referrerName: referrer?.full_name ?? "—",
-      referrerMobile: referrer?.mobile ?? "—",
-      referredName: referred?.full_name ?? "—",
-      referredMobile: referred?.mobile ?? "—",
+      referrerLeadId: row.referrer_lead_id ?? null,
+      referredLeadId: row.referred_lead_id ?? null,
+      referrerName: referrer?.full_name ?? "",
+      referrerMobile: referrer?.mobile ?? "",
+      referredName: referred?.full_name ?? "",
+      referredMobile: referred?.mobile ?? "",
       rewardStatus: row.reward_status,
+      rewardAmount,
+      referredStatus: referred?.status ?? null,
+      terminationReason: row.referred_lead_id
+        ? (terminationByLead.get(row.referred_lead_id) ?? null)
+        : null,
+      pendingReason: pendingRewardReason({
+        rewardStatus: row.reward_status,
+        referredFound,
+        referredStatus: referred?.status ?? null,
+        terminationReason: row.referred_lead_id
+          ? (terminationByLead.get(row.referred_lead_id) ?? null)
+          : null,
+      }),
       earnedAt: row.earned_at ? new Date(row.earned_at) : null,
       createdAt: new Date(row.created_at),
     } satisfies AdminReferralRow;
   });
+
+  const search = options?.referrerSearch?.trim() ?? "";
+  if (!search) return mapped;
+  // Referrer-side only: does not match referred name or referred mobile.
+  return mapped.filter((row) => matchesReferrerSearch(row, search));
 }
