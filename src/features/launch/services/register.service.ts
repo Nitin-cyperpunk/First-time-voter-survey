@@ -43,6 +43,7 @@ import {
   deleteParticipantByLeadId,
   findByMobile,
   findByReferralCode,
+  patchParticipantNameMobile,
   recordParticipantStatusHistory,
 } from "@/server/repositories/participants.repository";
 import { persistFtvAnalysisResponse } from "@/server/repositories/ftv-responses.repository";
@@ -502,9 +503,16 @@ export async function registerParticipant(
 
   const finalStatus = registrationTerminated ? "terminated" : "completed";
 
+  const resolvedFullName = input.fullName?.trim() || null;
+  if (!registrationTerminated && !resolvedFullName) {
+    console.warn(
+      `[registerParticipant] completed submission has no full_name. mobile present: ${Boolean(mobile)}`,
+    );
+  }
+
   const participant = await createParticipant({
     referralCode,
-    fullName: input.fullName?.trim() || "Anonymous",
+    fullName: resolvedFullName,
     mobile: mobile || null,
     dob: input.dob?.trim() || null,
     ageBand: ageBand || null,
@@ -533,6 +541,30 @@ export async function registerParticipant(
       ? buildRegistrationTerminationNotes(terminations)
       : "Qualified form completion",
   });
+
+  // If the registration arrived without name or mobile, attempt to heal from
+  // ftv_respondents_all which receives the full payload from the survey tool.
+  if (!resolvedFullName || !mobile) {
+    try {
+      const { getSupabaseAdmin } = await import("@/lib/supabase/admin");
+      const { data: ftvRow } = await getSupabaseAdmin()
+        .from("ftv_respondents_all")
+        .select("name,phone")
+        .eq("lead_id", participant.leadId)
+        .maybeSingle();
+      if (ftvRow) {
+        await patchParticipantNameMobile(participant.leadId, {
+          name: ftvRow.name ?? null,
+          phone: ftvRow.phone ?? null,
+        });
+      }
+    } catch (healError) {
+      console.error(
+        `[registerParticipant] ftv heal patch failed for ${participant.leadId}:`,
+        healError,
+      );
+    }
+  }
 
   await checkDuplicateFingerprint({
     leadId: participant.leadId,

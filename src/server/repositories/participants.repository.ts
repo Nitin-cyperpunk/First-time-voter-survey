@@ -7,7 +7,7 @@ type ParticipantInsert = Database["public"]["Tables"]["participants"]["Insert"];
 
 export type ParticipantCreateInput = {
   referralCode: string;
-  fullName: string;
+  fullName: string | null;
   mobile?: string | null;
   dob?: string | null;
   ageBand?: string | null;
@@ -69,7 +69,7 @@ export function mapParticipant(row: ParticipantRow): Participant {
 function toInsert(input: ParticipantCreateInput): ParticipantInsert {
   return {
     referral_code: input.referralCode,
-    full_name: input.fullName.trim() || "Anonymous",
+    full_name: input.fullName?.trim() || null,
     mobile: input.mobile?.trim() || null,
     dob: input.dob?.trim() || null,
     age_band: input.ageBand?.trim() || null,
@@ -397,4 +397,48 @@ export async function updateParticipantUpi(
   }
 
   return data ? mapParticipant(data) : null;
+}
+
+/**
+ * Patch a participant's full_name and/or mobile from an external source
+ * (e.g. ftv_respondents_all) when the registration write left them blank.
+ * Only updates fields that are currently blank/Anonymous on the row.
+ */
+export async function patchParticipantNameMobile(
+  leadId: string,
+  source: { name: string | null; phone: string | null },
+): Promise<void> {
+  const { data: current, error: fetchErr } = await getSupabaseAdmin()
+    .from("participants")
+    .select("full_name,mobile")
+    .eq("lead_id", leadId)
+    .maybeSingle();
+
+  if (fetchErr || !current) return;
+
+  const patch: Partial<ParticipantInsert> = {};
+  const isBlankName =
+    !current.full_name ||
+    current.full_name === "Anonymous" ||
+    current.full_name.trim() === "";
+  if (isBlankName && source.name?.trim()) {
+    patch.full_name = source.name.trim();
+  }
+  if (!current.mobile && source.phone?.trim()) {
+    patch.mobile = source.phone.trim();
+  }
+
+  if (Object.keys(patch).length === 0) return;
+
+  const { error } = await getSupabaseAdmin()
+    .from("participants")
+    .update(patch)
+    .eq("lead_id", leadId);
+
+  if (error) {
+    console.error(
+      `[patchParticipantNameMobile] failed to patch ${leadId}:`,
+      error,
+    );
+  }
 }

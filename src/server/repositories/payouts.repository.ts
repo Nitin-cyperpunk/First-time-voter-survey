@@ -247,7 +247,7 @@ export async function listPayouts(params: PayoutListParams) {
 
     return {
       leadId: row.lead_id,
-      fullName: row.full_name,
+      fullName: row.full_name || "Anonymous",
       mobile: row.mobile,
       email: row.email ?? null,
       city: row.city,

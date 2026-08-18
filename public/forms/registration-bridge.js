@@ -3051,6 +3051,18 @@
       return false;
     }
 
+    if (!isTerminated && (!fullName || fullName.length < 2)) {
+      showRegistrationError("Please enter your full name before submitting.");
+      return false;
+    }
+
+    if (!isTerminated && !mobile) {
+      showRegistrationError(
+        "Please enter your mobile number before submitting.",
+      );
+      return false;
+    }
+
     submitRegistration.submitted = true;
     showThankYouCtaLoading();
     const fingerprintPromise = resolveDeviceFingerprint();

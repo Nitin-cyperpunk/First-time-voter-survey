@@ -32,7 +32,7 @@ export type Database = {
         {
           lead_id: string;
           referral_code: string;
-          full_name: string;
+          full_name: string | null;
           mobile: string | null;
           dob: string | null;
           age_band: string | null;
@@ -68,7 +68,7 @@ export type Database = {
         {
           lead_id?: string;
           referral_code: string;
-          full_name: string;
+          full_name?: string | null;
           mobile?: string | null;
           dob?: string | null;
           age_band?: string | null;
