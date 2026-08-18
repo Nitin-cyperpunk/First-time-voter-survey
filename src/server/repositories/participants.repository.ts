@@ -65,11 +65,8 @@ export function mapParticipant(row: ParticipantRow): Participant {
     duplicateClusterId: (row as Record<string, unknown>).duplicate_cluster_id as string | null ?? null,
     isFingerprintClusterOriginal: Boolean((row as Record<string, unknown>).is_fingerprint_cluster_original),
     duplicateGamingPattern: (row as Record<string, unknown>).duplicate_gaming_pattern as string | null ?? null,
-    qcStatusOverride: normalizeQcOverride(
-      (row as Record<string, unknown>).qc_status_override,
-    ),
-    surveyDataIncomplete:
-      (row as Record<string, unknown>).survey_data_incomplete === true,
+    qcStatusOverride: normalizeQcOverride(row.qc_status_override),
+    surveyDataIncomplete: row.survey_data_incomplete === true,
     createdAt: new Date(row.created_at),
   };
 }
