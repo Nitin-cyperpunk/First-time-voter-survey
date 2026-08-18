@@ -16,6 +16,9 @@ export type PayoutRow = {
   email: string | null;
   city: string | null;
   referralCode: string;
+  /** All referrals attributed to this referrer (any status). */
+  referralTotalCount: number;
+  /** Earned referrals that count toward payable amount. */
   referralEarnedCount: number;
   referralEarnings: number;
   surveyEarnings: number;
@@ -214,6 +217,22 @@ export async function listPayouts(params: PayoutListParams) {
     leadsByIp.set(ip, [...new Set(leads)].sort((a, b) => a.localeCompare(b)));
   }
 
+  const { data: allReferrals, error: allReferralsError } = await getSupabaseAdmin()
+    .from("referrals")
+    .select("referrer_lead_id")
+    .in("referrer_lead_id", leadIds.length ? leadIds : ["__none__"]);
+
+  if (allReferralsError) throw allReferralsError;
+
+  const referralTotalCountByLead = new Map<string, number>();
+  for (const referral of allReferrals ?? []) {
+    if (!referral.referrer_lead_id) continue;
+    referralTotalCountByLead.set(
+      referral.referrer_lead_id,
+      (referralTotalCountByLead.get(referral.referrer_lead_id) ?? 0) + 1,
+    );
+  }
+
   const { data: referrals, error: referralsError } = await getSupabaseAdmin()
     .from("referrals")
     .select("referrer_lead_id, referred_lead_id, reward_status, reward_amount")
@@ -303,6 +322,7 @@ export async function listPayouts(params: PayoutListParams) {
       email: row.email ?? null,
       city: row.city,
       referralCode: row.referral_code,
+      referralTotalCount: referralTotalCountByLead.get(row.lead_id) ?? 0,
       referralEarnedCount: referralEarnedCountByLead.get(row.lead_id) ?? 0,
       referralEarnings,
       surveyEarnings,

@@ -70,6 +70,7 @@ type PayoutApiRow = {
   email: string | null;
   city: string | null;
   referralCode: string;
+  referralTotalCount: number;
   referralEarnedCount: number;
   referralEarnings: number;
   surveyEarnings: number;
@@ -199,9 +200,11 @@ function toRazorpaySourceRows(
     surveyName: row.surveyName,
     referralsName:
       mode === "referral"
-        ? `${row.referralEarnedCount} earned referral${row.referralEarnedCount === 1 ? "" : "s"}${row.referralsName ? ` · ${row.referralsName}` : ""}`
+        ? `${row.referralEarnedCount} earned / ${row.referralTotalCount} total${row.referralsName ? ` · ${row.referralsName}` : ""}`
         : row.referralsName,
     referralCount: mode === "referral" ? row.referralEarnedCount : undefined,
+    referralTotalCount:
+      mode === "referral" ? row.referralTotalCount : undefined,
     payoutReferenceId: row.payoutReferenceId,
   }));
 }
@@ -658,13 +661,20 @@ export function PayoutsTable() {
               <TableHead>{mode === "referral" ? "Referrer" : "Participant"}</TableHead>
               <TableHead>Mobile</TableHead>
               <TableHead>{mode === "referral" ? "UPI" : "Payment"}</TableHead>
-              <TableHead>
-                {mode === "referral" ? "Successful referrals" : "Date"}
-              </TableHead>
-              <TableHead>
-                {mode === "referral" ? "Payable amount" : "UPI"}
-              </TableHead>
-              <TableHead>{mode === "referral" ? "QC" : "QC"}</TableHead>
+              {mode === "referral" ? (
+                <>
+                  <TableHead>Total referred</TableHead>
+                  <TableHead>Earned</TableHead>
+                  <TableHead>Payable amount</TableHead>
+                </>
+              ) : (
+                <>
+                  <TableHead>Survey amount</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>UPI</TableHead>
+                </>
+              )}
+              <TableHead>QC</TableHead>
               <TableHead>Duplicate</TableHead>
               {mode === "referral" ? <TableHead>Payment</TableHead> : null}
             </TableRow>
@@ -673,7 +683,7 @@ export function PayoutsTable() {
             {loading ? (
               <TableRow>
                 <TableCell
-                  colSpan={mode === "referral" ? 10 : 9}
+                  colSpan={mode === "referral" ? 11 : 9}
                   className="py-8 text-center text-muted-foreground"
                 >
                   Loading payouts…
@@ -682,7 +692,7 @@ export function PayoutsTable() {
             ) : filteredRows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={mode === "referral" ? 10 : 9}
+                  colSpan={mode === "referral" ? 11 : 9}
                   className="py-8 text-center text-muted-foreground"
                 >
                   {mode === "referral"
@@ -740,7 +750,10 @@ export function PayoutsTable() {
                         ) : null}
                       </TableCell>
                       <TableCell className="font-mono text-[12px] font-semibold">
-                        {row.referralEarnedCount}
+                        {row.referralTotalCount ?? 0}
+                      </TableCell>
+                      <TableCell className="font-mono text-[12px] font-semibold">
+                        {row.referralEarnedCount ?? 0}
                       </TableCell>
                       <TableCell className="font-semibold">
                         {formatCurrency(row.referralEarnings)}
@@ -752,6 +765,9 @@ export function PayoutsTable() {
                         <StatusPill variant={paymentVariant(row.paymentStatus)}>
                           {row.paymentStatus}
                         </StatusPill>
+                      </TableCell>
+                      <TableCell className="font-semibold">
+                        {formatCurrency(row.surveyEarnings)}
                       </TableCell>
                       <TableCell>{formatDate(row.paymentDate)}</TableCell>
                       <TableCell onClick={(event) => event.stopPropagation()}>

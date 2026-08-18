@@ -7,6 +7,7 @@ import {
   RAZORPAY_UPI_HEADERS,
   PAYOUT_READINESS_HEADER,
   REFERRAL_COUNT_HEADER,
+  REFERRAL_TOTAL_COUNT_HEADER,
   type PayoutExportRow,
 } from "@/lib/payout-export/razorpay-upi-format";
 
@@ -266,6 +267,9 @@ function payoutHeaders(rows: PayoutExportRow[]): string[] {
   if (rows.some((row) => REFERRAL_COUNT_HEADER in row)) {
     headers.push(REFERRAL_COUNT_HEADER);
   }
+  if (rows.some((row) => REFERRAL_TOTAL_COUNT_HEADER in row)) {
+    headers.push(REFERRAL_TOTAL_COUNT_HEADER);
+  }
   return headers;
 }
 
@@ -378,7 +382,7 @@ function stylePayoutSheet(
 ) {
   worksheet["!cols"] = headers.map((header, index) => ({
     wch:
-      header === REFERRAL_COUNT_HEADER
+      header === REFERRAL_COUNT_HEADER || header === REFERRAL_TOTAL_COUNT_HEADER
         ? 20
         : (PAYOUT_COLUMN_WIDTHS[index] ?? 20),
   }));

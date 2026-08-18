@@ -2,6 +2,7 @@ export {
   RAZORPAY_UPI_HEADERS,
   PAYOUT_READINESS_HEADER,
   REFERRAL_COUNT_HEADER,
+  REFERRAL_TOTAL_COUNT_HEADER,
   buildPayoutExportRows,
   classifyPayoutExportRows,
   excludedReasonLabel,
