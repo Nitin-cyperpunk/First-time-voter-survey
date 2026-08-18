@@ -1,44 +1,4 @@
--- PREPARED ONLY. DO NOT APPLY until an explicit fieldwork decision.
--- File: scripts/_prepared_cap_change.NOT_APPLIED.sql
---
--- Live close trigger today:
---   Global 230 is a dashboard reference (target + buffer). It does NOT auto-close.
---   form_settings.study_config.auto_close_on_full = false (UI toggle is disabled).
---   Fieldwork stops only when an admin sets study_config.form_status = 'closed'
---     (Settings → Accept responses).
---   Per-city cities.capacity CAN reject new registrations when
---     study_config.enforce_capacity = true (city_full). That is already live.
---
--- Raising the raw 230 reference is CONFIGURATION — no deploy:
---   Settings → Funnel target & buffer, OR the JSONB patch below.
--- Switching the close trigger to clean completes REQUIRES A DEPLOY
---   (no code path currently auto-closes on clean or on 230).
---
--- Option A — raise the raw reference so dashboard remaining-to-cap tracks
--- extra fieldwork. Example: keep target 200, raise buffer so closesAt = 334
--- (200 clean at ~59.9% of raw). Adjust the numbers after a decision.
---
--- UPDATE form_settings
--- SET study_config = jsonb_set(
---   jsonb_set(study_config, '{buffer}', '134'),
---   '{total_capacity}', '334'
--- )
--- WHERE form_type = 'registration';
---
--- Option B — keep 230 as the raw reference; do nothing. Form stays open until
--- someone toggles form_status. Default outcome if fieldwork is stopped at 230
--- raw: ~138 deliverable clean.
---
--- Option C — close on clean (REQUIRES DEPLOY, then config). Sketch only:
---   1. Implement auto-close: when cleanDeliverable >= target, set form_status
---      closed (or reject new submits). Touch:
---        src/lib/study-config/gates.ts
---        src/features/launch/services/register.service.ts
---        src/features/respondents/lib/funnel-snapshot.ts
---        src/components/admin/study-config-settings.tsx (enable auto_close_on_full)
---   2. Then set auto_close_on_full = true.
---   Do not enable auto_close_on_full without that deploy — the flag is unused.
---
--- Pause without deploy (do not do this unless authorised):
---   Settings → Accept responses OFF
---   → PATCH /api/admin/study-config { form_status: "closed" }
+-- APPLIED IN CODE (2026-08-18): form closes when deliverable clean >= target (200).
+-- This SQL was a prepared buffer raise. Do not run it. The 230 line is not a close trigger.
+-- Emergency stop remains Settings → Accept responses (form_status).
+-- Per-city cities.capacity can still reject city_full when enforce_capacity is true.

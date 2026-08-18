@@ -485,9 +485,7 @@ export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
               <p className="rounded-[10px] border border-border bg-accent-soft px-3 py-2 text-sm leading-relaxed text-text-primary">
                 {cleanNeeded} more clean needed to hit target {funnel.target}.
                 The form closes when clean reaches {funnel.target}, not at{" "}
-                {funnel.closesAt} completed. {funnel.remainingToRawCap} raw
-                completes sit between here and the old 230 line — that line no
-                longer closes fieldwork. QC review ({qcReviewCompleted}) is
+                {funnel.closesAt} completed. QC review ({qcReviewCompleted}) is
                 recoverable through review, not new fieldwork — hollow records
                 in review are not usable.
               </p>
