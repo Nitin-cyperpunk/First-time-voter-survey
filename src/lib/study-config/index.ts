@@ -6,6 +6,7 @@ export {
   isAgeBandWithinStudyRule,
   isAgeWithinStudyRule,
   isCapacityEnforced,
+  isCleanTargetReached,
   isFormClosedForNewRespondents,
   isRegistrationAccepting,
   maySubmitWhileFormClosed,

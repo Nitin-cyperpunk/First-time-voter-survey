@@ -47,6 +47,20 @@ test("Clean excludes fingerprint only; IP-only stays clean", () => {
   assert.equal(matchesDuplicateFilter(ipOnly, "ip_review"), true);
   assert.equal(matchesDuplicateFilter(fingerprint, "non_duplicates"), false);
   assert.equal(matchesDuplicateFilter(fingerprint, "fingerprint"), true);
+
+  const hollowComplete = {
+    status: "completed",
+    isFlaggedDuplicate: false,
+    duplicateFlag: false,
+    surveyDataIncomplete: true,
+  };
+  const ipComplete = {
+    status: "completed",
+    isFlaggedDuplicate: true,
+    duplicateFlag: false,
+  };
+  assert.equal(matchesDuplicateFilter(hollowComplete, "non_duplicates"), false);
+  assert.equal(matchesDuplicateFilter(ipComplete, "non_duplicates"), true);
 });
 
 test("payout ip_review filter shows IP-only rows", () => {

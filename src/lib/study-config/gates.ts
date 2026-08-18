@@ -1,8 +1,30 @@
 import type { StudyConfig } from "@/lib/study-config/types";
 
-/** Public form may accept new responses. Only form_status gates the route. */
-export function isRegistrationAccepting(config: StudyConfig): boolean {
-  return config.form_status === "open";
+/** True when deliverable clean has reached the study target (default 200). */
+export function isCleanTargetReached(
+  cleanCount: number,
+  target: number,
+): boolean {
+  return cleanCount >= target;
+}
+
+/**
+ * Public form may accept new responses.
+ * Closed when an admin sets form_status, or when clean deliverable >= target.
+ * The raw completed line (target + buffer, e.g. 230) does not close the form.
+ */
+export function isRegistrationAccepting(
+  config: StudyConfig,
+  cleanCount?: number,
+): boolean {
+  if (config.form_status !== "open") return false;
+  if (
+    cleanCount != null &&
+    isCleanTargetReached(cleanCount, config.target)
+  ) {
+    return false;
+  }
+  return true;
 }
 
 /**
@@ -19,8 +41,11 @@ export function isCapacityEnforced(config: StudyConfig): boolean {
  * a manual close so partial data is not discarded. Fresh POSTs without startedAt
  * are rejected with form_closed.
  */
-export function isFormClosedForNewRespondents(config: StudyConfig): boolean {
-  return config.form_status !== "open";
+export function isFormClosedForNewRespondents(
+  config: StudyConfig,
+  cleanCount?: number,
+): boolean {
+  return !isRegistrationAccepting(config, cleanCount);
 }
 
 export function maySubmitWhileFormClosed(startedAt?: string | Date | null): boolean {

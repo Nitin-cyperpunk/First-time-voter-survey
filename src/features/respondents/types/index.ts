@@ -41,6 +41,7 @@ export type DashboardMetrics = {
     registered: number;
     completed: number;
     cleanDeliverable: number;
+    qcReviewCompleted: number;
     terminated: number;
     fraudFlagged: number;
     paid: number;

@@ -11,6 +11,7 @@ import {
   isDeliverableClean,
   toDeliverableRow,
 } from "@/lib/respondents/duplicate-visibility";
+import { computeEffectiveQcStatus } from "@/lib/respondents/qc-status";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getStudyConfig } from "@/server/repositories/form-settings.repository";
 
@@ -127,7 +128,9 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
       .limit(2000),
     db
       .from("participants")
-      .select("status, duplicate_flag, is_flagged_duplicate, survey_data_incomplete")
+      .select(
+        "status, duplicate_flag, is_flagged_duplicate, survey_data_incomplete, qc_status_override",
+      )
       .is("deleted_at", null)
       .in("status", [...QUALIFIED_COMPLETION_STATUSES]),
   ]);
@@ -203,9 +206,27 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
   const completed = completedRes.count ?? 0;
   const terminated = terminatedRes.count ?? 0;
   const paid = paidRes.count ?? 0;
-  const cleanDeliverable = (deliverableRes.data ?? []).filter((row) =>
+  const deliverableRows = deliverableRes.data ?? [];
+  const cleanDeliverable = deliverableRows.filter((row) =>
     isDeliverableClean(toDeliverableRow(row)),
   ).length;
+  const qcReviewCompleted = deliverableRows.filter((row) => {
+    const override =
+      row.qc_status_override === "pass" ||
+      row.qc_status_override === "fail" ||
+      row.qc_status_override === "review"
+        ? row.qc_status_override
+        : null;
+    return (
+      computeEffectiveQcStatus({
+        status: row.status,
+        duplicateFlag: row.duplicate_flag === true,
+        isFlaggedDuplicate: row.is_flagged_duplicate === true,
+        surveyDataIncomplete: row.survey_data_incomplete === true,
+        qcStatusOverride: override,
+      }) === "review"
+    );
+  }).length;
   const fraudFlagged = Math.max(
     fraudRes.count ?? 0,
     fraudLegacyRes.count ?? 0,
@@ -242,6 +263,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     registered,
     completed,
     cleanDeliverable,
+    qcReviewCompleted,
     terminated,
     fraudFlagged,
     paid,

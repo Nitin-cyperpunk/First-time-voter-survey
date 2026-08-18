@@ -28,27 +28,18 @@ const RING_R = 54;
 const RING_C = 2 * Math.PI * RING_R;
 
 const CLEAN_DELIVERABLE_TOOLTIP =
-  "Deliverable completes: no fingerprint duplicate (both sides excluded). IP-only flags stay included. Terminated excluded. QC-failed excluded; awaiting QC counts until failed. Admin Pass stays clean.";
+  "Deliverable completes: no fingerprint duplicate (both sides excluded). IP-only flags stay included. Hollow completes (survey data missing) excluded. Terminated excluded. QC-failed excluded; awaiting QC counts until failed. Admin Pass stays clean.";
 
 function cleanDeliverableHint(
   cleanDeliverable: number,
-  closesAt: number,
-  funnelStatus: FunnelSnapshotStatus,
-  completed: number,
+  target: number,
 ): string {
-  const shortfall = Math.max(0, closesAt - cleanDeliverable);
-  const base = `of ${closesAt} target · deliverable`;
+  const shortfall = Math.max(0, target - cleanDeliverable);
+  const base = `${cleanDeliverable} / ${target} target · deliverable`;
   if (shortfall <= 0) {
-    return `${base} · target met`;
+    return `${base} · form closes at ${target} clean`;
   }
-  const need = `${shortfall} more clean needed`;
-  if (
-    (funnelStatus === "over" || funnelStatus === "full") &&
-    cleanDeliverable < closesAt
-  ) {
-    return `${base} · ${need} · cap is on completed (${completed}), not clean`;
-  }
-  return `${base} · ${need}`;
+  return `${base} · ${shortfall} more clean needed · form closes at ${target} clean`;
 }
 
 type SectionKey =
@@ -167,10 +158,15 @@ export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
   const { funnel, kpis, config } = metrics;
   const status = statusCopy(funnel.status, funnel.formAccepting);
   const maxStage = Math.max(...funnel.stages.map((s) => s.count), 1);
+  const cleanNeeded = Math.max(0, funnel.target - kpis.cleanDeliverable);
+  const cleanTargetPct = Math.round(
+    (kpis.cleanDeliverable / Math.max(1, funnel.target)) * 1000,
+  ) / 10;
+  const qcReviewCompleted = kpis.qcReviewCompleted ?? 0;
   const ringOffset = useMemo(() => {
-    const pct = Math.min(100, Math.max(0, funnel.completedPct)) / 100;
+    const pct = Math.min(100, Math.max(0, cleanTargetPct)) / 100;
     return RING_C * (1 - pct);
-  }, [funnel.completedPct]);
+  }, [cleanTargetPct]);
 
   function setAll(next: boolean) {
     setOpen({
@@ -255,7 +251,7 @@ export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
             {
               label: "Completed",
               value: kpis.completed,
-              hint: `of ${config.closesAt} cap · qualified`,
+              hint: "qualified · not the close line",
               accent: "teal" as const,
             },
             {
@@ -263,15 +259,11 @@ export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
               value: kpis.cleanDeliverable,
               hint: cleanDeliverableHint(
                 kpis.cleanDeliverable,
-                config.closesAt,
-                funnel.status,
-                kpis.completed,
+                config.target,
               ),
               tooltip: CLEAN_DELIVERABLE_TOOLTIP,
               accent: "blue" as const,
-              emphasize:
-                kpis.cleanDeliverable < config.closesAt &&
-                (funnel.status === "over" || funnel.status === "full"),
+              emphasize: kpis.cleanDeliverable < config.target,
             },
             {
               label: "Terminated",
@@ -378,7 +370,13 @@ export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
           summary={
             <span className="inline-flex flex-wrap items-center gap-2">
               <span className="font-mono">
-                {funnel.completed} / {funnel.closesAt} completed
+                {kpis.cleanDeliverable} / {funnel.target} clean
+              </span>
+              <span className="font-mono text-plum-muted">
+                · {cleanNeeded} still needed
+              </span>
+              <span className="font-mono text-plum-muted">
+                · {funnel.completed} / {funnel.closesAt} completed
               </span>
               <span
                 className={cn(
@@ -402,7 +400,7 @@ export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
                 height="140"
                 viewBox="0 0 140 140"
                 className="-rotate-90"
-                aria-label={`${funnel.completedPct}% of cap`}
+                aria-label={`${cleanTargetPct}% of clean target`}
               >
                 <circle
                   cx="70"
@@ -428,36 +426,50 @@ export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                 <p className="font-mono text-2xl font-bold text-foreground">
-                  {funnel.completedPct}%
+                  {cleanTargetPct}%
                 </p>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-plum-faint">
-                  of cap
+                  of target
                 </p>
               </div>
             </div>
 
             <div className="space-y-4">
               <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
-                <LegendItem label="Target" value={funnel.target} />
-                <LegendItem label="Buffer" value={funnel.buffer} />
                 <LegendItem
-                  label="Closes at"
-                  value={funnel.closesAt}
+                  label="Clean"
+                  value={kpis.cleanDeliverable}
                   emphasize
                 />
-                <LegendItem label="Completed" value={funnel.completed} />
-                <LegendItem label="Terminated" value={funnel.terminated} />
+                <LegendItem label="Target" value={funnel.target} />
                 <LegendItem
-                  label="Remaining to cap"
-                  value={funnel.remainingToCap}
+                  label="Remaining to target"
+                  value={cleanNeeded}
+                  emphasize={cleanNeeded > 0}
                 />
+                <LegendItem label="QC review" value={qcReviewCompleted} />
+                <LegendItem
+                  label="Closes at"
+                  value={funnel.target}
+                  emphasize
+                />
+                <LegendItem
+                  label="Raw completed"
+                  value={funnel.completed}
+                />
+                <LegendItem label="Buffer" value={funnel.buffer} />
                 <LegendItem label="Paid" value={funnel.paid} />
               </dl>
 
               <div>
                 <p className="mb-2 text-xs font-semibold uppercase tracking-[0.06em] text-plum-faint">
-                  Funnel headroom
+                  Clean vs target · form closes at {funnel.target} clean
                 </p>
+                <HeadroomBar
+                  label="Clean"
+                  value={kpis.cleanDeliverable}
+                  max={funnel.target}
+                />
                 <HeadroomBar
                   label="Completed"
                   value={funnel.completed}
@@ -471,8 +483,13 @@ export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
               </div>
 
               <p className="rounded-[10px] border border-border bg-accent-soft px-3 py-2 text-sm leading-relaxed text-text-primary">
-                Buffer gap: {funnel.buffer} extra seats beyond target{" "}
-                {funnel.target}. Terminated (Q1/Q2): {funnel.terminated}.
+                {cleanNeeded} more clean needed to hit target {funnel.target}.
+                The form closes when clean reaches {funnel.target}, not at{" "}
+                {funnel.closesAt} completed. {funnel.remainingToRawCap} raw
+                completes sit between here and the old 230 line — that line no
+                longer closes fieldwork. QC review ({qcReviewCompleted}) is
+                recoverable through review, not new fieldwork — hollow records
+                in review are not usable.
               </p>
             </div>
           </div>

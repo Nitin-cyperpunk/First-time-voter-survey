@@ -6,6 +6,7 @@ import {
   coerceAgeBand,
   isAgeBandWithinStudyRule,
   isCapacityEnforced,
+  isRegistrationAccepting,
   maySubmitWhileFormClosed,
   parseAgeBand,
 } from "@/lib/study-config/gates";
@@ -74,4 +75,14 @@ test("maySubmitWhileFormClosed allows mid-survey finish only when startedAt is s
   assert.equal(maySubmitWhileFormClosed(""), false);
   assert.equal(maySubmitWhileFormClosed("2026-08-14T10:00:00.000Z"), true);
   assert.equal(maySubmitWhileFormClosed(new Date("2026-08-14T10:00:00.000Z")), true);
+});
+
+test("form accepts new responses until clean reaches target", () => {
+  const open = { ...DEFAULT_STUDY_CONFIG, form_status: "open" as const, target: 200 };
+  const closed = { ...open, form_status: "closed" as const };
+  assert.equal(isRegistrationAccepting(open, 133), true);
+  assert.equal(isRegistrationAccepting(open, 199), true);
+  assert.equal(isRegistrationAccepting(open, 200), false);
+  assert.equal(isRegistrationAccepting(open, 201), false);
+  assert.equal(isRegistrationAccepting(closed, 100), false);
 });
