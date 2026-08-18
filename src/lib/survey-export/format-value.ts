@@ -1,3 +1,4 @@
+import { formatExportDateTime } from "@/lib/format-admin-datetime";
 import type { SurveyAnswerValue, SurveyLeafValue } from "@/lib/survey-response-document";
 
 export function formatExportScalar(value: unknown): string {
@@ -134,43 +135,9 @@ export function isMatrixObject(
   );
 }
 
-/**
- * Format timestamps for FTV export.
- * IST / Asia/Kolkata, d/m/yyyy, 12-hour clock, lowercase am/pm.
- */
+/** Shared IST export clock — delegates to formatExportDateTime. */
 export function formatExportDate(
-  value: string | null | undefined,
+  value: string | Date | null | undefined,
 ): string {
-  if (!value) {
-    return "";
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return String(value).trim();
-  }
-
-  const parts = new Intl.DateTimeFormat("en-IN", {
-    timeZone: "Asia/Kolkata",
-    day: "numeric",
-    month: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
-  }).formatToParts(date);
-
-  const get = (type: Intl.DateTimeFormatPartTypes) =>
-    parts.find((part) => part.type === type)?.value ?? "";
-
-  const day = get("day");
-  const month = get("month");
-  const year = get("year");
-  const hour = get("hour");
-  const minute = get("minute");
-  const second = get("second");
-  const dayPeriod = get("dayPeriod").toLowerCase().replace(/\./g, "");
-
-  return `${day}/${month}/${year}, ${hour}:${minute}:${second} ${dayPeriod}`;
+  return formatExportDateTime(value);
 }

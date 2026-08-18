@@ -121,12 +121,12 @@ function respondentFromPayload(payload: SamplePayload): FtvRespondentRow {
   };
 }
 
-test("FTV export header count is 16 + 24 + 89 + 3 = 132", () => {
+test("FTV export header count is 16 + 24 + 89 + 6 = 135", () => {
   assert.equal(FTV_METADATA_HEADERS.length, 16);
   assert.equal(FTV_PROFILE_HEADERS.length, 24);
   assert.equal(FTV_ANSWER_HEADERS.length, 89);
-  assert.equal(FTV_EXPORT_HEADERS.length, 132);
-  assert.equal(new Set(FTV_EXPORT_HEADERS).size, 132);
+  assert.equal(FTV_EXPORT_HEADERS.length, 135);
+  assert.equal(new Set(FTV_EXPORT_HEADERS).size, 135);
 });
 
 test("Q6b_10 header keys on item_code text after typo fix", () => {
@@ -147,7 +147,7 @@ test("complete sample pivots Q8 binaries, grids by item_code, and other text", (
   assert.equal(Object.keys(row).length, FTV_EXPORT_HEADERS.length);
   assert.equal(row.respondent_id, "CI_FTV_0001");
   assert.equal(row.status, "COMPLETE");
-  assert.equal(row.terminated_at, "");
+  assert.equal(row["terminated_at (IST)"], "");
   assert.equal(row.Q1_code, 1);
   assert.equal(row.Q1, "Yes");
   assert.equal(row[Q6B_HEADERS[9]!], 3);
@@ -176,8 +176,8 @@ test("terminate sample keeps 44 null answers and zero Q8 selections", () => {
 
   assert.equal(row.respondent_id, "CI_FTV_0002");
   assert.equal(row.status, "TERMINATE_AGE_OUT_OF_RANGE");
-  assert.equal(row.completed_at, "");
-  assert.equal(row.terminated_at, "2026-08-13T10:05:02.000Z");
+  assert.equal(row["completed_at (IST)"], "");
+  assert.equal(row["terminated_at (IST)"], "2026-08-13 15:35:02");
   assert.equal(row.duration_seconds, 51);
   assert.equal(row.Q1_code, "");
   assert.equal(row.Q1, "");

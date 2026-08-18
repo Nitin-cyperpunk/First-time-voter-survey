@@ -1,4 +1,5 @@
 import { downloadCsv, downloadExcel } from "@/lib/export";
+import { formatExportDateTime } from "@/lib/format-admin-datetime";
 import { buildDuplicateExportFields } from "@/lib/respondents/duplicate-visibility";
 import {
   computeEffectiveQcStatus,
@@ -12,7 +13,7 @@ export const PARTICIPANT_LIST_EXPORT_HEADERS = [
   "Mobile",
   "City",
   "Status",
-  "Registered",
+  "Registered (IST)",
   "duplicate_flag",
   "duplicate_match_type",
   "duplicate_matched_lead_id",
@@ -24,7 +25,7 @@ export const PARTICIPANT_LIST_EXPORT_HEADERS = [
   "survey_data_incomplete",
   "qc_override_reason_latest",
   "qc_decided_by_latest",
-  "qc_decided_at_latest",
+  "qc_decided_at_latest (IST)",
 ] as const;
 
 export function rowsToParticipantExport(
@@ -35,6 +36,7 @@ export function rowsToParticipantExport(
     city?: string | null;
     status: string;
     createdAt: string;
+    createdAtIso?: string | null;
     isFlaggedDuplicate?: boolean;
     duplicateFlag?: boolean;
     originalParticipantLeadId?: string | null;
@@ -70,7 +72,9 @@ export function rowsToParticipantExport(
       Mobile: row.mobile,
       City: row.city ?? "",
       Status: row.status,
-      Registered: row.createdAt,
+      "Registered (IST)": formatExportDateTime(
+        row.createdAtIso ?? row.createdAt,
+      ),
       duplicate_flag: duplicate.duplicate_flag,
       duplicate_match_type: duplicate.duplicate_match_type,
       duplicate_matched_lead_id: duplicate.duplicate_matched_lead_id,
@@ -90,7 +94,9 @@ export function rowsToParticipantExport(
       survey_data_incomplete: row.surveyDataIncomplete ? "Yes" : "",
       qc_override_reason_latest: row.qcOverrideReasonLatest ?? "",
       qc_decided_by_latest: row.qcDecidedByLatest ?? "",
-      qc_decided_at_latest: row.qcDecidedAtLatest ?? "",
+      "qc_decided_at_latest (IST)": formatExportDateTime(
+        row.qcDecidedAtLatest,
+      ),
     };
   });
 }

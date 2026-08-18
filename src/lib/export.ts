@@ -3,6 +3,12 @@ import * as XLSXStyle from "xlsx-js-style";
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 
 import {
+  EXPORT_DATETIME_NUMBER_FORMAT,
+  isExportDateTimeHeader,
+  toIstExcelDate,
+} from "@/lib/format-admin-datetime";
+
+import {
   RAZORPAY_UPI_COLUMN_VALIDATIONS,
   RAZORPAY_UPI_HEADERS,
   PAYOUT_READINESS_HEADER,
@@ -46,17 +52,60 @@ function autoColumnWidths(
     );
     // Datetime meta cols need extra width so Excel doesn't show ########
     const minWidth =
-      header === "Started at" || header === "Completed at" ? 26 : 12;
+      isExportDateTimeHeader(header) ||
+      header === "Started at" ||
+      header === "Completed at"
+        ? 22
+        : 12;
     return { wch: Math.min(Math.max(maxLen + 2, minWidth), 48) };
   });
 }
 
+function applyIstExcelDateCells(
+  worksheet: XLSX.WorkSheet,
+  headers: string[],
+) {
+  const ref = worksheet["!ref"];
+  if (!ref) return;
+  const range = XLSX.utils.decode_range(ref);
+  for (let c = 0; c <= range.e.c; c += 1) {
+    const header = headers[c];
+    if (!header || !isExportDateTimeHeader(header)) continue;
+    for (let r = 1; r <= range.e.r; r += 1) {
+      const address = XLSX.utils.encode_cell({ r, c });
+      const cell = worksheet[address];
+      if (!cell || cell.v == null || cell.v === "") continue;
+      const excelDate = toIstExcelDate(
+        cell.v instanceof Date ? cell.v : String(cell.v),
+      );
+      if (excelDate === "") continue;
+      const serial =
+        (excelDate.getTime() - Date.UTC(1899, 11, 30)) / 86400000;
+      cell.t = "n";
+      cell.v = serial;
+      cell.z = EXPORT_DATETIME_NUMBER_FORMAT;
+      delete cell.w;
+    }
+  }
+}
+
+/** Excel-only: convert IST datetime strings into numeric date cells. */
+export function stampExportDateCells(
+  worksheet: XLSX.WorkSheet,
+  headers: string[],
+) {
+  applyIstExcelDateCells(worksheet, headers);
+}
+
 function buildWorksheet(
   rows: ExportRow[],
-  options: WorksheetOptions = {},
+  options: WorksheetOptions & { excelDates?: boolean } = {},
 ): XLSX.WorkSheet {
   const headers = options.headers ?? resolveHeaders(rows);
   const worksheet = XLSX.utils.json_to_sheet(rows, { header: headers });
+  if (options.excelDates) {
+    applyIstExcelDateCells(worksheet, headers);
+  }
 
   if (options.autoWidth !== false) {
     worksheet["!cols"] = autoColumnWidths(rows, headers);
@@ -133,7 +182,7 @@ export function downloadExcel(
   const cols = headers ?? resolveHeaders(rows);
   const worksheet =
     rows.length > 0
-      ? buildWorksheet(rows, { headers: cols })
+      ? buildWorksheet(rows, { headers: cols, excelDates: true })
       : XLSX.utils.aoa_to_sheet([cols]);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
@@ -149,7 +198,7 @@ export function downloadExcelWorkbook(
     const cols = sheet.headers ?? resolveHeaders(sheet.rows);
     const worksheet =
       sheet.rows.length > 0
-        ? buildWorksheet(sheet.rows, { headers: cols })
+        ? buildWorksheet(sheet.rows, { headers: cols, excelDates: true })
         : XLSX.utils.aoa_to_sheet([cols.length ? cols : [""]]);
     XLSX.utils.book_append_sheet(
       workbook,
@@ -167,6 +216,7 @@ export function downloadFormattedExcel(
 ) {
   const headers = resolveHeaders(rows);
   const worksheet = XLSX.utils.json_to_sheet(rows, { header: headers });
+  applyIstExcelDateCells(worksheet, headers);
   applyFormattedHeaderStyles(worksheet, headers, true);
   worksheet["!cols"] = autoColumnWidths(rows, headers);
   worksheet["!freeze"] = {

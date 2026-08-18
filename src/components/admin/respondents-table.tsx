@@ -101,6 +101,7 @@ export type RespondentTableRow = {
   referralPlatform: string | null;
   otherSource: string | null;
   createdAt: string;
+  createdAtIso?: string | null;
   qcStatusOverride: QcStatusValue | null;
   surveyDataIncomplete: boolean;
 };
