@@ -28,6 +28,8 @@ export type Participant = {
   duplicateClusterId: string | null;
   isFingerprintClusterOriginal: boolean;
   duplicateGamingPattern: string | null;
+  qcStatusOverride: "pass" | "fail" | "review" | null;
+  surveyDataIncomplete: boolean;
   createdAt: Date;
 };
 

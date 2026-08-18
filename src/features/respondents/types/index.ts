@@ -40,6 +40,7 @@ export type DashboardMetrics = {
   kpis: {
     registered: number;
     completed: number;
+    cleanDeliverable: number;
     terminated: number;
     fraudFlagged: number;
     paid: number;

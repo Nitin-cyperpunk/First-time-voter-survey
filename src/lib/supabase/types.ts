@@ -63,6 +63,10 @@ export type Database = {
           duplicate_cluster_id: string | null;
           is_fingerprint_cluster_original: boolean;
           duplicate_gaming_pattern: string | null;
+          qc_status_override: string | null;
+          survey_data_incomplete: boolean;
+          survey_data_incomplete_at: string | null;
+          survey_data_incomplete_reason: string | null;
           created_at: string;
           deleted_at: string | null;
           deleted_by: string | null;
@@ -102,6 +106,10 @@ export type Database = {
           duplicate_cluster_id?: string | null;
           is_fingerprint_cluster_original?: boolean;
           duplicate_gaming_pattern?: string | null;
+          qc_status_override?: string | null;
+          survey_data_incomplete?: boolean;
+          survey_data_incomplete_at?: string | null;
+          survey_data_incomplete_reason?: string | null;
           created_at?: string;
           deleted_at?: string | null;
           deleted_by?: string | null;
@@ -491,6 +499,45 @@ export type Database = {
           new_value?: string | null;
           created_at?: string;
         }
+      >;
+      participant_qc_override_log: TableDefinition<
+        {
+          id: string;
+          lead_id: string;
+          previous_auto_status: string;
+          new_auto_status: string;
+          previous_effective_status: string;
+          new_effective_status: string;
+          previous_override: string | null;
+          new_override: string;
+          reason: string;
+          changed_by_admin_id: string | null;
+          changed_by_email: string;
+          created_at: string;
+        },
+        {
+          id?: string;
+          lead_id: string;
+          previous_auto_status: string;
+          new_auto_status: string;
+          previous_effective_status: string;
+          new_effective_status: string;
+          previous_override?: string | null;
+          new_override: string;
+          reason: string;
+          changed_by_admin_id?: string | null;
+          changed_by_email: string;
+          created_at?: string;
+        },
+        [
+          {
+            foreignKeyName: "participant_qc_override_log_lead_id_fkey";
+            columns: ["lead_id"];
+            isOneToOne: false;
+            referencedRelation: "participants";
+            referencedColumns: ["lead_id"];
+          },
+        ]
       >;
       participant_sessions: TableDefinition<
         {
@@ -900,6 +947,21 @@ export type Database = {
           p_city_match_type?: string | null;
         };
         Returns: Json;
+      };
+      apply_participant_qc_override: {
+        Args: {
+          p_lead_id: string;
+          p_new_override: string;
+          p_reason: string;
+          p_previous_auto: string;
+          p_new_auto: string;
+          p_previous_effective: string;
+          p_new_effective: string;
+          p_previous_override: string | null;
+          p_admin_id: string;
+          p_admin_email: string;
+        };
+        Returns: undefined;
       };
     };
     Enums: Record<string, never>;

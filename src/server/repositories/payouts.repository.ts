@@ -2,8 +2,14 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getRewardAmounts } from "@/lib/study-config/rewards";
 import {
   matchesPayoutDuplicateFilter,
+  toDeliverableRow,
   type PayoutDuplicateFilter,
 } from "@/lib/respondents/duplicate-visibility";
+import {
+  computeEffectiveQcStatus,
+  surveyPayoutAmount,
+  type QcStatusValue,
+} from "@/lib/respondents/qc-status";
 import { getActivePublishedForm } from "@/server/repositories/forms.repository";
 
 export type PaymentStatus = "pending" | "ready" | "paid";
@@ -43,6 +49,8 @@ export type PayoutRow = {
   duplicateGamingPattern: string | null;
   /** All lead IDs sharing this participant's IP (including self). */
   ipAssociatedLeadIds: string[];
+  qcEffectiveStatus: QcStatusValue;
+  qcStatusOverridden: boolean;
   createdAt: Date | null;
 };
 
@@ -89,27 +97,14 @@ type ParticipantPayoutRow = {
   duplicate_cluster_id: string | null;
   is_fingerprint_cluster_original: boolean | null;
   duplicate_gaming_pattern: string | null;
+  qc_status_override: string | null;
+  survey_data_incomplete: boolean | null;
   created_at: string | null;
   payouts:
     | { payment_status: string; payment_date: string | null }
     | { payment_status: string; payment_date: string | null }[]
     | null;
 };
-
-function surveyEarningsForStatus(
-  status: string,
-  surveyRewardAmount: number,
-): number {
-  const normalized = status.toLowerCase();
-  if (
-    normalized === "review_pass" ||
-    normalized === "successful" ||
-    normalized === "qc_pass"
-  ) {
-    return surveyRewardAmount;
-  }
-  return 0;
-}
 
 function normalizePayoutJoin(
   payouts: ParticipantPayoutRow["payouts"],
@@ -187,7 +182,7 @@ export async function listPayouts(params: PayoutListParams) {
   const { data: participants, error } = await getSupabaseAdmin()
     .from("participants")
     .select(
-      "lead_id, full_name, mobile, email, city, status, upi_id, referral_code, is_flagged_duplicate, duplicate_flag, duplicate_reason, ip_address, original_participant_lead_id, duplicate_cluster_id, is_fingerprint_cluster_original, duplicate_gaming_pattern, created_at, payouts(payment_status, payment_date)",
+      "lead_id, full_name, mobile, email, city, status, upi_id, referral_code, is_flagged_duplicate, duplicate_flag, duplicate_reason, ip_address, original_participant_lead_id, duplicate_cluster_id, is_fingerprint_cluster_original, duplicate_gaming_pattern, qc_status_override, survey_data_incomplete, created_at, payouts(payment_status, payment_date)",
     )
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
@@ -313,8 +308,23 @@ export async function listPayouts(params: PayoutListParams) {
   let payoutRows: PayoutRow[] = rows.map((row) => {
     const payout = normalizePayoutJoin(row.payouts);
     const referralEarnings = referralEarningsByLead.get(row.lead_id) ?? 0;
-    const surveyEarnings = surveyEarningsForStatus(
-      row.status,
+    const qcRow = {
+      status: row.status,
+      duplicateFlag: row.duplicate_flag === true,
+      isFlaggedDuplicate: row.is_flagged_duplicate === true,
+      surveyDataIncomplete: row.survey_data_incomplete === true,
+      qcStatusOverride:
+        row.qc_status_override === "pass" ||
+        row.qc_status_override === "fail" ||
+        row.qc_status_override === "review"
+          ? (row.qc_status_override as QcStatusValue)
+          : null,
+    };
+    const effectiveQc = computeEffectiveQcStatus(qcRow);
+    const deliverable = toDeliverableRow(row);
+    const surveyEarnings = surveyPayoutAmount(
+      deliverable,
+      effectiveQc,
       surveyRewardAmount,
     );
     const paymentStatus = (payout?.payment_status ??
@@ -350,6 +360,8 @@ export async function listPayouts(params: PayoutListParams) {
       ipAssociatedLeadIds: row.ip_address?.trim()
         ? (leadsByIp.get(row.ip_address.trim()) ?? [row.lead_id])
         : [],
+      qcEffectiveStatus: effectiveQc,
+      qcStatusOverridden: qcRow.qcStatusOverride !== null,
       createdAt: row.created_at ? new Date(row.created_at) : null,
     };
   });
@@ -386,8 +398,10 @@ export async function listPayouts(params: PayoutListParams) {
       referral: afterDuplicate.filter(
         (row) => matchesPayoutMode(row, "referral") && row.referralEarnings > 0,
       ).length,
-      survey: afterDuplicate.filter((row) =>
-        matchesPayoutMode(row, "survey"),
+      survey: afterDuplicate.filter(
+        (row) =>
+          matchesPayoutMode(row, "survey") &&
+          row.qcEffectiveStatus === "pass",
       ).length,
     },
     duplicate: {
@@ -407,8 +421,8 @@ export async function listPayouts(params: PayoutListParams) {
   payoutRows = payoutRows.filter((row) => {
     if (!matchesPayoutMode(row, mode)) return false;
     if (!matchesPayoutDuplicateFilter(row, duplicateFilter)) return false;
-    // Referral tab only shows referrers with a positive payable amount.
     if (mode === "referral" && row.referralEarnings <= 0) return false;
+    if (mode === "survey" && row.qcEffectiveStatus !== "pass") return false;
     return true;
   });
 

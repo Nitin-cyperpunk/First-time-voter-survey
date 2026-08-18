@@ -55,6 +55,8 @@ export default async function RespondentsOpsPage() {
     referralPlatform: participant.referralPlatform,
     otherSource: participant.otherSource,
     createdAt: formatDate(participant.createdAt),
+    qcStatusOverride: participant.qcStatusOverride ?? null,
+    surveyDataIncomplete: participant.surveyDataIncomplete,
   }));
 
   return (
