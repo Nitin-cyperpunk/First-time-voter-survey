@@ -6,6 +6,7 @@ import {
   RAZORPAY_UPI_COLUMN_VALIDATIONS,
   RAZORPAY_UPI_HEADERS,
   PAYOUT_READINESS_HEADER,
+  REFERRAL_COUNT_HEADER,
   type PayoutExportRow,
 } from "@/lib/payout-export/razorpay-upi-format";
 
@@ -260,6 +261,14 @@ export const PAYOUT_COLUMN_WIDTHS = [
   20, // J Payout readiness
 ] as const;
 
+function payoutHeaders(rows: PayoutExportRow[]): string[] {
+  const headers: string[] = [...RAZORPAY_UPI_HEADERS, PAYOUT_READINESS_HEADER];
+  if (rows.some((row) => REFERRAL_COUNT_HEADER in row)) {
+    headers.push(REFERRAL_COUNT_HEADER);
+  }
+  return headers;
+}
+
 /**
  * xlsx-js-style emits <x:Visible/> which Excel treats as "always show this note".
  * Hidden notes still appear on hover; they must not cover data on open.
@@ -367,7 +376,12 @@ function stylePayoutSheet(
   headers: string[],
   rowCount: number,
 ) {
-  worksheet["!cols"] = PAYOUT_COLUMN_WIDTHS.map((wch) => ({ wch }));
+  worksheet["!cols"] = headers.map((header, index) => ({
+    wch:
+      header === REFERRAL_COUNT_HEADER
+        ? 20
+        : (PAYOUT_COLUMN_WIDTHS[index] ?? 20),
+  }));
   worksheet["!rows"] = [{ hpt: 36 }];
 
   for (let index = 0; index < headers.length; index += 1) {
@@ -432,7 +446,7 @@ export function buildRazorpayPayoutExcelBytes(input: {
 }): Uint8Array {
   const rows =
     input.payoutRows.length > 0 ? input.payoutRows : emptyPayoutExportRows();
-  const headers = [...RAZORPAY_UPI_HEADERS, PAYOUT_READINESS_HEADER];
+  const headers = payoutHeaders(rows);
 
   const payoutSheet = XLSXStyle.utils.json_to_sheet(rows, { header: headers });
   stylePayoutSheet(payoutSheet, headers, rows.length);
@@ -514,9 +528,9 @@ export function downloadRazorpayPayoutCsv(input: {
   payoutRows: PayoutExportRow[];
   filterMeta?: PayoutExportFilterMeta;
 }) {
-  const headers = [...RAZORPAY_UPI_HEADERS, PAYOUT_READINESS_HEADER];
   const rows =
     input.payoutRows.length > 0 ? input.payoutRows : emptyPayoutExportRows();
+  const headers = payoutHeaders(rows);
   const worksheet = XLSX.utils.json_to_sheet(rows, { header: headers });
   const workbook = XLSX.utils.book_new();
   XLSXStyle.utils.book_append_sheet(workbook, worksheet, "Payouts");

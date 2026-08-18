@@ -1,11 +1,8 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getRewardAmounts } from "@/lib/study-config/rewards";
 import {
-  isFingerprintFlagged,
-  isCleanForPayout,
   matchesPayoutDuplicateFilter,
   type PayoutDuplicateFilter,
-  type DuplicateSignals,
 } from "@/lib/respondents/duplicate-visibility";
 import { getActivePublishedForm } from "@/server/repositories/forms.repository";
 
@@ -19,6 +16,7 @@ export type PayoutRow = {
   email: string | null;
   city: string | null;
   referralCode: string;
+  referralEarnedCount: number;
   referralEarnings: number;
   surveyEarnings: number;
   totalAmount: number;
@@ -220,7 +218,7 @@ export async function listPayouts(params: PayoutListParams) {
     .from("referrals")
     .select("referrer_lead_id, referred_lead_id, reward_status, reward_amount")
     .in("referrer_lead_id", leadIds.length ? leadIds : ["__none__"])
-    .in("reward_status", ["earned", "paid"]);
+    .eq("reward_status", "earned");
 
   if (referralsError) throw referralsError;
 
@@ -246,6 +244,7 @@ export async function listPayouts(params: PayoutListParams) {
   }
 
   const referralEarningsByLead = new Map<string, number>();
+  const referralEarnedCountByLead = new Map<string, number>();
   const referredNamesByLead = new Map<string, string[]>();
   for (const referral of referrals ?? []) {
     if (!referral.referrer_lead_id) continue;
@@ -268,6 +267,10 @@ export async function listPayouts(params: PayoutListParams) {
     referralEarningsByLead.set(
       referral.referrer_lead_id,
       (referralEarningsByLead.get(referral.referrer_lead_id) ?? 0) + amount,
+    );
+    referralEarnedCountByLead.set(
+      referral.referrer_lead_id,
+      (referralEarnedCountByLead.get(referral.referrer_lead_id) ?? 0) + 1,
     );
 
     const referredName =
@@ -300,6 +303,7 @@ export async function listPayouts(params: PayoutListParams) {
       email: row.email ?? null,
       city: row.city,
       referralCode: row.referral_code,
+      referralEarnedCount: referralEarnedCountByLead.get(row.lead_id) ?? 0,
       referralEarnings,
       surveyEarnings,
       totalAmount: referralEarnings + surveyEarnings,

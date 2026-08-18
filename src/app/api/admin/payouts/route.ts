@@ -29,10 +29,11 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = request.nextUrl;
+    const mode = parseMode(searchParams.get("mode"));
     const result = await listPayouts({
       search: searchParams.get("search") ?? undefined,
       paymentStatus: parsePaymentStatus(searchParams.get("status")),
-      mode: parseMode(searchParams.get("mode")),
+      mode,
       duplicateFilter: parseDuplicateFilter(searchParams.get("duplicate")),
       sortBy:
         (searchParams.get("sortBy") as
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
           | "totalAmount"
           | "paymentStatus"
           | "paymentDate"
-          | null) ?? "leadId",
+          | null) ?? (mode === "referral" ? "totalAmount" : "leadId"),
       sortDir: searchParams.get("sortDir") === "asc" ? "asc" : "desc",
       page: Number(searchParams.get("page") ?? "1"),
       pageSize: Number(searchParams.get("pageSize") ?? "25"),

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { isAdminAuthenticated } from "@/lib/auth/admin-session";
+import { pendingRewardReason } from "@/lib/referrals/pending-reward-reason";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getRewardAmounts } from "@/lib/study-config/rewards";
 
@@ -12,8 +13,10 @@ export type ReferralPayoutDetail = {
   referredStatus: string | null;
   rewardStatus: string;
   rewardAmount: number | null;
+  countsTowardPayable: boolean;
   earnedAt: string | null;
   createdAt: string;
+  pendingKind: "terminated" | "duplicate_qc" | "other" | null;
   /** Why a pending referral will never be paid, or why it is still waiting. */
   pendingReason: string | null;
 };
@@ -56,23 +59,31 @@ export async function GET(
 
     if (pErr) throw pErr;
 
+    const { data: screenerRows, error: screenerErr } = await getSupabaseAdmin()
+      .from("screener_responses")
+      .select("lead_id, termination_reason")
+      .in("lead_id", referredIds.length ? referredIds : ["__none__"]);
+
+    if (screenerErr) throw screenerErr;
+
     const byId = new Map(
       (referred ?? []).map((p) => [p.lead_id, p]),
     );
+    const terminationReasonByLead = new Map(
+      (screenerRows ?? []).map((row) => [row.lead_id, row.termination_reason ?? null]),
+    );
 
-    function pendingReason(
+    function pendingKind(
       rewardStatus: string,
       participant: ReturnType<typeof byId.get>,
-    ): string | null {
+    ): ReferralPayoutDetail["pendingKind"] {
       if (rewardStatus !== "pending") return null;
-      if (!participant) return "Referred person not found.";
-      if (participant.status === "terminated") {
-        return "Referred person did not qualify (terminated). This referral will not be paid.";
-      }
+      if (!participant) return "other";
+      if (participant.status === "terminated") return "terminated";
       if (participant.is_flagged_duplicate || participant.duplicate_flag) {
-        return "Referred person is flagged as a duplicate — awaiting QC review before reward can be confirmed.";
+        return "duplicate_qc";
       }
-      return "Awaiting qualification.";
+      return "other";
     }
 
     const rows: ReferralPayoutDetail[] = referrals.map((r) => {
@@ -92,9 +103,19 @@ export async function GET(
         referredStatus: p?.status ?? null,
         rewardStatus: r.reward_status,
         rewardAmount: Number.isFinite(amount) ? amount : null,
+        countsTowardPayable:
+          r.reward_status === "earned" && !(p?.duplicate_flag ?? false),
         earnedAt: r.earned_at ?? null,
         createdAt: r.created_at,
-        pendingReason: pendingReason(r.reward_status, p),
+        pendingKind: pendingKind(r.reward_status, p),
+        pendingReason: pendingRewardReason({
+          rewardStatus: r.reward_status,
+          referredFound: Boolean(r.referred_lead_id && p),
+          referredStatus: p?.status ?? null,
+          terminationReason: r.referred_lead_id
+            ? (terminationReasonByLead.get(r.referred_lead_id) ?? null)
+            : null,
+        }),
       };
     });
 

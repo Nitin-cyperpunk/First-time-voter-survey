@@ -70,6 +70,7 @@ type PayoutApiRow = {
   email: string | null;
   city: string | null;
   referralCode: string;
+  referralEarnedCount: number;
   referralEarnings: number;
   surveyEarnings: number;
   totalAmount: number;
@@ -102,8 +103,10 @@ type ReferralPayoutDetail = {
   referredStatus: string | null;
   rewardStatus: string;
   rewardAmount: number | null;
+  countsTowardPayable: boolean;
   earnedAt: string | null;
   createdAt: string;
+  pendingKind: "terminated" | "duplicate_qc" | "other" | null;
   pendingReason: string | null;
 };
 
@@ -140,7 +143,7 @@ function parseStatusParam(
   return "all";
 }
 
-function parseSortByParam(value: string | null): SortBy {
+function parseSortByParam(value: string | null, mode: PayoutMode): SortBy {
   if (
     value === "leadId" ||
     value === "fullName" ||
@@ -150,7 +153,7 @@ function parseSortByParam(value: string | null): SortBy {
   ) {
     return value;
   }
-  return "leadId";
+  return mode === "referral" ? "totalAmount" : "leadId";
 }
 
 function amountForMode(row: PayoutApiRow, mode: PayoutMode) {
@@ -194,7 +197,11 @@ function toRazorpaySourceRows(
     upiId: row.upiId,
     amount: amountForMode(row, mode),
     surveyName: row.surveyName,
-    referralsName: row.referralsName,
+    referralsName:
+      mode === "referral"
+        ? `${row.referralEarnedCount} earned referral${row.referralEarnedCount === 1 ? "" : "s"}${row.referralsName ? ` · ${row.referralsName}` : ""}`
+        : row.referralsName,
+    referralCount: mode === "referral" ? row.referralEarnedCount : undefined,
     payoutReferenceId: row.payoutReferenceId,
   }));
 }
@@ -207,19 +214,34 @@ function rewardVariant(status: string): StatusPillVariant {
 }
 
 function summarizeReferralDetails(rows: ReferralPayoutDetail[]) {
-  let earned = 0, pending = 0, earnedAmount = 0;
-  let terminatedCount = 0, duplicatePendingCount = 0;
+  let earned = 0;
+  let pendingQc = 0;
+  let notPayable = 0;
+  let earnedAmount = 0;
+  let pendingQcAmount = 0;
   for (const r of rows) {
-    if (r.rewardStatus === "earned" || r.rewardStatus === "paid") {
+    if (r.rewardStatus === "earned" && r.countsTowardPayable) {
       earned++;
       earnedAmount += r.rewardAmount ?? 0;
-    } else {
-      pending++;
-      if (r.pendingReason?.includes("terminated")) terminatedCount++;
-      else if (r.pendingReason?.includes("duplicate")) duplicatePendingCount++;
+    } else if (r.rewardStatus === "earned") {
+      notPayable++;
+    } else if (r.rewardStatus === "pending") {
+      if (r.pendingKind === "terminated") {
+        notPayable++;
+      } else {
+        pendingQc++;
+        pendingQcAmount += r.rewardAmount ?? 0;
+      }
     }
   }
-  return { total: rows.length, earned, pending, earnedAmount, terminatedCount, duplicatePendingCount };
+  return {
+    total: rows.length,
+    earned,
+    pendingQc,
+    notPayable,
+    earnedAmount,
+    pendingQcAmount,
+  };
 }
 
 export function PayoutsTable() {
@@ -231,7 +253,7 @@ export function PayoutsTable() {
   const duplicateFilter = parseDuplicateParam(searchParams.get("duplicate"));
   const search = searchParams.get("search") ?? "";
   const status = parseStatusParam(searchParams.get("status"));
-  const sortBy = parseSortByParam(searchParams.get("sortBy"));
+  const sortBy = parseSortByParam(searchParams.get("sortBy"), mode);
   const sortDir = searchParams.get("sortDir") === "asc" ? "asc" : "desc";
 
   const [rows, setRows] = useState<PayoutApiRow[]>([]);
@@ -254,7 +276,8 @@ export function PayoutsTable() {
         (key === "mode" && value === "referral") ||
         (key === "duplicate" && value === "all") ||
         (key === "status" && value === "all") ||
-        (key === "sortBy" && value === "leadId") ||
+        (key === "sortBy" &&
+          value === (mode === "referral" ? "totalAmount" : "leadId")) ||
         (key === "sortDir" && value === "desc");
       if (omitDefault) next.delete(key);
       else next.set(key, value);
@@ -413,6 +436,9 @@ export function PayoutsTable() {
     setSelected((current) =>
       current?.leadId === leadId ? { ...current, upiId } : current,
     );
+    setReferralDrawerRow((current) =>
+      current?.leadId === leadId ? { ...current, upiId } : current,
+    );
   }
 
   const bulkActions: BulkAction[] = [
@@ -440,8 +466,8 @@ export function PayoutsTable() {
         <div>
           <p className="text-sm font-semibold text-foreground">Payout type</p>
           <p className="mt-0.5 text-xs text-plum-muted">
-            Referral lists everyone (incl. terminated referrers). Survey lists
-            only people who completed the form / QC path.
+            Referral shows only referrers with earned payout due. Survey keeps
+            its existing completed / QC payout list unchanged.
           </p>
         </div>
         <div
@@ -600,7 +626,7 @@ export function PayoutsTable() {
         {status !== "all" ? ` · payment ${status}` : ""}
         {mode !== "referral"
           ? ". Fingerprint matches are stronger than IP-only matches — IP can be shared Wi\u2011Fi or carrier NAT."
-          : "."}
+          : ". Referral payable uses earned referrals only."}
       </p>
 
       {mode === "referral" ? (
@@ -629,23 +655,25 @@ export function PayoutsTable() {
                 />
               </TableHead>
               <TableHead>Lead ID</TableHead>
-              <TableHead>Participant</TableHead>
+              <TableHead>{mode === "referral" ? "Referrer" : "Participant"}</TableHead>
               <TableHead>Mobile</TableHead>
+              <TableHead>{mode === "referral" ? "UPI" : "Payment"}</TableHead>
               <TableHead>
-                {mode === "referral" ? "Referral" : "Survey"}
+                {mode === "referral" ? "Successful referrals" : "Date"}
               </TableHead>
-              <TableHead>Payment</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>UPI</TableHead>
-              <TableHead>QC</TableHead>
+              <TableHead>
+                {mode === "referral" ? "Payable amount" : "UPI"}
+              </TableHead>
+              <TableHead>{mode === "referral" ? "QC" : "QC"}</TableHead>
               <TableHead>Duplicate</TableHead>
+              {mode === "referral" ? <TableHead>Payment</TableHead> : null}
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
                 <TableCell
-                  colSpan={10}
+                  colSpan={mode === "referral" ? 10 : 9}
                   className="py-8 text-center text-muted-foreground"
                 >
                   Loading payouts…
@@ -654,7 +682,7 @@ export function PayoutsTable() {
             ) : filteredRows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={10}
+                  colSpan={mode === "referral" ? 10 : 9}
                   className="py-8 text-center text-muted-foreground"
                 >
                   {mode === "referral"
@@ -694,30 +722,47 @@ export function PayoutsTable() {
                   <TableCell className="font-mono text-[12px]">
                     {row.mobile || "—"}
                   </TableCell>
-                  <TableCell className="font-semibold">
-                    {formatCurrency(amountForMode(row, mode))}
-                    {mode === "referral" && !row.upiId ? (
-                      <span
-                        className="ml-1.5 rounded bg-amber-100 px-1 py-0.5 text-[10px] font-medium text-amber-700"
-                        title="No UPI ID — cannot pay"
-                      >
-                        No UPI
-                      </span>
-                    ) : null}
-                  </TableCell>
-                  <TableCell>
-                    <StatusPill variant={paymentVariant(row.paymentStatus)}>
-                      {row.paymentStatus}
-                    </StatusPill>
-                  </TableCell>
-                  <TableCell>{formatDate(row.paymentDate)}</TableCell>
-                  <TableCell onClick={(event) => event.stopPropagation()}>
-                    <PayoutUpiEditor
-                      leadId={row.leadId}
-                      upiId={row.upiId}
-                      onSaved={(upiId) => updateRowUpi(row.leadId, upiId)}
-                    />
-                  </TableCell>
+                  {mode === "referral" ? (
+                    <>
+                      <TableCell onClick={(event) => event.stopPropagation()}>
+                        <PayoutUpiEditor
+                          leadId={row.leadId}
+                          upiId={row.upiId}
+                          onSaved={(upiId) => updateRowUpi(row.leadId, upiId)}
+                        />
+                        {!row.upiId ? (
+                          <span
+                            className="mt-1 inline-block rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700"
+                            title="No UPI ID — cannot pay"
+                          >
+                            Missing UPI
+                          </span>
+                        ) : null}
+                      </TableCell>
+                      <TableCell className="font-mono text-[12px] font-semibold">
+                        {row.referralEarnedCount}
+                      </TableCell>
+                      <TableCell className="font-semibold">
+                        {formatCurrency(row.referralEarnings)}
+                      </TableCell>
+                    </>
+                  ) : (
+                    <>
+                      <TableCell>
+                        <StatusPill variant={paymentVariant(row.paymentStatus)}>
+                          {row.paymentStatus}
+                        </StatusPill>
+                      </TableCell>
+                      <TableCell>{formatDate(row.paymentDate)}</TableCell>
+                      <TableCell onClick={(event) => event.stopPropagation()}>
+                        <PayoutUpiEditor
+                          leadId={row.leadId}
+                          upiId={row.upiId}
+                          onSaved={(upiId) => updateRowUpi(row.leadId, upiId)}
+                        />
+                      </TableCell>
+                    </>
+                  )}
                   <TableCell>
                     <StatusPill variant={qcVariant(row.qcStatus)}>
                       {row.qcStatus}
@@ -729,6 +774,13 @@ export function PayoutsTable() {
                       ipAssociatedLeadIds={row.ipAssociatedLeadIds}
                     />
                   </TableCell>
+                  {mode === "referral" ? (
+                    <TableCell>
+                      <StatusPill variant={paymentVariant(row.paymentStatus)}>
+                        {row.paymentStatus}
+                      </StatusPill>
+                    </TableCell>
+                  ) : null}
                 </TableRow>
               ))
             )}
@@ -1045,7 +1097,11 @@ function ReferralDrawerContent({
       </SheetHeader>
 
       <div className="flex-1 overflow-y-auto p-6">
-        {/* UPI section */}
+        <SectionTitle>Referrer</SectionTitle>
+        <DetailRow label="Name" value={row.fullName || "Anonymous"} />
+        <DetailRow label="Mobile" value={row.mobile || "—"} mono />
+        <DetailRow label="UPI ID" value={row.upiId || "Missing UPI"} mono />
+
         <SectionTitle>UPI</SectionTitle>
         {row.upiId ? null : (
           <div className="mb-3 rounded-[10px] border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
@@ -1071,15 +1127,11 @@ function ReferralDrawerContent({
           <>
             <DetailRow label="Referred total" value={String(summary.total)} />
             <DetailRow label="Earned" value={String(summary.earned)} />
-            <DetailRow label="Pending (terminated)" value={String(summary.terminatedCount)} />
-            <DetailRow label="Pending (duplicate QC)" value={String(summary.duplicatePendingCount)} />
+            <DetailRow label="Pending QC" value={String(summary.pendingQc)} />
+            <DetailRow label="Not payable" value={String(summary.notPayable)} />
             <DetailRow
-              label="Pending QC amount (estimated)"
-              value={
-                summary.duplicatePendingCount > 0
-                  ? `≈${formatCurrency((details.find(d => d.rewardStatus === "pending" && d.pendingReason?.includes("duplicate"))?.rewardAmount ?? 25) * summary.duplicatePendingCount)}`
-                  : "—"
-              }
+              label="Amount pending QC"
+              value={summary.pendingQcAmount > 0 ? formatCurrency(summary.pendingQcAmount) : "—"}
             />
 
             {/* Per-referral list */}
@@ -1101,10 +1153,9 @@ function ReferralDrawerContent({
 }
 
 function ReferralDetailCard({ r }: { r: ReferralPayoutDetail }) {
-  const isTerminated =
-    r.rewardStatus === "pending" && r.pendingReason?.includes("terminated");
+  const isTerminated = r.rewardStatus === "pending" && r.pendingKind === "terminated";
   const isDuplicatePending =
-    r.rewardStatus === "pending" && r.pendingReason?.includes("duplicate");
+    r.rewardStatus === "pending" && r.pendingKind === "duplicate_qc";
 
   return (
     <li className="rounded-[10px] border border-border bg-card p-3">
@@ -1124,6 +1175,7 @@ function ReferralDetailCard({ r }: { r: ReferralPayoutDetail }) {
       </div>
       <p className="mt-1.5 text-xs text-plum-muted">
         {formatCurrencyOrDash(r.rewardAmount)} · {formatDateStr(r.createdAt)}
+        {r.referredStatus ? ` · ${r.referredStatus}` : ""}
       </p>
       {r.rewardStatus === "pending" ? (
         <p
@@ -1137,6 +1189,12 @@ function ReferralDetailCard({ r }: { r: ReferralPayoutDetail }) {
           )}
         >
           {r.pendingReason ?? "Pending."}
+        </p>
+      ) : null}
+      {r.rewardStatus === "earned" && !r.countsTowardPayable ? (
+        <p className="mt-2 rounded bg-amber-50 px-2 py-1 text-xs text-amber-700">
+          Fingerprint-flagged referred participant. This earned row does not count
+          toward payable amount.
         </p>
       ) : null}
     </li>

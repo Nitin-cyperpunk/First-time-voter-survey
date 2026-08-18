@@ -26,6 +26,7 @@ export type PayoutExportSourceRow = {
   amount: number;
   surveyName?: string | null;
   referralsName?: string | null;
+  referralCount?: number;
   payoutReferenceId?: string | null;
 };
 
@@ -36,9 +37,11 @@ export type PayoutExportExcludeReason =
   | "invalid_name";
 
 export const PAYOUT_READINESS_HEADER = "Payout readiness" as const;
+export const REFERRAL_COUNT_HEADER = "Earned referral count" as const;
 
 export type PayoutExportRow = RazorpayUpiExportRow & {
   [PAYOUT_READINESS_HEADER]: string;
+  [REFERRAL_COUNT_HEADER]?: number | "";
 };
 
 export type PayoutExportSummary = {
@@ -395,6 +398,9 @@ export function buildPayoutExportRows(rows: PayoutExportSourceRow[]): {
         readiness === "ready"
           ? "Ready for payout"
           : excludedReasonLabel(readiness),
+      ...(row.referralCount !== undefined
+        ? { [REFERRAL_COUNT_HEADER]: row.referralCount }
+        : {}),
     };
   });
 
