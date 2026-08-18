@@ -1002,9 +1002,7 @@ export function RespondentsTable({
                     <QcStatusBadge row={selected} />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    {(["fail", "review"] as const).includes(
-                      computeEffectiveQcStatus(selected),
-                    ) ? (
+                    {computeEffectiveQcStatus(selected) !== "pass" ? (
                       <Button
                         type="button"
                         size="sm"
