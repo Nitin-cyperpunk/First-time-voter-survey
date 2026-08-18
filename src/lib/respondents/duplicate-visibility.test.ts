@@ -3,6 +3,8 @@ import { test } from "node:test";
 
 import {
   isAnyDuplicate,
+  isCleanForPayout,
+  isIpReviewOnly,
   matchesDuplicateFilter,
   matchesPayoutDuplicateFilter,
 } from "@/lib/respondents/duplicate-visibility";
@@ -25,27 +27,30 @@ test("NULL duplicate signals count as Clean, not Flagged", () => {
   assert.equal(matchesPayoutDuplicateFilter(undefinedRow, "all"), true);
 });
 
-test("flagged + clean partition the full set", () => {
-  const rows = [
-    { isFlaggedDuplicate: false, duplicateFlag: false },
-    { isFlaggedDuplicate: true, duplicateFlag: false },
-    { isFlaggedDuplicate: false, duplicateFlag: true },
-    { isFlaggedDuplicate: true, duplicateFlag: true },
-    { isFlaggedDuplicate: Boolean(null), duplicateFlag: Boolean(null) },
-  ];
-  const flagged = rows.filter((row) =>
-    matchesPayoutDuplicateFilter(row, "flagged"),
-  );
-  const clean = rows.filter((row) =>
-    matchesPayoutDuplicateFilter(row, "clean"),
-  );
-  assert.equal(flagged.length + clean.length, rows.length);
-  assert.equal(flagged.length, 3);
-  assert.equal(clean.length, 2);
+test("IP-only rows are flagged for review and still clean for payout", () => {
+  const ipOnly = { isFlaggedDuplicate: true, duplicateFlag: false };
+  assert.equal(matchesPayoutDuplicateFilter(ipOnly, "flagged"), true);
+  assert.equal(matchesPayoutDuplicateFilter(ipOnly, "clean"), true);
+  assert.equal(matchesPayoutDuplicateFilter(ipOnly, "ip_review"), true);
 });
 
-test("respondent filter labels are unchanged", () => {
-  const row = { isFlaggedDuplicate: true, duplicateFlag: false };
-  assert.equal(matchesDuplicateFilter(row, "duplicates"), true);
-  assert.equal(matchesDuplicateFilter(row, "non_duplicates"), false);
+test("Clean excludes fingerprint only; IP-only stays clean", () => {
+  const ipOnly = { isFlaggedDuplicate: true, duplicateFlag: false };
+  const fingerprint = { isFlaggedDuplicate: false, duplicateFlag: true };
+
+  assert.equal(isCleanForPayout(ipOnly), true);
+  assert.equal(isCleanForPayout(fingerprint), false);
+  assert.equal(isIpReviewOnly(ipOnly), true);
+  assert.equal(matchesDuplicateFilter(ipOnly, "non_duplicates"), true);
+  assert.equal(matchesDuplicateFilter(ipOnly, "ip_review"), true);
+  assert.equal(matchesDuplicateFilter(fingerprint, "non_duplicates"), false);
+  assert.equal(matchesDuplicateFilter(fingerprint, "fingerprint"), true);
+});
+
+test("payout ip_review filter shows IP-only rows", () => {
+  const ipOnly = { isFlaggedDuplicate: true, duplicateFlag: false };
+  const both = { isFlaggedDuplicate: true, duplicateFlag: true };
+
+  assert.equal(matchesPayoutDuplicateFilter(ipOnly, "ip_review"), true);
+  assert.equal(matchesPayoutDuplicateFilter(both, "ip_review"), false);
 });

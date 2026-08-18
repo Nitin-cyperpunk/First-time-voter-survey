@@ -284,6 +284,20 @@ export async function updateParticipantDuplicateFlag(
   if (error) throw error;
 }
 
+/** Flag or clear is_flagged_duplicate for every participant on this IP. */
+export async function updateIpDuplicateFlagsForAddress(
+  ipAddress: string,
+  isFlaggedDuplicate: boolean,
+) {
+  const { error } = await getSupabaseAdmin()
+    .from("participants")
+    .update({ is_flagged_duplicate: isFlaggedDuplicate })
+    .eq("ip_address", ipAddress)
+    .is("deleted_at", null);
+
+  if (error) throw error;
+}
+
 export async function updateParticipantProfile(
   leadId: string,
   input: {

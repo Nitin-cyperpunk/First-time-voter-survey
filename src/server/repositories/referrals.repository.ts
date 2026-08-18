@@ -48,6 +48,20 @@ export async function createReferral(input: {
 
 export async function markReferralEarnedForReferredLeadId(referredLeadId: string) {
   const { referralRewardAmount } = await getRewardAmounts();
+
+  const { data: referred, error: participantError } = await getSupabaseAdmin()
+    .from("participants")
+    .select("lead_id, duplicate_flag")
+    .eq("lead_id", referredLeadId)
+    .maybeSingle();
+
+  if (participantError) throw participantError;
+
+  // Fingerprint-flagged referred persons are ineligible — never mark earned.
+  if (referred?.duplicate_flag) {
+    return null;
+  }
+
   const now = new Date().toISOString();
   const { data, error } = await getSupabaseAdmin()
     .from("referrals")

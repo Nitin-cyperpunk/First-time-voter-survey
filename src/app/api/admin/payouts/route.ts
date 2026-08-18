@@ -18,7 +18,13 @@ function parseMode(value: string | null): PayoutMode {
 }
 
 function parseDuplicateFilter(value: string | null): PayoutDuplicateFilter {
-  if (value === "flagged" || value === "clean") return value;
+  if (
+    value === "flagged" ||
+    value === "clean" ||
+    value === "ip_review"
+  ) {
+    return value;
+  }
   return "all";
 }
 
