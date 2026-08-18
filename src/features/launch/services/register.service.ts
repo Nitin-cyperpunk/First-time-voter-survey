@@ -63,6 +63,7 @@ import {
   maySubmitWhileFormClosed,
 } from "@/lib/study-config/gates";
 import { getStudyConfig } from "@/server/repositories/form-settings.repository";
+import { countDeliverableClean } from "@/server/repositories/deliverable-clean.repository";
 import { buildResponseExportArtifacts } from "@/lib/form-export/persist-export";
 import { normalizeDeviceFingerprint } from "@/lib/device-fingerprint";
 import { nestAnswersByQuestion } from "@/lib/survey-export/nest-by-question";
@@ -345,8 +346,9 @@ export async function registerParticipant(
   },
 ) {
   const studyConfig = await getStudyConfig();
+  const cleanCount = await countDeliverableClean();
   if (
-    !isRegistrationAccepting(studyConfig) &&
+    !isRegistrationAccepting(studyConfig, cleanCount) &&
     !maySubmitWhileFormClosed(input.startedAt)
   ) {
     throw new CapacityError("form_closed");

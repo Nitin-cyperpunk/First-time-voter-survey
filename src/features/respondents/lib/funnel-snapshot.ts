@@ -3,7 +3,10 @@ import {
   closesAt as computeClosesAt,
   DEFAULT_STUDY_CONFIG,
 } from "@/lib/study-config/defaults";
-import { isRegistrationAccepting } from "@/lib/study-config/gates";
+import {
+  isCleanTargetReached,
+  isRegistrationAccepting,
+} from "@/lib/study-config/gates";
 
 export type FunnelStageKey = "registration" | "completed" | "paid";
 
@@ -40,6 +43,7 @@ export type FunnelSnapshot = {
   completedPct: number;
   targetPct: number;
   remainingToCap: number;
+  remainingToRawCap: number;
   status: FunnelSnapshotStatus;
   formAccepting: boolean;
   cliffLabel: string | null;
@@ -48,6 +52,7 @@ export type FunnelSnapshot = {
 export type FunnelCounts = {
   registered: number;
   completed: number;
+  cleanDeliverable?: number;
   terminated: number;
   fraudFlagged: number;
   paid: number;
@@ -67,14 +72,13 @@ function dropSeverity(dropPct: number): DropSeverity {
 
 function resolveStatus(
   config: StudyConfig,
-  completedPct: number,
-  registered: number,
-  closesAt: number,
+  cleanCount: number,
 ): FunnelSnapshotStatus {
   if (config.form_status !== "open") return "project-closed";
-  if (registered > closesAt || completedPct > 100) return "over";
-  if (completedPct >= 100 || registered >= closesAt) return "full";
-  if (completedPct >= 85) return "near-full";
+  if (cleanCount > config.target) return "over";
+  if (isCleanTargetReached(cleanCount, config.target)) return "full";
+  const cleanPct = pct(cleanCount, config.target);
+  if (cleanPct >= 85) return "near-full";
   return "open";
 }
 
@@ -90,6 +94,7 @@ export function buildFunnelSnapshot(
   const buffer = config.buffer;
   const closesAt = computeClosesAt(config);
   const { registered, completed, terminated, fraudFlagged, paid } = counts;
+  const cleanDeliverable = counts.cleanDeliverable ?? 0;
 
   const rawStages: Array<{ key: FunnelStageKey; label: string; count: number }> =
     [
@@ -130,7 +135,7 @@ export function buildFunnelSnapshot(
   }
 
   const completedPct = pct(completed, closesAt);
-  const targetPct = pct(completed, target);
+  const targetPct = pct(cleanDeliverable, target);
 
   return {
     target,
@@ -144,9 +149,10 @@ export function buildFunnelSnapshot(
     stages,
     completedPct,
     targetPct,
-    remainingToCap: Math.max(0, closesAt - completed),
-    status: resolveStatus(config, completedPct, registered, closesAt),
-    formAccepting: isRegistrationAccepting(config),
+    remainingToCap: Math.max(0, target - cleanDeliverable),
+    remainingToRawCap: Math.max(0, closesAt - completed),
+    status: resolveStatus(config, cleanDeliverable),
+    formAccepting: isRegistrationAccepting(config, cleanDeliverable),
     cliffLabel,
   };
 }

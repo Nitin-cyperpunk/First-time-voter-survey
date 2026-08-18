@@ -7,7 +7,7 @@ export type FormStatus = "open" | "closed";
 export type StudyConfig = {
   target: number;
   buffer: number;
-  /** Reference N for counting/reporting. Not a hard cap. Fieldwork closes via form_status. */
+  /** Reference N for counting/reporting. Not the close trigger. */
   total_capacity: number;
   /**
    * Per-city qualified-complete limit (cities.capacity). Unmatched (no city_id)
@@ -22,9 +22,9 @@ export type StudyConfig = {
   enforce_quota_cascade: boolean;
   /** Capacity stored on newly added cities. Override per city without a code change. */
   default_city_capacity: number;
-  /** Respondent-facing form open/close. Independent of target/buffer funnel. */
+  /** Emergency stop. Also closed automatically when clean deliverable >= target. */
   form_status: FormStatus;
-  /** Do not enable for this study. Form is closed manually via form_status. */
+  /** Unused. Close is coded as clean >= target, not this flag. */
   auto_close_on_full: boolean;
   survey_active: boolean;
   eligibility_open: boolean;

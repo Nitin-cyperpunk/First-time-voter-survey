@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 
 type StudyConfigSettingsProps = {
   initialConfig: StudyConfig;
+  initialCleanCount: number;
 };
 
 type BoolKey = {
@@ -75,7 +76,10 @@ type PendingOpenToggle = {
   consequence: string;
 };
 
-export function StudyConfigSettings({ initialConfig }: StudyConfigSettingsProps) {
+export function StudyConfigSettings({
+  initialConfig,
+  initialCleanCount,
+}: StudyConfigSettingsProps) {
   const [config, setConfig] = useState<StudyConfig>(initialConfig);
   const [saving, setSaving] = useState(false);
   const [pendingToggle, setPendingToggle] = useState<PendingOpenToggle | null>(
@@ -149,7 +153,7 @@ export function StudyConfigSettings({ initialConfig }: StudyConfigSettingsProps)
               are reference numbers for monitoring. Superadmin only.
             </p>
           </div>
-          <StatusBadge config={config} />
+          <StatusBadge config={config} cleanCount={initialCleanCount} />
         </div>
       </div>
 
@@ -162,11 +166,10 @@ export function StudyConfigSettings({ initialConfig }: StudyConfigSettingsProps)
           Form open / close
         </h3>
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-plum-muted">
-          Closed: the respondent route shows the closed screen (questions are
-          not mounted) and a direct submit without a start time is rejected with{" "}
-          <span className="font-mono">form_closed</span>. Respondents already
-          mid-survey may finish so partial data is not discarded. Referral
-          links still resolve to the same closed screen.
+          The form closes when deliverable clean reaches the study target (
+          {config.target}). An admin can still turn Accept responses off as an
+          emergency stop. Mid-survey respondents may finish. The raw completed
+          line ({cap}) does not close the form.
         </p>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-border px-4 py-3">
           <div>
@@ -189,8 +192,8 @@ export function StudyConfigSettings({ initialConfig }: StudyConfigSettingsProps)
               Auto-close when full
             </p>
             <p className="text-xs text-plum-muted">
-              Inactive. Fieldwork is stopped with Accept responses, not a
-              global cap.
+              Inactive. Fieldwork closes at {config.target} clean, not at the
+              raw completed line.
             </p>
           </div>
           <Toggle
@@ -227,9 +230,9 @@ export function StudyConfigSettings({ initialConfig }: StudyConfigSettingsProps)
           Global reference
         </h3>
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-plum-muted">
-          This is a monitoring reference for the manual close at 200–230, not a
-          hard cap. Per-city limit is stored on each city (default{" "}
-          {config.default_city_capacity}).
+          This is a monitoring reference. The form closes at {config.target}{" "}
+          clean, not at {cap} completed. Per-city limit is stored on each city
+          (default {config.default_city_capacity}).
         </p>
         <div className="mt-4 flex flex-wrap gap-4">
           <label className="block max-w-xs space-y-1.5">
@@ -581,8 +584,14 @@ function Field({
   );
 }
 
-function StatusBadge({ config }: { config: StudyConfig }) {
-  const open = isRegistrationAccepting(config);
+function StatusBadge({
+  config,
+  cleanCount,
+}: {
+  config: StudyConfig;
+  cleanCount: number;
+}) {
+  const open = isRegistrationAccepting(config, cleanCount);
   return (
     <span
       className={cn(

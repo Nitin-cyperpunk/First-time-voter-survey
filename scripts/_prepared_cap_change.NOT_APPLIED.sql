@@ -1,0 +1,4 @@
+-- APPLIED IN CODE (2026-08-18): form closes when deliverable clean >= target (200).
+-- This SQL was a prepared buffer raise. Do not run it. The 230 line is not a close trigger.
+-- Emergency stop remains Settings → Accept responses (form_status).
+-- Per-city cities.capacity can still reject city_full when enforce_capacity is true.

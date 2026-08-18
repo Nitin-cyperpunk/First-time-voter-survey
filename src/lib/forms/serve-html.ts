@@ -5,6 +5,7 @@ import { injectRegistrationBridge } from "@/lib/forms/html-upload";
 import { injectFieldQKeyMap } from "@/lib/forms/inject-field-q-key-map";
 import { isRegistrationAccepting } from "@/lib/study-config/gates";
 import { getActivePublishedForm } from "@/server/repositories/forms.repository";
+import { countDeliverableClean } from "@/server/repositories/deliverable-clean.repository";
 import { getStudyConfig } from "@/server/repositories/form-settings.repository";
 
 const ANALYTICS_SCRIPT = '<script src="/forms/survey-analytics.js"></script>';
@@ -115,7 +116,8 @@ function surveyClosedPageHtml() {
 
 export async function serveActiveFormHtml(formType: FormType = "registration") {
   const studyConfig = await getStudyConfig();
-  if (!isRegistrationAccepting(studyConfig)) {
+  const cleanCount = await countDeliverableClean();
+  if (!isRegistrationAccepting(studyConfig, cleanCount)) {
     return htmlResponse(surveyClosedPageHtml());
   }
 

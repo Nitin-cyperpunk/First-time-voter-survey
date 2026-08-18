@@ -116,16 +116,10 @@ export function isFingerprintFlagged(row: DuplicateSignals): boolean {
 }
 
 /**
- * Whether a record is "clean" for payout and reward purposes.
- *
- * CLEAN  = duplicate_flag is false (fingerprint is absent on this record).
- *          IP-only records (is_flagged_duplicate=true, duplicate_flag=false)
- *          ARE clean — see operative rule above.
- *
- * NOT CLEAN = duplicate_flag is true (fingerprint match, either side of pair).
- *
- * This is the single definition of "clean". Use it everywhere — filter, payout
- * query, reward eligibility, export.
+ * Fingerprint layer of "clean": duplicate_flag is false.
+ * IP-only records ARE clean at this layer — see operative rule above.
+ * NOT a complete deliverable definition — use isDeliverableClean for the
+ * sample count, respondents Clean filter, and export eligibility.
  */
 export function isCleanForPayout(row: DuplicateSignals): boolean {
   return !isFingerprintFlagged(row);
@@ -161,7 +155,8 @@ export function isQcEffectiveFail(status: string): boolean {
 }
 
 /**
- * Deliverable clean count — single definition for dashboard, filters, payout, export.
+ * Single deliverable "clean" definition — dashboard card, Target panel,
+ * respondents Clean filter, export sample, payout amount (via QC pass).
  *
  * Includes qualified completions that pass the fingerprint clean rule (isCleanForPayout).
  * IP-only flags remain included. Terminated and pre-complete statuses are excluded.
@@ -230,11 +225,20 @@ export function isIpReviewOnly(row: DuplicateSignals): boolean {
 }
 
 export function matchesDuplicateFilter(
-  row: DuplicateSignals,
+  row: DuplicateSignals &
+    Partial<Pick<DeliverableRow, "status" | "surveyDataIncomplete">>,
   filter: DuplicateFilter,
 ): boolean {
   if (filter === "all") return true;
-  if (filter === "non_duplicates") return isCleanForPayout(row);
+  if (filter === "non_duplicates") {
+    if (typeof row.status === "string") {
+      return isDeliverableClean({
+        ...row,
+        status: row.status,
+      });
+    }
+    return isCleanForPayout(row);
+  }
   if (filter === "fingerprint") return isFingerprintFlagged(row);
   if (filter === "ip_review") return isIpReviewOnly(row);
   if (filter === "duplicates") return isAnyDuplicate(row);
@@ -244,8 +248,10 @@ export function matchesDuplicateFilter(
 /**
  * Payout duplicate filter.
  *
- * "clean"   → isCleanForPayout(row): no fingerprint flag. IP-only stays clean.
- * "flagged" → isAnyDuplicate(row): either IP or fingerprint signal present.
+ * Duplicate-signal filter on the payouts page (not the sample count).
+ * "clean"   → isCleanForPayout: no fingerprint flag. IP-only stays clean.
+ * Survey ₹ uses isSurveyPayoutEligible (deliverable completeness + QC pass).
+ * "flagged" → isAnyDuplicate: either IP or fingerprint signal present.
  * "all"     → always true.
  *
  * NULL/false on both signals is clean — records predating fingerprinting must
