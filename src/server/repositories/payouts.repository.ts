@@ -300,8 +300,9 @@ export async function listPayouts(params: PayoutListParams) {
 
   const counts: PayoutListCounts = {
     mode: {
-      referral: afterDuplicate.filter((row) =>
-        matchesPayoutMode(row, "referral"),
+      // Referral tab: only count referrers with earned > 0.
+      referral: afterDuplicate.filter(
+        (row) => matchesPayoutMode(row, "referral") && row.referralEarnings > 0,
       ).length,
       survey: afterDuplicate.filter((row) =>
         matchesPayoutMode(row, "survey"),
@@ -318,11 +319,13 @@ export async function listPayouts(params: PayoutListParams) {
     },
   };
 
-  payoutRows = payoutRows.filter(
-    (row) =>
-      matchesPayoutMode(row, mode) &&
-      matchesPayoutDuplicateFilter(row, duplicateFilter),
-  );
+  payoutRows = payoutRows.filter((row) => {
+    if (!matchesPayoutMode(row, mode)) return false;
+    if (!matchesPayoutDuplicateFilter(row, duplicateFilter)) return false;
+    // Referral tab only shows referrers with a positive payable amount.
+    if (mode === "referral" && row.referralEarnings <= 0) return false;
+    return true;
+  });
 
   payoutRows.sort((a, b) =>
     compareRows(a, b, params.sortBy, params.sortDir, mode),

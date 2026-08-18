@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
@@ -89,6 +90,19 @@ type PayoutApiRow = {
 };
 
 type PayoutMode = "referral" | "survey";
+
+type ReferralPayoutDetail = {
+  id: string;
+  referredLeadId: string | null;
+  referredName: string;
+  referredMobile: string;
+  referredStatus: string | null;
+  rewardStatus: string;
+  rewardAmount: number | null;
+  earnedAt: string | null;
+  createdAt: string;
+  pendingReason: string | null;
+};
 
 type SortBy =
   | "leadId"
@@ -182,6 +196,29 @@ function toRazorpaySourceRows(
   }));
 }
 
+function rewardVariant(status: string): StatusPillVariant {
+  const n = status.toLowerCase();
+  if (n === "paid") return "success";
+  if (n === "earned") return "review";
+  return "pending";
+}
+
+function summarizeReferralDetails(rows: ReferralPayoutDetail[]) {
+  let earned = 0, pending = 0, earnedAmount = 0;
+  let terminatedCount = 0, duplicatePendingCount = 0;
+  for (const r of rows) {
+    if (r.rewardStatus === "earned" || r.rewardStatus === "paid") {
+      earned++;
+      earnedAmount += r.rewardAmount ?? 0;
+    } else {
+      pending++;
+      if (r.pendingReason?.includes("terminated")) terminatedCount++;
+      else if (r.pendingReason?.includes("duplicate")) duplicatePendingCount++;
+    }
+  }
+  return { total: rows.length, earned, pending, earnedAmount, terminatedCount, duplicatePendingCount };
+}
+
 export function PayoutsTable() {
   const router = useRouter();
   const pathname = usePathname();
@@ -199,6 +236,11 @@ export function PayoutsTable() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<PayoutApiRow | null>(null);
+
+  // Referral-mode drawer state
+  const [referralDrawerRow, setReferralDrawerRow] = useState<PayoutApiRow | null>(null);
+  const [referralDetails, setReferralDetails] = useState<ReferralPayoutDetail[]>([]);
+  const [referralDetailsLoading, setReferralDetailsLoading] = useState(false);
 
   function patchParams(patch: Record<string, string | null>) {
     const next = new URLSearchParams(searchParams.toString());
@@ -342,6 +384,24 @@ export function PayoutsTable() {
     }
     toastSuccess(`Export Payout File: ${parts.join("; ")}.`);
   }
+
+  const openReferralDrawer = useCallback(async (row: PayoutApiRow) => {
+    setReferralDrawerRow(row);
+    setReferralDetails([]);
+    setReferralDetailsLoading(true);
+    try {
+      const response = await fetch(
+        `/api/admin/payouts/${encodeURIComponent(row.leadId)}/referrals`,
+      );
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error ?? "Failed to load.");
+      setReferralDetails((payload.rows ?? []) as ReferralPayoutDetail[]);
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Failed to load referral details.");
+    } finally {
+      setReferralDetailsLoading(false);
+    }
+  }, []);
 
   function updateRowUpi(leadId: string, upiId: string | null) {
     setRows((current) =>
@@ -534,10 +594,15 @@ export function PayoutsTable() {
           ? ""
           : ` · ${payoutDuplicateFilterLabel(duplicateFilter).toLowerCase()}`}
         {search.trim() ? ` · search “${search.trim()}”` : ""}
-        {status !== "all" ? ` · payment ${status}` : ""}. Fingerprint matches
-        are stronger than IP-only matches — IP can be shared Wi‑Fi or carrier
-        NAT.
+        {status !== "all" ? ` · payment ${status}` : ""}
+        {mode !== "referral"
+          ? ". Fingerprint matches are stronger than IP-only matches — IP can be shared Wi\u2011Fi or carrier NAT."
+          : "."}
       </p>
+
+      {mode === "referral" ? (
+        <ReferralPayoutSummary rows={rows} />
+      ) : null}
 
       {showSelectAllFilteredBanner ? (
         <SelectAllFilteredBanner
@@ -599,7 +664,11 @@ export function PayoutsTable() {
                 <TableRow
                   key={row.leadId}
                   className="cursor-pointer"
-                  onClick={() => setSelected(row)}
+                  onClick={() =>
+                    mode === "referral"
+                      ? void openReferralDrawer(row)
+                      : setSelected(row)
+                  }
                 >
                   <SelectableRowCheckboxCell
                     leadId={row.leadId}
@@ -616,12 +685,22 @@ export function PayoutsTable() {
                       {row.leadId}
                     </Link>
                   </TableCell>
-                  <TableCell className="font-medium">{row.fullName}</TableCell>
+                  <TableCell className="font-medium">
+                    {row.fullName || "Anonymous"}
+                  </TableCell>
                   <TableCell className="font-mono text-[12px]">
-                    {row.mobile}
+                    {row.mobile || "—"}
                   </TableCell>
                   <TableCell className="font-semibold">
                     {formatCurrency(amountForMode(row, mode))}
+                    {mode === "referral" && !row.upiId ? (
+                      <span
+                        className="ml-1.5 rounded bg-amber-100 px-1 py-0.5 text-[10px] font-medium text-amber-700"
+                        title="No UPI ID — cannot pay"
+                      >
+                        No UPI
+                      </span>
+                    ) : null}
                   </TableCell>
                   <TableCell>
                     <StatusPill variant={paymentVariant(row.paymentStatus)}>
@@ -668,6 +747,26 @@ export function PayoutsTable() {
         onClear={bulk.clearSelection}
       />
 
+      {/* Referral-mode drawer: shows referred persons for the selected referrer */}
+      <Sheet
+        open={referralDrawerRow !== null}
+        onOpenChange={(open) => {
+          if (!open) { setReferralDrawerRow(null); setReferralDetails([]); }
+        }}
+      >
+        <SheetContent className="w-full max-w-[480px] gap-0 bg-background p-0 sm:max-w-[480px]">
+          {referralDrawerRow ? (
+            <ReferralDrawerContent
+              row={referralDrawerRow}
+              details={referralDetails}
+              loading={referralDetailsLoading}
+              onUpiSaved={(upiId) => updateRowUpi(referralDrawerRow.leadId, upiId)}
+            />
+          ) : null}
+        </SheetContent>
+      </Sheet>
+
+      {/* Survey-mode (and fallback) drawer: participant detail */}
       <Sheet
         open={selected !== null}
         onOpenChange={(open) => !open && setSelected(null)}
@@ -819,6 +918,202 @@ export function PayoutsTable() {
         </SheetContent>
       </Sheet>
     </div>
+  );
+}
+
+// ─── Referral payout summary banner ────────────────────────────────────────
+
+function ReferralPayoutSummary({ rows }: { rows: PayoutApiRow[] }) {
+  const { totalAmount, missingUpiAmount, missingUpiCount } = useMemo(() => {
+    let totalAmount = 0;
+    let missingUpiAmount = 0;
+    let missingUpiCount = 0;
+    for (const row of rows) {
+      totalAmount += row.referralEarnings;
+      if (!row.upiId) {
+        missingUpiAmount += row.referralEarnings;
+        missingUpiCount++;
+      }
+    }
+    return { totalAmount, missingUpiAmount, missingUpiCount };
+  }, [rows]);
+
+  if (rows.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-4 rounded-[12px] border border-border bg-card p-4 text-sm">
+      <Stat label="Payees" value={String(rows.length)} />
+      <Stat label="Total payable" value={formatCurrency(totalAmount)} />
+      {missingUpiCount > 0 ? (
+        <Stat
+          label={`Blocked (no UPI · ${missingUpiCount})`}
+          value={formatCurrency(missingUpiAmount)}
+          warn
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  warn,
+}: {
+  label: string;
+  value: string;
+  warn?: boolean;
+}) {
+  return (
+    <div>
+      <p className="text-xs text-plum-muted">{label}</p>
+      <p
+        className={cn(
+          "font-mono text-base font-semibold",
+          warn ? "text-amber-600" : "text-foreground",
+        )}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
+// ─── Referral drawer ────────────────────────────────────────────────────────
+
+function formatCurrencyOrDash(amount: number | null) {
+  if (amount === null || !Number.isFinite(amount)) return "—";
+  return formatCurrency(amount);
+}
+
+function formatDateStr(value: string | null) {
+  if (!value) return "—";
+  return formatAdminDate(value);
+}
+
+function ReferralDrawerContent({
+  row,
+  details,
+  loading,
+  onUpiSaved,
+}: {
+  row: PayoutApiRow;
+  details: ReferralPayoutDetail[];
+  loading: boolean;
+  onUpiSaved: (upiId: string | null) => void;
+}) {
+  const summary = useMemo(() => summarizeReferralDetails(details), [details]);
+
+  return (
+    <>
+      <SheetHeader className="border-b border-border bg-card p-6">
+        <SheetTitle className="text-lg font-bold text-foreground">
+          {row.fullName || "Anonymous"}
+        </SheetTitle>
+        <p className="font-mono text-xs text-muted-foreground">
+          {row.mobile || "No mobile"}
+          {row.city ? ` · ${row.city}` : ""}
+          {" · "}
+          {row.leadId}
+        </p>
+      </SheetHeader>
+
+      <div className="flex-1 overflow-y-auto p-6">
+        {/* UPI section */}
+        <SectionTitle>UPI</SectionTitle>
+        {row.upiId ? null : (
+          <div className="mb-3 rounded-[10px] border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
+            No UPI ID — this person cannot be paid until one is added.
+          </div>
+        )}
+        <div className="flex items-center justify-between gap-4 border-b border-dashed border-border py-2.5 text-sm">
+          <span className="shrink-0 text-plum-muted">UPI</span>
+          <PayoutUpiEditor
+            leadId={row.leadId}
+            upiId={row.upiId}
+            variant="drawer"
+            onSaved={onUpiSaved}
+          />
+        </div>
+
+        {/* Earnings summary */}
+        <SectionTitle>Referral earnings</SectionTitle>
+        <DetailRow label="Payable (earned)" value={formatCurrencyOrDash(row.referralEarnings)} />
+        {loading ? (
+          <p className="py-4 text-center text-sm text-plum-muted">Loading referrals…</p>
+        ) : (
+          <>
+            <DetailRow label="Referred total" value={String(summary.total)} />
+            <DetailRow label="Earned" value={String(summary.earned)} />
+            <DetailRow label="Pending (terminated)" value={String(summary.terminatedCount)} />
+            <DetailRow label="Pending (duplicate QC)" value={String(summary.duplicatePendingCount)} />
+            <DetailRow
+              label="Pending QC amount (estimated)"
+              value={
+                summary.duplicatePendingCount > 0
+                  ? `≈${formatCurrency((details.find(d => d.rewardStatus === "pending" && d.pendingReason?.includes("duplicate"))?.rewardAmount ?? 25) * summary.duplicatePendingCount)}`
+                  : "—"
+              }
+            />
+
+            {/* Per-referral list */}
+            <SectionTitle>All referrals</SectionTitle>
+            {details.length === 0 ? (
+              <p className="text-sm text-plum-muted">No referrals found.</p>
+            ) : (
+              <ul className="space-y-3">
+                {details.map((r) => (
+                  <ReferralDetailCard key={r.id} r={r} />
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+      </div>
+    </>
+  );
+}
+
+function ReferralDetailCard({ r }: { r: ReferralPayoutDetail }) {
+  const isTerminated =
+    r.rewardStatus === "pending" && r.pendingReason?.includes("terminated");
+  const isDuplicatePending =
+    r.rewardStatus === "pending" && r.pendingReason?.includes("duplicate");
+
+  return (
+    <li className="rounded-[10px] border border-border bg-card p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="font-medium text-foreground">
+            {r.referredName || "Anonymous"}
+          </p>
+          <p className="font-mono text-xs text-plum-muted">
+            {r.referredMobile || "—"}
+            {r.referredLeadId ? ` · ${r.referredLeadId}` : ""}
+          </p>
+        </div>
+        <StatusPill variant={rewardVariant(r.rewardStatus)}>
+          {r.rewardStatus}
+        </StatusPill>
+      </div>
+      <p className="mt-1.5 text-xs text-plum-muted">
+        {formatCurrencyOrDash(r.rewardAmount)} · {formatDateStr(r.createdAt)}
+      </p>
+      {r.rewardStatus === "pending" ? (
+        <p
+          className={cn(
+            "mt-2 rounded px-2 py-1 text-xs",
+            isTerminated
+              ? "bg-gray-100 text-gray-600"
+              : isDuplicatePending
+                ? "bg-amber-50 text-amber-700"
+                : "bg-blue-50 text-blue-700",
+          )}
+        >
+          {r.pendingReason ?? "Pending."}
+        </p>
+      ) : null}
+    </li>
   );
 }
 
