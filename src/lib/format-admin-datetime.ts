@@ -81,6 +81,23 @@ export function formatExportDateTime(
 export function toIstExcelDate(
   value: Date | string | null | undefined,
 ): Date | "" {
+  if (typeof value === "string") {
+    const wall = value.trim().match(
+      /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/,
+    );
+    if (wall) {
+      return new Date(
+        Date.UTC(
+          Number(wall[1]),
+          Number(wall[2]) - 1,
+          Number(wall[3]),
+          Number(wall[4]),
+          Number(wall[5]),
+          Number(wall[6]),
+        ),
+      );
+    }
+  }
   const formatted = formatExportDateTime(value);
   if (!formatted) return "";
   const match = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/.exec(
@@ -104,9 +121,9 @@ export function isExportDateTimeHeader(header: string): boolean {
   return (
     /\(IST\)\s*$/i.test(header) ||
     /_at$/i.test(header) ||
-    /^Registered$/i.test(header) ||
-    /^Created date$/i.test(header) ||
-    /^Payment date$/i.test(header) ||
+    /^Registered(\s*\(IST\))?$/i.test(header) ||
+    /^Created date(\s*\(IST\))?$/i.test(header) ||
+    /^Payment date(\s*\(IST\))?$/i.test(header) ||
     /decided_at/i.test(header)
   );
 }

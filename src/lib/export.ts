@@ -88,11 +88,24 @@ function applyIstExcelDateCells(
     }
   }
 }
+
+/** Excel-only: convert IST datetime strings into numeric date cells. */
+export function stampExportDateCells(
+  worksheet: XLSX.WorkSheet,
+  headers: string[],
+) {
+  applyIstExcelDateCells(worksheet, headers);
+}
+
+function buildWorksheet(
   rows: ExportRow[],
-  options: WorksheetOptions = {},
+  options: WorksheetOptions & { excelDates?: boolean } = {},
 ): XLSX.WorkSheet {
   const headers = options.headers ?? resolveHeaders(rows);
   const worksheet = XLSX.utils.json_to_sheet(rows, { header: headers });
+  if (options.excelDates) {
+    applyIstExcelDateCells(worksheet, headers);
+  }
 
   if (options.autoWidth !== false) {
     worksheet["!cols"] = autoColumnWidths(rows, headers);
@@ -169,7 +182,7 @@ export function downloadExcel(
   const cols = headers ?? resolveHeaders(rows);
   const worksheet =
     rows.length > 0
-      ? buildWorksheet(rows, { headers: cols })
+      ? buildWorksheet(rows, { headers: cols, excelDates: true })
       : XLSX.utils.aoa_to_sheet([cols]);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
@@ -185,7 +198,7 @@ export function downloadExcelWorkbook(
     const cols = sheet.headers ?? resolveHeaders(sheet.rows);
     const worksheet =
       sheet.rows.length > 0
-        ? buildWorksheet(sheet.rows, { headers: cols })
+        ? buildWorksheet(sheet.rows, { headers: cols, excelDates: true })
         : XLSX.utils.aoa_to_sheet([cols.length ? cols : [""]]);
     XLSX.utils.book_append_sheet(
       workbook,
@@ -203,6 +216,7 @@ export function downloadFormattedExcel(
 ) {
   const headers = resolveHeaders(rows);
   const worksheet = XLSX.utils.json_to_sheet(rows, { header: headers });
+  applyIstExcelDateCells(worksheet, headers);
   applyFormattedHeaderStyles(worksheet, headers, true);
   worksheet["!cols"] = autoColumnWidths(rows, headers);
   worksheet["!freeze"] = {

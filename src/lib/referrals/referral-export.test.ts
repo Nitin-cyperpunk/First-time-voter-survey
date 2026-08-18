@@ -15,7 +15,7 @@ test("export headers are the eight referral columns", () => {
     "Reward status",
     "Pending reason",
     "Amount",
-    "Created date",
+    "Created date (IST)",
   ]);
 });
 
@@ -58,4 +58,5 @@ test("earned rows leave pending reason blank even if a reason string is present"
 
   assert.equal(row["Pending reason"], "");
   assert.equal(row.Amount, 25);
+  assert.equal(row["Created date (IST)"], "2026-08-17 05:30:00");
 });

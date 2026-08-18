@@ -1,4 +1,5 @@
 import { downloadCsv, downloadExcel, type ExportRow } from "@/lib/export";
+import { formatExportDateTime } from "@/lib/format-admin-datetime";
 
 export const REFERRAL_EXPORT_HEADERS = [
   "Referrer name",
@@ -8,7 +9,7 @@ export const REFERRAL_EXPORT_HEADERS = [
   "Reward status",
   "Pending reason",
   "Amount",
-  "Created date",
+  "Created date (IST)",
 ] as const;
 
 export type ReferralExportSource = {
@@ -29,12 +30,6 @@ function cell(value: string | number | null | undefined): string | number {
   return value;
 }
 
-function formatCreated(value: Date | string): string {
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toISOString();
-}
-
 export function rowsToReferralExport(
   rows: ReferralExportSource[],
 ): ExportRow[] {
@@ -52,7 +47,7 @@ export function rowsToReferralExport(
       row.rewardAmount == null || !Number.isFinite(Number(row.rewardAmount))
         ? ""
         : Number(row.rewardAmount),
-    "Created date": formatCreated(row.createdAt),
+    "Created date (IST)": formatExportDateTime(row.createdAt),
   }));
 }
 
