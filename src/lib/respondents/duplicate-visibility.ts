@@ -20,19 +20,26 @@
 
 export type DuplicateMatchType = "none" | "ip" | "fingerprint" | "both";
 
-export type DuplicateFilter = "all" | "duplicates" | "non_duplicates";
+export type DuplicateFilter =
+  | "all"
+  | "duplicates"
+  | "non_duplicates"
+  | "ip_review"
+  | "fingerprint";
 
 export const DUPLICATE_FILTER_OPTIONS: Array<{
   value: DuplicateFilter;
   label: string;
 }> = [
   { value: "all", label: "All" },
-  { value: "duplicates", label: "Duplicates" },
-  { value: "non_duplicates", label: "Non-Duplicates" },
+  { value: "non_duplicates", label: "Clean" },
+  { value: "fingerprint", label: "Fingerprint" },
+  { value: "ip_review", label: "IP review" },
+  { value: "duplicates", label: "Any flag" },
 ];
 
 /** Payout-tab labels. "Flagged" = either signal. "Clean" = no fingerprint flag. */
-export type PayoutDuplicateFilter = "all" | "flagged" | "clean";
+export type PayoutDuplicateFilter = "all" | "flagged" | "clean" | "ip_review";
 
 export const PAYOUT_DUPLICATE_FILTER_OPTIONS: Array<{
   value: PayoutDuplicateFilter;
@@ -41,6 +48,7 @@ export const PAYOUT_DUPLICATE_FILTER_OPTIONS: Array<{
   { value: "all", label: "All" },
   { value: "flagged", label: "Flagged" },
   { value: "clean", label: "Clean" },
+  { value: "ip_review", label: "IP review" },
 ];
 
 export function payoutDuplicateFilterLabel(
@@ -114,14 +122,21 @@ export function isCleanForPayout(row: DuplicateSignals): boolean {
   return !isFingerprintFlagged(row);
 }
 
+/** IP-only review flag: shared IP, no fingerprint match on this record. */
+export function isIpReviewOnly(row: DuplicateSignals): boolean {
+  return row.isFlaggedDuplicate === true && !isFingerprintFlagged(row);
+}
+
 export function matchesDuplicateFilter(
   row: DuplicateSignals,
   filter: DuplicateFilter,
 ): boolean {
   if (filter === "all") return true;
-  const duplicate = isAnyDuplicate(row);
-  if (filter === "duplicates") return duplicate;
-  return !duplicate;
+  if (filter === "non_duplicates") return isCleanForPayout(row);
+  if (filter === "fingerprint") return isFingerprintFlagged(row);
+  if (filter === "ip_review") return isIpReviewOnly(row);
+  if (filter === "duplicates") return isAnyDuplicate(row);
+  return true;
 }
 
 /**
@@ -140,6 +155,7 @@ export function matchesPayoutDuplicateFilter(
 ): boolean {
   if (filter === "all") return true;
   if (filter === "clean") return isCleanForPayout(row);
+  if (filter === "ip_review") return isIpReviewOnly(row);
   // "flagged" = any duplicate signal (IP or fingerprint)
   return isAnyDuplicate(row);
 }

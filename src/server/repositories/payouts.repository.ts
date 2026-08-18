@@ -64,7 +64,12 @@ export type PayoutListParams = {
 
 export type PayoutListCounts = {
   mode: { referral: number; survey: number };
-  duplicate: { all: number; flagged: number; clean: number };
+  duplicate: {
+    all: number;
+    flagged: number;
+    clean: number;
+    ip_review: number;
+  };
 };
 
 type ParticipantPayoutRow = {
@@ -364,7 +369,9 @@ export async function listPayouts(params: PayoutListParams) {
 
   const mode: PayoutMode = params.mode === "survey" ? "survey" : "referral";
   const duplicateFilter: PayoutDuplicateFilter =
-    params.duplicateFilter === "flagged" || params.duplicateFilter === "clean"
+    params.duplicateFilter === "flagged" ||
+    params.duplicateFilter === "clean" ||
+    params.duplicateFilter === "ip_review"
       ? params.duplicateFilter
       : "all";
 
@@ -390,6 +397,9 @@ export async function listPayouts(params: PayoutListParams) {
       ).length,
       clean: afterMode.filter((row) =>
         matchesPayoutDuplicateFilter(row, "clean"),
+      ).length,
+      ip_review: afterMode.filter((row) =>
+        matchesPayoutDuplicateFilter(row, "ip_review"),
       ).length,
     },
   };

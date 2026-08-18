@@ -120,12 +120,12 @@ type SortBy =
 
 type PayoutCounts = {
   mode: { referral: number; survey: number };
-  duplicate: { all: number; flagged: number; clean: number };
+  duplicate: { all: number; flagged: number; clean: number; ip_review: number };
 };
 
 const EMPTY_COUNTS: PayoutCounts = {
   mode: { referral: 0, survey: 0 },
-  duplicate: { all: 0, flagged: 0, clean: 0 },
+  duplicate: { all: 0, flagged: 0, clean: 0, ip_review: 0 },
 };
 
 function parseModeParam(value: string | null): PayoutMode {
@@ -133,7 +133,13 @@ function parseModeParam(value: string | null): PayoutMode {
 }
 
 function parseDuplicateParam(value: string | null): PayoutDuplicateFilter {
-  if (value === "flagged" || value === "clean") return value;
+  if (
+    value === "flagged" ||
+    value === "clean" ||
+    value === "ip_review"
+  ) {
+    return value;
+  }
   return "all";
 }
 
