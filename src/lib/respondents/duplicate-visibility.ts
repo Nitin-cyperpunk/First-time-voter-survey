@@ -1,3 +1,23 @@
+// ─── Operative rule (single canonical location) ──────────────────────────────
+//
+// FINGERPRINT match (including "both"):
+//   duplicate_flag=true → INELIGIBLE on both sides of any pair or cluster.
+//   Excluded from "clean". No referral reward. No survey payout.
+//   Rationale: a device fingerprint identifies the same physical device with
+//   high confidence. Matching fingerprints are strong evidence of the same person.
+//
+// IP-ONLY match:
+//   is_flagged_duplicate=true, duplicate_flag=false → REVIEW only.
+//   Still counted as "clean". Still payable.
+//   Rationale: CGNAT in India means hundreds of mobile users share one public
+//   IP address, and household members share a home connection. Withholding
+//   money on IP alone would penalise a large number of genuine respondents.
+//   Changing this requires an explicit product decision.
+//
+// These are two separately queryable states, not one shared flag.
+// This file is the single authoritative definition. Import from here everywhere.
+// ─────────────────────────────────────────────────────────────────────────────
+
 export type DuplicateMatchType = "none" | "ip" | "fingerprint" | "both";
 
 export type DuplicateFilter = "all" | "duplicates" | "non_duplicates";
@@ -11,7 +31,7 @@ export const DUPLICATE_FILTER_OPTIONS: Array<{
   { value: "non_duplicates", label: "Non-Duplicates" },
 ];
 
-/** Payout-tab labels: a flag for review, not an accusation. */
+/** Payout-tab labels. "Flagged" = either signal. "Clean" = no fingerprint flag. */
 export type PayoutDuplicateFilter = "all" | "flagged" | "clean";
 
 export const PAYOUT_DUPLICATE_FILTER_OPTIONS: Array<{
@@ -40,10 +60,16 @@ export const DUPLICATE_MATCH_LABELS: Record<DuplicateMatchType, string> = {
 };
 
 export type DuplicateSignals = {
-  isFlaggedDuplicate: boolean;
-  duplicateFlag: boolean;
-  /** First-seen / source lead this row duplicates (same field as detail “First seen”). */
+  isFlaggedDuplicate: boolean;  // is_flagged_duplicate: IP-based flag
+  duplicateFlag: boolean;       // duplicate_flag: fingerprint-based flag
+  /** Lead ID of the earliest record in this cluster (set on non-original members). */
   originalParticipantLeadId?: string | null;
+  /** Shared cluster UUID, present on all members after migration 025. */
+  duplicateClusterId?: string | null;
+  /** True if this record is the chronologically first in its cluster. */
+  isFingerprintClusterOriginal?: boolean;
+  /** 'screener_evasion' when earlier entry was terminated and this one completed. */
+  duplicateGamingPattern?: string | null;
 };
 
 export function deriveDuplicateMatchType(
@@ -57,8 +83,35 @@ export function deriveDuplicateMatchType(
   return "none";
 }
 
+/** True if the record has ANY duplicate signal (IP or fingerprint). */
 export function isAnyDuplicate(row: DuplicateSignals): boolean {
   return deriveDuplicateMatchType(row) !== "none";
+}
+
+/**
+ * True if this record has a FINGERPRINT duplicate flag (duplicate_flag=true).
+ * This is the ineligibility signal — both the original and later members of a
+ * fingerprint cluster have this set.
+ * IP-only records return false — they are still clean and payable.
+ */
+export function isFingerprintFlagged(row: DuplicateSignals): boolean {
+  return row.duplicateFlag === true;
+}
+
+/**
+ * Whether a record is "clean" for payout and reward purposes.
+ *
+ * CLEAN  = duplicate_flag is false (fingerprint is absent on this record).
+ *          IP-only records (is_flagged_duplicate=true, duplicate_flag=false)
+ *          ARE clean — see operative rule above.
+ *
+ * NOT CLEAN = duplicate_flag is true (fingerprint match, either side of pair).
+ *
+ * This is the single definition of "clean". Use it everywhere — filter, payout
+ * query, reward eligibility, export.
+ */
+export function isCleanForPayout(row: DuplicateSignals): boolean {
+  return !isFingerprintFlagged(row);
 }
 
 export function matchesDuplicateFilter(
@@ -72,17 +125,23 @@ export function matchesDuplicateFilter(
 }
 
 /**
- * Payout duplicate filter. NULL/false on both signals is Clean — older rows
- * that predate fingerprinting must not fall through Flagged and Clean.
+ * Payout duplicate filter.
+ *
+ * "clean"   → isCleanForPayout(row): no fingerprint flag. IP-only stays clean.
+ * "flagged" → isAnyDuplicate(row): either IP or fingerprint signal present.
+ * "all"     → always true.
+ *
+ * NULL/false on both signals is clean — records predating fingerprinting must
+ * not fall between "flagged" and "clean".
  */
 export function matchesPayoutDuplicateFilter(
   row: DuplicateSignals,
   filter: PayoutDuplicateFilter,
 ): boolean {
   if (filter === "all") return true;
-  const flagged = isAnyDuplicate(row);
-  if (filter === "flagged") return flagged;
-  return !flagged;
+  if (filter === "clean") return isCleanForPayout(row);
+  // "flagged" = any duplicate signal (IP or fingerprint)
+  return isAnyDuplicate(row);
 }
 
 export function formatDuplicateStatusLabel(row: DuplicateSignals): string {
@@ -110,6 +169,9 @@ export type DuplicateExportFields = {
   duplicate_flag: string;
   duplicate_match_type: string;
   duplicate_matched_lead_id: string;
+  duplicate_cluster_id: string;
+  is_fingerprint_cluster_original: string;
+  duplicate_gaming_pattern: string;
 };
 
 export function buildDuplicateExportFields(
@@ -120,5 +182,9 @@ export function buildDuplicateExportFields(
     duplicate_flag: formatDuplicateFlagExport(row),
     duplicate_match_type: formatDuplicateMatchTypeExport(row),
     duplicate_matched_lead_id: isAnyDuplicate(row) ? matched : "",
+    duplicate_cluster_id: row.duplicateClusterId ?? "",
+    is_fingerprint_cluster_original:
+      row.isFingerprintClusterOriginal === true ? "Yes" : "",
+    duplicate_gaming_pattern: row.duplicateGamingPattern ?? "",
   };
 }

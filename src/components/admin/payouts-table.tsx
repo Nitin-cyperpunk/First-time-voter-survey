@@ -85,6 +85,9 @@ type PayoutApiRow = {
   duplicateReason: string | null;
   ipAddress: string | null;
   originalParticipantLeadId: string | null;
+  duplicateClusterId: string | null;
+  isFingerprintClusterOriginal: boolean;
+  duplicateGamingPattern: string | null;
   ipAssociatedLeadIds: string[];
   createdAt: string | null;
 };
@@ -894,8 +897,31 @@ export function PayoutsTable() {
                     value={selected.isFlaggedDuplicate ? "Yes" : "No"}
                   />
                   <DetailRow
-                    label="Fingerprint flag"
-                    value={selected.duplicateFlag ? "Yes" : "No"}
+                    label="Fingerprint flag (ineligible)"
+                    value={selected.duplicateFlag ? "Yes — INELIGIBLE" : "No"}
+                  />
+                  <DetailRow
+                    label="Role in cluster"
+                    value={
+                      !selected.duplicateClusterId
+                        ? "—"
+                        : selected.isFingerprintClusterOriginal
+                          ? "Original (first seen)"
+                          : "Later entry"
+                    }
+                  />
+                  <DetailRow
+                    label="Gaming pattern"
+                    value={
+                      selected.duplicateGamingPattern === "screener_evasion"
+                        ? "⚠ Screener evasion"
+                        : "—"
+                    }
+                  />
+                  <DetailRow
+                    label="Cluster ID"
+                    value={selected.duplicateClusterId ?? "—"}
+                    mono
                   />
                   <DetailRow
                     label="Duplicate reason"

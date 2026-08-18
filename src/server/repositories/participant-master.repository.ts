@@ -36,6 +36,9 @@ export type ParticipantMasterRecord = {
     duplicateDetectedAt: Date | null;
     reviewStatus: string;
     originalParticipantLeadId: string | null;
+    duplicateClusterId: string | null;
+    isFingerprintClusterOriginal: boolean;
+    duplicateGamingPattern: string | null;
     createdAt: Date;
   };
   referral: {
@@ -151,6 +154,9 @@ export async function getParticipantMasterRecord(
       duplicateDetectedAt: participant.duplicateDetectedAt,
       reviewStatus: participant.reviewStatus,
       originalParticipantLeadId: participant.originalParticipantLeadId,
+      duplicateClusterId: participant.duplicateClusterId,
+      isFingerprintClusterOriginal: participant.isFingerprintClusterOriginal,
+      duplicateGamingPattern: participant.duplicateGamingPattern,
       createdAt: participant.createdAt,
     },
     referral: {

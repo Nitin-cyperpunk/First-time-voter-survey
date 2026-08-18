@@ -11,6 +11,9 @@ export const PARTICIPANT_LIST_EXPORT_HEADERS = [
   "duplicate_flag",
   "duplicate_match_type",
   "duplicate_matched_lead_id",
+  "duplicate_cluster_id",
+  "is_fingerprint_cluster_original",
+  "duplicate_gaming_pattern",
 ] as const;
 
 export function rowsToParticipantExport(
@@ -24,6 +27,9 @@ export function rowsToParticipantExport(
     isFlaggedDuplicate?: boolean;
     duplicateFlag?: boolean;
     originalParticipantLeadId?: string | null;
+    duplicateClusterId?: string | null;
+    isFingerprintClusterOriginal?: boolean;
+    duplicateGamingPattern?: string | null;
   }>,
 ): Record<string, string | number>[] {
   return rows.map((row) => {
@@ -31,6 +37,9 @@ export function rowsToParticipantExport(
       isFlaggedDuplicate: Boolean(row.isFlaggedDuplicate),
       duplicateFlag: Boolean(row.duplicateFlag),
       originalParticipantLeadId: row.originalParticipantLeadId ?? null,
+      duplicateClusterId: row.duplicateClusterId ?? null,
+      isFingerprintClusterOriginal: row.isFingerprintClusterOriginal ?? false,
+      duplicateGamingPattern: row.duplicateGamingPattern ?? null,
     });
     return {
       Lead_ID: row.leadId,
@@ -42,6 +51,9 @@ export function rowsToParticipantExport(
       duplicate_flag: duplicate.duplicate_flag,
       duplicate_match_type: duplicate.duplicate_match_type,
       duplicate_matched_lead_id: duplicate.duplicate_matched_lead_id,
+      duplicate_cluster_id: duplicate.duplicate_cluster_id,
+      is_fingerprint_cluster_original: duplicate.is_fingerprint_cluster_original,
+      duplicate_gaming_pattern: duplicate.duplicate_gaming_pattern,
     };
   });
 }

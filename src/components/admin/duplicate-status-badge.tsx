@@ -12,22 +12,21 @@ import {
 import {
   deriveDuplicateMatchType,
   DUPLICATE_MATCH_LABELS,
+  isFingerprintFlagged,
   type DuplicateSignals,
 } from "@/lib/respondents/duplicate-visibility";
 
+// Fingerprint-ineligible and IP-review must be visually distinct.
+// They are two separately queryable and separately actionable states.
 function variantForMatchType(
   matchType: ReturnType<typeof deriveDuplicateMatchType>,
+  isIneligible: boolean,
 ): StatusPillVariant {
-  switch (matchType) {
-    case "none":
-      return "lead";
-    case "ip":
-      return "fail";
-    case "fingerprint":
-      return "review";
-    case "both":
-      return "notEligible";
-  }
+  if (matchType === "none") return "lead";
+  // Fingerprint (including "both") → ineligible → stronger colour
+  if (isIneligible) return "notEligible";
+  // IP-only → review flag only → softer colour
+  return "review";
 }
 
 type DuplicateStatusBadgeProps = {
@@ -41,24 +40,35 @@ export function DuplicateStatusBadge({
   ipAssociatedLeadIds = [],
 }: DuplicateStatusBadgeProps) {
   const matchType = deriveDuplicateMatchType(row);
+  const isIneligible = isFingerprintFlagged(row);
   const sharedIpLeads = ipAssociatedLeadIds.filter(Boolean);
   const isIpDuplicate = matchType === "ip" || matchType === "both";
   const showIpHover = isIpDuplicate && sharedIpLeads.length > 1;
 
   const sourceLeadId = row.originalParticipantLeadId?.trim() || null;
+  const isOriginal = row.isFingerprintClusterOriginal === true;
+  const isGaming = row.duplicateGamingPattern === "screener_evasion";
 
   const body =
     matchType === "none" ? (
       <span className="text-sm text-muted-foreground">No</span>
     ) : (
       <div className="flex flex-col gap-1">
-        <StatusPill variant={variantForMatchType(matchType)}>Yes</StatusPill>
+        <StatusPill variant={variantForMatchType(matchType, isIneligible)}>
+          {isIneligible
+            ? isOriginal
+              ? "Ineligible (original)"
+              : "Ineligible"
+            : "Review"}
+        </StatusPill>
         <span className="text-[11px] font-medium text-plum-muted">
           {DUPLICATE_MATCH_LABELS[matchType]}
+          {isIneligible && !isOriginal && isGaming ? " · ⚠ Screener evasion" : ""}
+          {isIneligible && isOriginal ? " · First seen" : ""}
         </span>
         {sourceLeadId ? (
           <span className="font-mono text-[11px] text-plum-muted">
-            {sourceLeadId}
+            ↑ {sourceLeadId}
           </span>
         ) : null}
       </div>

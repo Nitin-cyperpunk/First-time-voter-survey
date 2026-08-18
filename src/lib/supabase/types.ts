@@ -60,6 +60,9 @@ export type Database = {
           duplicate_detected_at: string | null;
           review_status: string;
           original_participant_lead_id: string | null;
+          duplicate_cluster_id: string | null;
+          is_fingerprint_cluster_original: boolean;
+          duplicate_gaming_pattern: string | null;
           created_at: string;
           deleted_at: string | null;
           deleted_by: string | null;
@@ -96,6 +99,9 @@ export type Database = {
           duplicate_detected_at?: string | null;
           review_status?: string;
           original_participant_lead_id?: string | null;
+          duplicate_cluster_id?: string | null;
+          is_fingerprint_cluster_original?: boolean;
+          duplicate_gaming_pattern?: string | null;
           created_at?: string;
           deleted_at?: string | null;
           deleted_by?: string | null;

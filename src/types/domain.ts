@@ -25,6 +25,9 @@ export type Participant = {
   duplicateDetectedAt: Date | null;
   reviewStatus: string;
   originalParticipantLeadId: string | null;
+  duplicateClusterId: string | null;
+  isFingerprintClusterOriginal: boolean;
+  duplicateGamingPattern: string | null;
   createdAt: Date;
 };
 

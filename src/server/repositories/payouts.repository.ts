@@ -1,8 +1,11 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getRewardAmounts } from "@/lib/study-config/rewards";
 import {
+  isFingerprintFlagged,
+  isCleanForPayout,
   matchesPayoutDuplicateFilter,
   type PayoutDuplicateFilter,
+  type DuplicateSignals,
 } from "@/lib/respondents/duplicate-visibility";
 import { getActivePublishedForm } from "@/server/repositories/forms.repository";
 
@@ -34,6 +37,9 @@ export type PayoutRow = {
   duplicateReason: string | null;
   ipAddress: string | null;
   originalParticipantLeadId: string | null;
+  duplicateClusterId: string | null;
+  isFingerprintClusterOriginal: boolean;
+  duplicateGamingPattern: string | null;
   /** All lead IDs sharing this participant's IP (including self). */
   ipAssociatedLeadIds: string[];
   createdAt: Date | null;
@@ -74,6 +80,9 @@ type ParticipantPayoutRow = {
   duplicate_reason: string | null;
   ip_address: string | null;
   original_participant_lead_id: string | null;
+  duplicate_cluster_id: string | null;
+  is_fingerprint_cluster_original: boolean | null;
+  duplicate_gaming_pattern: string | null;
   created_at: string | null;
   payouts:
     | { payment_status: string; payment_date: string | null }
@@ -172,7 +181,7 @@ export async function listPayouts(params: PayoutListParams) {
   const { data: participants, error } = await getSupabaseAdmin()
     .from("participants")
     .select(
-      "lead_id, full_name, mobile, email, city, status, upi_id, referral_code, is_flagged_duplicate, duplicate_flag, duplicate_reason, ip_address, original_participant_lead_id, created_at, payouts(payment_status, payment_date)",
+      "lead_id, full_name, mobile, email, city, status, upi_id, referral_code, is_flagged_duplicate, duplicate_flag, duplicate_reason, ip_address, original_participant_lead_id, duplicate_cluster_id, is_fingerprint_cluster_original, duplicate_gaming_pattern, created_at, payouts(payment_status, payment_date)",
     )
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
@@ -183,6 +192,13 @@ export async function listPayouts(params: PayoutListParams) {
   const leadIds = rows.map((row) => row.lead_id);
   const nameByLeadId = new Map(
     rows.map((row) => [row.lead_id, row.full_name] as const),
+  );
+  // Build a set of lead IDs that are fingerprint-flagged (duplicate_flag=true).
+  // Referrals where the REFERRED person is fingerprint-flagged do not count
+  // toward the referrer's payable total — a flagged referred person is ineligible
+  // and should not generate a reward for the referrer.
+  const fingerprintFlaggedLeadIds = new Set(
+    rows.filter((row) => Boolean(row.duplicate_flag)).map((row) => row.lead_id),
   );
 
   const leadsByIp = new Map<string, string[]>();
@@ -208,10 +224,42 @@ export async function listPayouts(params: PayoutListParams) {
 
   if (referralsError) throw referralsError;
 
+  // Fetch duplicate_flag for referred participants who may not be in `rows`
+  // (e.g. referred persons who are terminated — not in the payout list).
+  const referredIds = [
+    ...new Set(
+      (referrals ?? [])
+        .map((r) => r.referred_lead_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  if (referredIds.length > 0) {
+    const { data: referredParticipants } = await getSupabaseAdmin()
+      .from("participants")
+      .select("lead_id, duplicate_flag")
+      .in("lead_id", referredIds);
+    for (const rp of referredParticipants ?? []) {
+      if (rp.duplicate_flag) {
+        fingerprintFlaggedLeadIds.add(rp.lead_id);
+      }
+    }
+  }
+
   const referralEarningsByLead = new Map<string, number>();
   const referredNamesByLead = new Map<string, string[]>();
   for (const referral of referrals ?? []) {
     if (!referral.referrer_lead_id) continue;
+
+    // If the REFERRED person is fingerprint-flagged (ineligible), this referral
+    // does not count toward the referrer's payable total. The referral still
+    // appears in the drawer — it is not deleted — but its amount is excluded.
+    if (
+      referral.referred_lead_id &&
+      fingerprintFlaggedLeadIds.has(referral.referred_lead_id)
+    ) {
+      continue;
+    }
+
     const stored =
       referral.reward_amount !== null && referral.reward_amount !== undefined
         ? Number(referral.reward_amount)
@@ -267,6 +315,9 @@ export async function listPayouts(params: PayoutListParams) {
       duplicateReason: row.duplicate_reason,
       ipAddress: row.ip_address,
       originalParticipantLeadId: row.original_participant_lead_id,
+      duplicateClusterId: row.duplicate_cluster_id ?? null,
+      isFingerprintClusterOriginal: Boolean(row.is_fingerprint_cluster_original),
+      duplicateGamingPattern: row.duplicate_gaming_pattern ?? null,
       ipAssociatedLeadIds: row.ip_address?.trim()
         ? (leadsByIp.get(row.ip_address.trim()) ?? [row.lead_id])
         : [],

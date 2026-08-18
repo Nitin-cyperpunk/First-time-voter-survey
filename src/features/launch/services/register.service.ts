@@ -568,6 +568,7 @@ export async function registerParticipant(
 
   await checkDuplicateFingerprint({
     leadId: participant.leadId,
+    status: finalStatus,
     fingerprint: deviceFingerprint,
     ipAddress: options.ipAddress ?? null,
     userAgent: options.userAgent ?? null,

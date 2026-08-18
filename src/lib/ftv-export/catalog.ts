@@ -320,6 +320,9 @@ export const FTV_DUPLICATE_EXPORT_HEADERS = [
   "duplicate_flag",
   "duplicate_match_type",
   "duplicate_matched_lead_id",
+  "duplicate_cluster_id",
+  "is_fingerprint_cluster_original",
+  "duplicate_gaming_pattern",
 ] as const;
 
 export const FTV_EXPORT_HEADERS: string[] = [

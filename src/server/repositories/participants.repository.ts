@@ -62,6 +62,9 @@ export function mapParticipant(row: ParticipantRow): Participant {
       : null,
     reviewStatus: row.review_status ?? "Pending",
     originalParticipantLeadId: row.original_participant_lead_id ?? null,
+    duplicateClusterId: (row as Record<string, unknown>).duplicate_cluster_id as string | null ?? null,
+    isFingerprintClusterOriginal: Boolean((row as Record<string, unknown>).is_fingerprint_cluster_original),
+    duplicateGamingPattern: (row as Record<string, unknown>).duplicate_gaming_pattern as string | null ?? null,
     createdAt: new Date(row.created_at),
   };
 }

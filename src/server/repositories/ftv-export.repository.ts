@@ -262,7 +262,7 @@ export async function listFtvExportBundle(
       const { data: participantRows, error: participantError } = await supabase
         .from("participants")
         .select(
-          "lead_id, is_flagged_duplicate, duplicate_flag, original_participant_lead_id",
+          "lead_id, is_flagged_duplicate, duplicate_flag, original_participant_lead_id, duplicate_cluster_id, is_fingerprint_cluster_original, duplicate_gaming_pattern",
         )
         .in("lead_id", chunk)
         .is("deleted_at", null);
@@ -275,6 +275,12 @@ export async function listFtvExportBundle(
             duplicateFlag: Boolean(participant.duplicate_flag),
             originalParticipantLeadId:
               participant.original_participant_lead_id ?? null,
+            duplicateClusterId:
+              (participant as Record<string, unknown>).duplicate_cluster_id as string | null ?? null,
+            isFingerprintClusterOriginal:
+              Boolean((participant as Record<string, unknown>).is_fingerprint_cluster_original),
+            duplicateGamingPattern:
+              (participant as Record<string, unknown>).duplicate_gaming_pattern as string | null ?? null,
           }),
         );
       }
@@ -289,6 +295,9 @@ export async function listFtvExportBundle(
         isFlaggedDuplicate: false,
         duplicateFlag: false,
         originalParticipantLeadId: null,
+        duplicateClusterId: null,
+        isFingerprintClusterOriginal: false,
+        duplicateGamingPattern: null,
       });
     return {
       ...row,

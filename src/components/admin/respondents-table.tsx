@@ -79,6 +79,9 @@ export type RespondentTableRow = {
   duplicateDetectedAt: string | null;
   reviewStatus: string;
   originalParticipantLeadId: string | null;
+  duplicateClusterId: string | null;
+  isFingerprintClusterOriginal: boolean;
+  duplicateGamingPattern: string | null;
   deviceFingerprint: string | null;
   ipAddress: string | null;
   hasScreener: boolean;
@@ -796,6 +799,29 @@ export function RespondentsTable({
                     label="First seen (original lead)"
                     value={selected.originalParticipantLeadId ?? "—"}
                     mono
+                  />
+                  <DetailRow
+                    label="Cluster ID"
+                    value={selected.duplicateClusterId ?? "—"}
+                    mono
+                  />
+                  <DetailRow
+                    label="Role in cluster"
+                    value={
+                      !selected.duplicateClusterId
+                        ? "—"
+                        : selected.isFingerprintClusterOriginal
+                          ? "Original (first seen)"
+                          : "Later entry"
+                    }
+                  />
+                  <DetailRow
+                    label="Gaming pattern"
+                    value={
+                      selected.duplicateGamingPattern === "screener_evasion"
+                        ? "⚠ Screener evasion (earlier entry terminated)"
+                        : "—"
+                    }
                   />
                   <DetailRow
                     label="Detected at"
