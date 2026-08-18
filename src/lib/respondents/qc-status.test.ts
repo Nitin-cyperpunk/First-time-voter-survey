@@ -53,6 +53,18 @@ test("auto QC: IP-only → review not fail", () => {
   );
 });
 
+test("auto QC: hollow complete → review", () => {
+  assert.equal(
+    computeAutoQcStatus({
+      status: "completed",
+      duplicateFlag: false,
+      isFlaggedDuplicate: false,
+      surveyDataIncomplete: true,
+    }),
+    "review",
+  );
+});
+
 test("effective QC uses override when set", () => {
   const row = {
     status: "completed",
@@ -69,6 +81,17 @@ test("survey payout amount uses effective pass", () => {
   const row = { status: "completed", duplicateFlag: false, isFlaggedDuplicate: false };
   assert.equal(surveyPayoutAmount(row, "pass", rate), 75);
   assert.equal(surveyPayoutAmount(row, "review", rate), 0);
+});
+
+test("survey payout amount excludes hollow complete", () => {
+  const rate = 75;
+  const hollow = {
+    status: "completed",
+    duplicateFlag: false,
+    isFlaggedDuplicate: false,
+    surveyDataIncomplete: true,
+  };
+  assert.equal(surveyPayoutAmount(hollow, "pass", rate), 0);
 });
 
 test("override reason minimum length", () => {

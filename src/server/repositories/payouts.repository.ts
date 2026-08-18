@@ -98,6 +98,7 @@ type ParticipantPayoutRow = {
   is_fingerprint_cluster_original: boolean | null;
   duplicate_gaming_pattern: string | null;
   qc_status_override: string | null;
+  survey_data_incomplete: boolean | null;
   created_at: string | null;
   payouts:
     | { payment_status: string; payment_date: string | null }
@@ -181,7 +182,7 @@ export async function listPayouts(params: PayoutListParams) {
   const { data: participants, error } = await getSupabaseAdmin()
     .from("participants")
     .select(
-      "lead_id, full_name, mobile, email, city, status, upi_id, referral_code, is_flagged_duplicate, duplicate_flag, duplicate_reason, ip_address, original_participant_lead_id, duplicate_cluster_id, is_fingerprint_cluster_original, duplicate_gaming_pattern, qc_status_override, created_at, payouts(payment_status, payment_date)",
+      "lead_id, full_name, mobile, email, city, status, upi_id, referral_code, is_flagged_duplicate, duplicate_flag, duplicate_reason, ip_address, original_participant_lead_id, duplicate_cluster_id, is_fingerprint_cluster_original, duplicate_gaming_pattern, qc_status_override, survey_data_incomplete, created_at, payouts(payment_status, payment_date)",
     )
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
@@ -311,6 +312,7 @@ export async function listPayouts(params: PayoutListParams) {
       status: row.status,
       duplicateFlag: row.duplicate_flag === true,
       isFlaggedDuplicate: row.is_flagged_duplicate === true,
+      surveyDataIncomplete: row.survey_data_incomplete === true,
       qcStatusOverride:
         row.qc_status_override === "pass" ||
         row.qc_status_override === "fail" ||

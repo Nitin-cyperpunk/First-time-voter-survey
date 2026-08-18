@@ -56,6 +56,7 @@ export default async function RespondentsOpsPage() {
     otherSource: participant.otherSource,
     createdAt: formatDate(participant.createdAt),
     qcStatusOverride: participant.qcStatusOverride ?? null,
+    surveyDataIncomplete: participant.surveyDataIncomplete,
   }));
 
   return (

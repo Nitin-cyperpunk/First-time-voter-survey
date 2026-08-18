@@ -83,12 +83,19 @@ test("deliverable clean excludes fingerprint and QC fail; IP-only stays", () => 
     isFlaggedDuplicate: false,
     duplicateFlag: false,
   };
+  const hollow = {
+    status: "completed",
+    isFlaggedDuplicate: false,
+    duplicateFlag: false,
+    surveyDataIncomplete: true,
+  };
 
   assert.equal(isDeliverableClean(ipComplete), true);
   assert.equal(isDeliverableClean(fpComplete), false);
   assert.equal(isDeliverableClean(qcFail), false);
   assert.equal(isDeliverableClean(adminPass), true);
   assert.equal(isDeliverableClean(terminated), false);
+  assert.equal(isDeliverableClean(hollow), false);
 });
 
 test("survey earnings match deliverable clean eligibility", () => {

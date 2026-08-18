@@ -29,6 +29,7 @@ export type Participant = {
   isFingerprintClusterOriginal: boolean;
   duplicateGamingPattern: string | null;
   qcStatusOverride: "pass" | "fail" | "review" | null;
+  surveyDataIncomplete: boolean;
   createdAt: Date;
 };
 

@@ -29,6 +29,7 @@ type ParticipantQcRow = {
   duplicate_flag: boolean | null;
   is_flagged_duplicate: boolean | null;
   qc_status_override: string | null;
+  survey_data_incomplete: boolean | null;
 };
 
 function mapLogRow(row: Record<string, unknown>): QcOverrideLogEntry {
@@ -55,6 +56,7 @@ function toQcRow(row: ParticipantQcRow) {
     status: row.status,
     duplicateFlag: row.duplicate_flag === true,
     isFlaggedDuplicate: row.is_flagged_duplicate === true,
+    surveyDataIncomplete: row.survey_data_incomplete === true,
     qcStatusOverride: (row.qc_status_override as QcStatusValue | null) ?? null,
   };
 }
@@ -87,7 +89,7 @@ export async function applyQcOverride(input: {
   const { data: participant, error: fetchError } = await getSupabaseAdmin()
     .from("participants")
     .select(
-      "lead_id, status, duplicate_flag, is_flagged_duplicate, qc_status_override",
+      "lead_id, status, duplicate_flag, is_flagged_duplicate, qc_status_override, survey_data_incomplete",
     )
     .eq("lead_id", input.leadId)
     .is("deleted_at", null)

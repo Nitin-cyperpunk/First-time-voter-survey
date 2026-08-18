@@ -22,6 +22,10 @@ import {
   isQualifiedCompletionStatus,
   normalizeParticipantStatus,
 } from "@/lib/participant-lifecycle";
+import {
+  isSurveyDataComplete,
+  type SurveyCompletenessInput,
+} from "@/lib/respondents/survey-completeness";
 
 export type DuplicateMatchType = "none" | "ip" | "fingerprint" | "both";
 
@@ -127,7 +131,18 @@ export function isCleanForPayout(row: DuplicateSignals): boolean {
   return !isFingerprintFlagged(row);
 }
 
-export type DeliverableRow = DuplicateSignals & { status: string };
+export type DeliverableRow = DuplicateSignals & {
+  status: string;
+  surveyDataIncomplete?: boolean;
+};
+
+export type DeliverableParticipantInput = {
+  status: string;
+  duplicate_flag?: boolean | null;
+  is_flagged_duplicate?: boolean | null;
+  survey_data_incomplete?: boolean | null;
+  surveyDataIncomplete?: boolean | null;
+};
 
 /** Admin QC pass or downstream successful / paid (override counts as clean). */
 export function isQcEffectivePass(status: string): boolean {
@@ -152,11 +167,20 @@ export function isQcEffectiveFail(status: string): boolean {
  * IP-only flags remain included. Terminated and pre-complete statuses are excluded.
  * QC-failed rows are excluded; awaiting QC (status=completed) counts until failed.
  * Admin Pass → successful/review_pass/paid stays clean.
+ * Hollow completes (survey_data_incomplete) are excluded.
  */
 export function isDeliverableClean(row: DeliverableRow): boolean {
   if (!isQualifiedCompletionStatus(row.status)) return false;
   if (!isCleanForPayout(row)) return false;
   if (isQcEffectiveFail(row.status)) return false;
+  if (
+    !isSurveyDataComplete({
+      status: row.status,
+      surveyDataIncomplete: row.surveyDataIncomplete,
+    })
+  ) {
+    return false;
+  }
   return true;
 }
 
@@ -169,15 +193,34 @@ export function surveyEarningsAmount(
 }
 
 /** Map DB / API snake_case participant fields to DeliverableRow signals. */
-export function toDeliverableRow(participant: {
-  status: string;
-  duplicate_flag?: boolean | null;
-  is_flagged_duplicate?: boolean | null;
-}): DeliverableRow {
+export function toDeliverableRow(participant: DeliverableParticipantInput): DeliverableRow {
   return {
     status: participant.status,
     duplicateFlag: participant.duplicate_flag === true,
     isFlaggedDuplicate: participant.is_flagged_duplicate === true,
+    surveyDataIncomplete:
+      participant.surveyDataIncomplete === true ||
+      participant.survey_data_incomplete === true,
+  };
+}
+
+export function toSurveyCompletenessInput(
+  participant: DeliverableParticipantInput &
+    Partial<
+      Pick<
+        SurveyCompletenessInput,
+        "screenerAnswers" | "screenerAnalytics" | "ftvPayload"
+      >
+    >,
+): SurveyCompletenessInput {
+  return {
+    status: participant.status,
+    surveyDataIncomplete:
+      participant.surveyDataIncomplete === true ||
+      participant.survey_data_incomplete === true,
+    screenerAnswers: participant.screenerAnswers,
+    screenerAnalytics: participant.screenerAnalytics,
+    ftvPayload: participant.ftvPayload,
   };
 }
 

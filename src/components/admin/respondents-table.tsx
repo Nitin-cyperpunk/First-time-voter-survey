@@ -102,6 +102,7 @@ export type RespondentTableRow = {
   otherSource: string | null;
   createdAt: string;
   qcStatusOverride: QcStatusValue | null;
+  surveyDataIncomplete: boolean;
 };
 
 type RespondentsTableProps = {

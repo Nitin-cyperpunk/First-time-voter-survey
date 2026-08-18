@@ -68,6 +68,8 @@ export function mapParticipant(row: ParticipantRow): Participant {
     qcStatusOverride: normalizeQcOverride(
       (row as Record<string, unknown>).qc_status_override,
     ),
+    surveyDataIncomplete:
+      (row as Record<string, unknown>).survey_data_incomplete === true,
     createdAt: new Date(row.created_at),
   };
 }

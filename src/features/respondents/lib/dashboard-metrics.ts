@@ -127,7 +127,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
       .limit(2000),
     db
       .from("participants")
-      .select("status, duplicate_flag, is_flagged_duplicate")
+      .select("status, duplicate_flag, is_flagged_duplicate, survey_data_incomplete")
       .is("deleted_at", null)
       .in("status", [...QUALIFIED_COMPLETION_STATUSES]),
   ]);

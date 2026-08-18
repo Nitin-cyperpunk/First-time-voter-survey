@@ -6,12 +6,14 @@ import {
   type DeliverableRow,
   type DuplicateSignals,
 } from "@/lib/respondents/duplicate-visibility";
+import { isSurveyDataComplete } from "@/lib/respondents/survey-completeness";
 
 export type QcStatusValue = "pass" | "fail" | "review";
 
 export type QcStatusRow = DuplicateSignals & {
   status: string;
   qcStatusOverride?: QcStatusValue | null;
+  surveyDataIncomplete?: boolean;
 };
 
 /** Minimum non-whitespace characters for an override reason (server-enforced too). */
@@ -36,15 +38,24 @@ export type QcFilter = (typeof QC_FILTER_OPTIONS)[number]["value"];
 /**
  * Automatic QC rules (single source — reads duplicate-visibility, does not re-derive).
  *
- * PASS   = not fingerprint-cluster member AND not terminated
+ * PASS   = not fingerprint-cluster member AND not terminated AND survey data present
  * FAIL   = fingerprint cluster member (duplicate_flag=true, either side incl. original)
- * REVIEW = terminated without fingerprint cluster; OR IP-only flagged
+ * REVIEW = terminated without fingerprint cluster; OR IP-only flagged; OR hollow complete
  *
  * Terminated → REVIEW (not auto-fail) so mistaken terminations can be recovered via override.
  * IP-only never auto-fails — CGNAT / shared home connections in India are weak evidence.
+ * Hollow completes → REVIEW (not auto-fail) so a mistaken flag can be overridden.
  */
 export function computeAutoQcStatus(row: QcStatusRow): QcStatusValue {
   if (isFingerprintFlagged(row)) return "fail";
+  if (
+    !isSurveyDataComplete({
+      status: row.status,
+      surveyDataIncomplete: row.surveyDataIncomplete,
+    })
+  ) {
+    return "review";
+  }
   if (isTerminatedStatus(row.status)) return "review";
   if (isIpReviewOnly(row)) return "review";
   return "pass";
@@ -83,6 +94,14 @@ export function isSurveyPayoutEligible(
 ): boolean {
   if (!isQualifiedCompletionStatus(row.status)) return false;
   if (isQcEffectiveFail(row.status)) return false;
+  if (
+    !isSurveyDataComplete({
+      status: row.status,
+      surveyDataIncomplete: row.surveyDataIncomplete,
+    })
+  ) {
+    return false;
+  }
   return effectiveQc === "pass";
 }
 
@@ -113,6 +132,14 @@ export function qcStatusVariant(
 export function autoQcRuleSummary(row: QcStatusRow): string {
   if (isFingerprintFlagged(row)) {
     return "Fingerprint duplicate cluster member (both sides ineligible).";
+  }
+  if (
+    !isSurveyDataComplete({
+      status: row.status,
+      surveyDataIncomplete: row.surveyDataIncomplete,
+    })
+  ) {
+    return "Survey data missing or empty — held for review (hollow complete).";
   }
   if (isTerminatedStatus(row.status)) {
     return "Terminated — held for manual review (not auto-failed).";

@@ -21,6 +21,7 @@ export const PARTICIPANT_LIST_EXPORT_HEADERS = [
   "duplicate_gaming_pattern",
   "qc_status",
   "qc_overridden",
+  "survey_data_incomplete",
   "qc_override_reason_latest",
   "qc_decided_by_latest",
   "qc_decided_at_latest",
@@ -41,6 +42,7 @@ export function rowsToParticipantExport(
     isFingerprintClusterOriginal?: boolean;
     duplicateGamingPattern?: string | null;
     qcStatusOverride?: "pass" | "fail" | "review" | null;
+    surveyDataIncomplete?: boolean;
     qcOverrideReasonLatest?: string | null;
     qcDecidedByLatest?: string | null;
     qcDecidedAtLatest?: string | null;
@@ -60,6 +62,7 @@ export function rowsToParticipantExport(
       duplicateFlag: Boolean(row.duplicateFlag),
       isFlaggedDuplicate: Boolean(row.isFlaggedDuplicate),
       qcStatusOverride: row.qcStatusOverride ?? null,
+      surveyDataIncomplete: row.surveyDataIncomplete === true,
     });
     return {
       Lead_ID: row.leadId,
@@ -80,9 +83,11 @@ export function rowsToParticipantExport(
         duplicateFlag: Boolean(row.duplicateFlag),
         isFlaggedDuplicate: Boolean(row.isFlaggedDuplicate),
         qcStatusOverride: row.qcStatusOverride ?? null,
+        surveyDataIncomplete: row.surveyDataIncomplete === true,
       })
         ? "Yes"
         : "",
+      survey_data_incomplete: row.surveyDataIncomplete ? "Yes" : "",
       qc_override_reason_latest: row.qcOverrideReasonLatest ?? "",
       qc_decided_by_latest: row.qcDecidedByLatest ?? "",
       qc_decided_at_latest: row.qcDecidedAtLatest ?? "",
