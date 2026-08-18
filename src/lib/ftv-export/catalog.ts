@@ -221,9 +221,9 @@ export const FTV_METADATA_HEADERS = [
   "respondent_id",
   "survey_version",
   "status",
-  "started_at",
-  "completed_at",
-  "terminated_at",
+  "started_at (IST)",
+  "completed_at (IST)",
+  "terminated_at (IST)",
   "duration_seconds",
   "consent",
   "terms_accepted",
@@ -233,7 +233,7 @@ export const FTV_METADATA_HEADERS = [
   "order_q6b",
   "order_q14",
   "state_match",
-  "created_at",
+  "created_at (IST)",
 ] as const;
 
 export const FTV_PROFILE_HEADERS = [

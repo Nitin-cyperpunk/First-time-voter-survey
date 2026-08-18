@@ -3,6 +3,12 @@ import * as XLSXStyle from "xlsx-js-style";
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 
 import {
+  EXPORT_DATETIME_NUMBER_FORMAT,
+  isExportDateTimeHeader,
+  toIstExcelDate,
+} from "@/lib/format-admin-datetime";
+
+import {
   RAZORPAY_UPI_COLUMN_VALIDATIONS,
   RAZORPAY_UPI_HEADERS,
   PAYOUT_READINESS_HEADER,
@@ -46,12 +52,42 @@ function autoColumnWidths(
     );
     // Datetime meta cols need extra width so Excel doesn't show ########
     const minWidth =
-      header === "Started at" || header === "Completed at" ? 26 : 12;
+      isExportDateTimeHeader(header) ||
+      header === "Started at" ||
+      header === "Completed at"
+        ? 22
+        : 12;
     return { wch: Math.min(Math.max(maxLen + 2, minWidth), 48) };
   });
 }
 
-function buildWorksheet(
+function applyIstExcelDateCells(
+  worksheet: XLSX.WorkSheet,
+  headers: string[],
+) {
+  const ref = worksheet["!ref"];
+  if (!ref) return;
+  const range = XLSX.utils.decode_range(ref);
+  for (let c = 0; c <= range.e.c; c += 1) {
+    const header = headers[c];
+    if (!header || !isExportDateTimeHeader(header)) continue;
+    for (let r = 1; r <= range.e.r; r += 1) {
+      const address = XLSX.utils.encode_cell({ r, c });
+      const cell = worksheet[address];
+      if (!cell || cell.v == null || cell.v === "") continue;
+      const excelDate = toIstExcelDate(
+        cell.v instanceof Date ? cell.v : String(cell.v),
+      );
+      if (excelDate === "") continue;
+      const serial =
+        (excelDate.getTime() - Date.UTC(1899, 11, 30)) / 86400000;
+      cell.t = "n";
+      cell.v = serial;
+      cell.z = EXPORT_DATETIME_NUMBER_FORMAT;
+      delete cell.w;
+    }
+  }
+}
   rows: ExportRow[],
   options: WorksheetOptions = {},
 ): XLSX.WorkSheet {

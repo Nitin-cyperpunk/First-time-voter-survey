@@ -1,4 +1,5 @@
 import type { ExportRow } from "@/lib/export";
+import { formatExportDateTime } from "@/lib/format-admin-datetime";
 import {
   FTV_EXPORT_HEADERS,
   Q6A_HEADERS,
@@ -164,9 +165,9 @@ export function pivotFtvWideRow(
   row.respondent_id = cell(respondent.respondent_id);
   row.survey_version = cell(respondent.survey_version);
   row.status = cell(respondent.status);
-  row.started_at = cell(respondent.started_at);
-  row.completed_at = cell(respondent.completed_at);
-  row.terminated_at = cell(respondent.terminated_at);
+  row["started_at (IST)"] = formatExportDateTime(respondent.started_at);
+  row["completed_at (IST)"] = formatExportDateTime(respondent.completed_at);
+  row["terminated_at (IST)"] = formatExportDateTime(respondent.terminated_at);
   row.duration_seconds = cell(respondent.duration_seconds);
   row.consent = cell(respondent.consent);
   row.terms_accepted = cell(respondent.terms_accepted);
@@ -176,7 +177,7 @@ export function pivotFtvWideRow(
   row.order_q6b = cell(respondent.order_q6b);
   row.order_q14 = cell(respondent.order_q14);
   row.state_match = cell(respondent.state_match);
-  row.created_at = cell(respondent.created_at);
+  row["created_at (IST)"] = formatExportDateTime(respondent.created_at);
 
   row.name = cell(respondent.name);
   row.email = cell(respondent.email);
