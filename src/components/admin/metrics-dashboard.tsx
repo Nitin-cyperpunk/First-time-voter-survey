@@ -27,6 +27,30 @@ const REFRESH_MS = 30_000;
 const RING_R = 54;
 const RING_C = 2 * Math.PI * RING_R;
 
+const CLEAN_DELIVERABLE_TOOLTIP =
+  "Deliverable completes: no fingerprint duplicate (both sides excluded). IP-only flags stay included. Terminated excluded. QC-failed excluded; awaiting QC counts until failed. Admin Pass stays clean.";
+
+function cleanDeliverableHint(
+  cleanDeliverable: number,
+  closesAt: number,
+  funnelStatus: FunnelSnapshotStatus,
+  completed: number,
+): string {
+  const shortfall = Math.max(0, closesAt - cleanDeliverable);
+  const base = `of ${closesAt} target · deliverable`;
+  if (shortfall <= 0) {
+    return `${base} · target met`;
+  }
+  const need = `${shortfall} more clean needed`;
+  if (
+    (funnelStatus === "over" || funnelStatus === "full") &&
+    cleanDeliverable < closesAt
+  ) {
+    return `${base} · ${need} · cap is on completed (${completed}), not clean`;
+  }
+  return `${base} · ${need}`;
+}
+
 type SectionKey =
   | "funnel"
   | "target"
@@ -235,6 +259,21 @@ export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
               accent: "teal" as const,
             },
             {
+              label: "Clean / QC passed",
+              value: kpis.cleanDeliverable,
+              hint: cleanDeliverableHint(
+                kpis.cleanDeliverable,
+                config.closesAt,
+                funnel.status,
+                kpis.completed,
+              ),
+              tooltip: CLEAN_DELIVERABLE_TOOLTIP,
+              accent: "blue" as const,
+              emphasize:
+                kpis.cleanDeliverable < config.closesAt &&
+                (funnel.status === "over" || funnel.status === "full"),
+            },
+            {
               label: "Terminated",
               value: kpis.terminated,
               hint: "Q1/Q2 screen-out",
@@ -259,6 +298,8 @@ export function MetricsDashboard({ initialMetrics }: MetricsDashboardProps) {
             label={tile.label}
             value={tile.value}
             hint={tile.hint}
+            tooltip={"tooltip" in tile ? tile.tooltip : undefined}
+            emphasize={"emphasize" in tile ? tile.emphasize : false}
             accent={tile.accent}
             delayMs={index * 45}
           />
@@ -546,13 +587,17 @@ function KpiTile({
   label,
   value,
   hint,
+  tooltip,
   accent,
+  emphasize = false,
   delayMs = 0,
 }: {
   label: string;
   value: number;
   hint: string;
+  tooltip?: string;
   accent: "rose" | "teal" | "blue" | "plum" | "amber";
+  emphasize?: boolean;
   delayMs?: number;
 }) {
   const bar = {
@@ -566,10 +611,12 @@ function KpiTile({
   return (
     <div
       className={cn(
-        "metrics-kpi-enter relative overflow-hidden rounded-[14px] border border-border bg-card p-4 shadow-sm before:absolute before:inset-y-0 before:left-0 before:w-[3px]",
+        "metrics-kpi-enter relative overflow-hidden rounded-[14px] border bg-card p-4 shadow-sm before:absolute before:inset-y-0 before:left-0 before:w-[3px]",
+        emphasize ? "border-primary/40 bg-accent-soft/30" : "border-border",
         bar,
       )}
       style={{ animationDelay: `${delayMs}ms` }}
+      title={tooltip}
     >
       <p className="font-mono text-2xl font-bold tabular-nums tracking-tight text-foreground">
         {value}
@@ -577,7 +624,7 @@ function KpiTile({
       <p className="mt-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
         {label}
       </p>
-      <p className="mt-0.5 text-[11px] text-plum-muted">{hint}</p>
+      <p className="mt-0.5 text-[11px] leading-snug text-plum-muted">{hint}</p>
     </div>
   );
 }

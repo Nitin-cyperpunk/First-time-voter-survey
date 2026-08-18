@@ -18,6 +18,11 @@
 // This file is the single authoritative definition. Import from here everywhere.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import {
+  isQualifiedCompletionStatus,
+  normalizeParticipantStatus,
+} from "@/lib/participant-lifecycle";
+
 export type DuplicateMatchType = "none" | "ip" | "fingerprint" | "both";
 
 export type DuplicateFilter =
@@ -120,6 +125,52 @@ export function isFingerprintFlagged(row: DuplicateSignals): boolean {
  */
 export function isCleanForPayout(row: DuplicateSignals): boolean {
   return !isFingerprintFlagged(row);
+}
+
+export type DeliverableRow = DuplicateSignals & { status: string };
+
+/** Admin QC pass or downstream successful / paid (override counts as clean). */
+export function isQcEffectivePass(status: string): boolean {
+  const normalized = normalizeParticipantStatus(status);
+  return (
+    normalized === "review_pass" ||
+    normalized === "successful" ||
+    normalized === "paid"
+  );
+}
+
+/** Admin QC fail or downstream unsuccessful. */
+export function isQcEffectiveFail(status: string): boolean {
+  const normalized = normalizeParticipantStatus(status);
+  return normalized === "review_fail" || normalized === "unsuccessful";
+}
+
+/**
+ * Deliverable clean count — single definition for dashboard, filters, payout, export.
+ *
+ * Includes qualified completions that pass the fingerprint clean rule (isCleanForPayout).
+ * IP-only flags remain included. Terminated and pre-complete statuses are excluded.
+ * QC-failed rows are excluded; awaiting QC (status=completed) counts until failed.
+ * Admin Pass → successful/review_pass/paid stays clean.
+ */
+export function isDeliverableClean(row: DeliverableRow): boolean {
+  if (!isQualifiedCompletionStatus(row.status)) return false;
+  if (!isCleanForPayout(row)) return false;
+  if (isQcEffectiveFail(row.status)) return false;
+  return true;
+}
+
+/** Map DB / API snake_case participant fields to DeliverableRow signals. */
+export function toDeliverableRow(participant: {
+  status: string;
+  duplicate_flag?: boolean | null;
+  is_flagged_duplicate?: boolean | null;
+}): DeliverableRow {
+  return {
+    status: participant.status,
+    duplicateFlag: participant.duplicate_flag === true,
+    isFlaggedDuplicate: participant.is_flagged_duplicate === true,
+  };
 }
 
 /** IP-only review flag: shared IP, no fingerprint match on this record. */

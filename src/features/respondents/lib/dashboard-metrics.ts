@@ -7,6 +7,10 @@ import { aggregateNormalizedCitiesSplit } from "@/features/respondents/lib/city-
 import { buildFunnelSnapshot } from "@/features/respondents/lib/funnel-snapshot";
 import { QUALIFIED_COMPLETION_STATUSES } from "@/features/respondents/lib/metric-status-sets";
 import { closesAt } from "@/lib/study-config/defaults";
+import {
+  isDeliverableClean,
+  toDeliverableRow,
+} from "@/lib/respondents/duplicate-visibility";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getStudyConfig } from "@/server/repositories/form-settings.repository";
 
@@ -67,6 +71,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     cityRes,
     terminationsRes,
     timingRes,
+    deliverableRes,
   ] = await Promise.all([
     db
       .from("participants")
@@ -120,6 +125,11 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
       .select("total_duration_sec")
       .is("deleted_at", null)
       .limit(2000),
+    db
+      .from("participants")
+      .select("status, duplicate_flag, is_flagged_duplicate")
+      .is("deleted_at", null)
+      .in("status", [...QUALIFIED_COMPLETION_STATUSES]),
   ]);
 
   for (const result of [
@@ -132,6 +142,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     completedReferralsRes,
     acquisitionRes,
     cityRes,
+    deliverableRes,
   ]) {
     if (result.error) throw result.error;
   }
@@ -192,6 +203,9 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
   const completed = completedRes.count ?? 0;
   const terminated = terminatedRes.count ?? 0;
   const paid = paidRes.count ?? 0;
+  const cleanDeliverable = (deliverableRes.data ?? []).filter((row) =>
+    isDeliverableClean(toDeliverableRow(row)),
+  ).length;
   const fraudFlagged = Math.max(
     fraudRes.count ?? 0,
     fraudLegacyRes.count ?? 0,
@@ -227,6 +241,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
   const kpis = {
     registered,
     completed,
+    cleanDeliverable,
     terminated,
     fraudFlagged,
     paid,
