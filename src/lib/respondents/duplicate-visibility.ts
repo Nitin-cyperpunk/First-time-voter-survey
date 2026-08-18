@@ -160,6 +160,14 @@ export function isDeliverableClean(row: DeliverableRow): boolean {
   return true;
 }
 
+/** @deprecated Use surveyPayoutAmount from qc-status with effective QC. */
+export function surveyEarningsAmount(
+  row: DeliverableRow,
+  surveyRewardAmount: number,
+): number {
+  return isDeliverableClean(row) ? surveyRewardAmount : 0;
+}
+
 /** Map DB / API snake_case participant fields to DeliverableRow signals. */
 export function toDeliverableRow(participant: {
   status: string;

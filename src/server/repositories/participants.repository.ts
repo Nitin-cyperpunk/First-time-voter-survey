@@ -65,8 +65,16 @@ export function mapParticipant(row: ParticipantRow): Participant {
     duplicateClusterId: (row as Record<string, unknown>).duplicate_cluster_id as string | null ?? null,
     isFingerprintClusterOriginal: Boolean((row as Record<string, unknown>).is_fingerprint_cluster_original),
     duplicateGamingPattern: (row as Record<string, unknown>).duplicate_gaming_pattern as string | null ?? null,
+    qcStatusOverride: normalizeQcOverride(
+      (row as Record<string, unknown>).qc_status_override,
+    ),
     createdAt: new Date(row.created_at),
   };
+}
+
+function normalizeQcOverride(value: unknown): "pass" | "fail" | "review" | null {
+  if (value === "pass" || value === "fail" || value === "review") return value;
+  return null;
 }
 
 function toInsert(input: ParticipantCreateInput): ParticipantInsert {

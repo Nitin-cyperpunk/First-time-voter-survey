@@ -63,6 +63,15 @@ import {
   matchesDuplicateFilter,
   type DuplicateFilter,
 } from "@/lib/respondents/duplicate-visibility";
+import {
+  computeEffectiveQcStatus,
+  matchesQcFilter,
+  type QcFilter,
+  QC_FILTER_OPTIONS,
+  type QcStatusValue,
+} from "@/lib/respondents/qc-status";
+import { QcOverrideModal, type QcOverrideTarget } from "@/components/admin/qc-override-modal";
+import { QcStatusBadge, QcTableCell } from "@/components/admin/qc-status-badge";
 
 export type RespondentTableRow = {
   leadId: string;
@@ -92,6 +101,7 @@ export type RespondentTableRow = {
   referralPlatform: string | null;
   otherSource: string | null;
   createdAt: string;
+  qcStatusOverride: QcStatusValue | null;
 };
 
 type RespondentsTableProps = {
@@ -133,10 +143,6 @@ function statusVariant(status: string): StatusPillVariant {
   if (normalized === "review_fail") return "fail";
   if (normalized.includes("pending")) return "pending";
   return "lead";
-}
-
-function canRunQc(status: string) {
-  return normalizeParticipantStatus(status) === "completed";
 }
 
 function matchesStatusFilter(status: string, filter: StatusFilter) {
@@ -197,8 +203,22 @@ export function RespondentsTable({
     useState<ScreenerOutcomeFilter>("all");
   const [duplicateFilter, setDuplicateFilter] =
     useState<DuplicateFilter>("all");
+  const [qcFilter, setQcFilter] = useState<QcFilter>("all");
   const [selected, setSelected] = useState<RespondentTableRow | null>(null);
-  const [qcUpdating, setQcUpdating] = useState<"pass" | "fail" | null>(null);
+  const [overrideTarget, setOverrideTarget] = useState<QcOverrideTarget | null>(
+    null,
+  );
+  const [overrideBusy, setOverrideBusy] = useState(false);
+  const [qcLog, setQcLog] = useState<
+    Array<{
+      id: string;
+      previousEffectiveStatus: string;
+      newEffectiveStatus: string;
+      reason: string;
+      changedByEmail: string;
+      createdAt: string;
+    }>
+  >([]);
   const [deleteTarget, setDeleteTarget] = useState<RespondentTableRow | null>(
     null,
   );
@@ -266,6 +286,7 @@ export function RespondentsTable({
         ) {
           return false;
         }
+        if (!matchesQcFilter(row, qcFilter)) return false;
         return true;
       }),
     [
@@ -275,6 +296,7 @@ export function RespondentsTable({
       acquisitionTypeFilter,
       sourceFilter,
       platformFilter,
+      qcFilter,
     ],
   );
 
@@ -307,56 +329,12 @@ export function RespondentsTable({
   }, [
     statusFilter,
     duplicateFilter,
+    qcFilter,
     screenerOutcomeFilter,
     acquisitionTypeFilter,
     sourceFilter,
     platformFilter,
   ]);
-
-  async function handleQcUpdate(outcome: "pass" | "fail") {
-    if (!selected) return;
-
-    setQcUpdating(outcome);
-
-    const loadingId = toastLoading("Updating status...");
-
-    try {
-      const response = await fetch(
-        `/api/respondents/${encodeURIComponent(selected.leadId)}/qc`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ outcome }),
-        },
-      );
-      const payload = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        throw new Error(payload.error ?? "Failed to update QC status.");
-      }
-
-      const nextStatus =
-        typeof payload.status === "string" ? payload.status : selected.status;
-      setRows((current) =>
-        current.map((row) =>
-          row.leadId === selected.leadId ? { ...row, status: nextStatus } : row,
-        ),
-      );
-      setSelected((current) =>
-        current ? { ...current, status: nextStatus } : current,
-      );
-      dismissToast(loadingId);
-      toastSuccess("✅ Status Updated Successfully");
-      router.refresh();
-    } catch (error) {
-      dismissToast(loadingId);
-      toastError(
-        error instanceof Error ? error.message : "Failed to update QC status.",
-      );
-    } finally {
-      setQcUpdating(null);
-    }
-  }
 
   async function handleDeleteRespondent(reason: string) {
     if (!deleteTarget) return;
@@ -405,7 +383,89 @@ export function RespondentsTable({
     sourceFilter !== "all" ||
     platformFilter !== "all" ||
     screenerOutcomeFilter !== "all" ||
-    duplicateFilter !== "all";
+    duplicateFilter !== "all" ||
+    qcFilter !== "all";
+
+  useEffect(() => {
+    if (!selected) {
+      setQcLog([]);
+      return;
+    }
+    void fetch(
+      `/api/admin/respondents/${encodeURIComponent(selected.leadId)}/qc-override`,
+    )
+      .then((res) => res.json())
+      .then((payload) => {
+        if (Array.isArray(payload.log)) setQcLog(payload.log);
+      })
+      .catch(() => setQcLog([]));
+  }, [selected?.leadId]);
+
+  function openOverrideModal(row: RespondentTableRow, newOverride: QcStatusValue) {
+    setOverrideTarget({
+      leadId: row.leadId,
+      fullName: row.fullName,
+      newOverride,
+      status: row.status,
+      duplicateFlag: row.duplicateFlag,
+      isFlaggedDuplicate: row.isFlaggedDuplicate,
+      originalParticipantLeadId: row.originalParticipantLeadId,
+      duplicateClusterId: row.duplicateClusterId,
+      isFingerprintClusterOriginal: row.isFingerprintClusterOriginal,
+      duplicateGamingPattern: row.duplicateGamingPattern,
+      qcStatusOverride: row.qcStatusOverride,
+    });
+  }
+
+  async function handleQcOverrideConfirm(reason: string) {
+    if (!overrideTarget) return;
+    setOverrideBusy(true);
+    const loadingId = toastLoading("Saving QC override...");
+    try {
+      const response = await fetch(
+        `/api/admin/respondents/${encodeURIComponent(overrideTarget.leadId)}/qc-override`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            override: overrideTarget.newOverride,
+            reason,
+          }),
+        },
+      );
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Failed to apply QC override.");
+      }
+
+      setRows((current) =>
+        current.map((row) =>
+          row.leadId === overrideTarget.leadId
+            ? {
+                ...row,
+                qcStatusOverride: overrideTarget.newOverride,
+              }
+            : row,
+        ),
+      );
+      setSelected((current) =>
+        current?.leadId === overrideTarget.leadId
+          ? { ...current, qcStatusOverride: overrideTarget.newOverride }
+          : current,
+      );
+      dismissToast(loadingId);
+      toastSuccess("QC override saved.");
+      setOverrideTarget(null);
+      router.refresh();
+    } catch (error) {
+      dismissToast(loadingId);
+      toastError(
+        error instanceof Error ? error.message : "Failed to apply QC override.",
+      );
+    } finally {
+      setOverrideBusy(false);
+    }
+  }
 
   function exportFilteredList(format: "csv" | "excel") {
     if (filteredRows.length === 0) {
@@ -502,6 +562,20 @@ export function RespondentsTable({
             {filter.value === "duplicates" && visibleDuplicateCount > 0
               ? ` (${visibleDuplicateCount})`
               : ""}
+          </Button>
+        ))}
+      </div>
+
+      <div className="-mx-1 flex flex-wrap gap-2 overflow-x-auto px-1 pb-1">
+        {QC_FILTER_OPTIONS.map((filter) => (
+          <Button
+            key={filter.value}
+            type="button"
+            size="sm"
+            variant={qcFilter === filter.value ? "default" : "outline"}
+            onClick={() => setQcFilter(filter.value)}
+          >
+            {filter.label}
           </Button>
         ))}
       </div>
@@ -616,6 +690,7 @@ export function RespondentsTable({
               <TableHead>Type</TableHead>
               <TableHead>Ref. platform</TableHead>
               <TableHead>Survey</TableHead>
+              <TableHead className="min-w-[5.5rem]">QC</TableHead>
               <TableHead>Duplicate</TableHead>
               <TableHead>Registered</TableHead>
             </TableRow>
@@ -624,7 +699,7 @@ export function RespondentsTable({
             {filteredRows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={14}
+                  colSpan={15}
                   className="py-8 text-center text-muted-foreground"
                 >
                   {rows.length === 0
@@ -691,6 +766,14 @@ export function RespondentsTable({
                     >
                       {participant.hasScreener ? "Submitted" : "Missing"}
                     </StatusPill>
+                  </TableCell>
+                  <TableCell className="px-2" onClick={(e) => e.stopPropagation()}>
+                    <QcTableCell
+                      row={participant}
+                      onRequestOverride={(newOverride) =>
+                        openOverrideModal(participant, newOverride)
+                      }
+                    />
                   </TableCell>
                   <TableCell>
                     <DuplicateStatusBadge row={participant} />
@@ -913,40 +996,75 @@ export function RespondentsTable({
 
                 <SectionTitle>Quality control</SectionTitle>
                 <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() => void handleQcUpdate("pass")}
-                      disabled={
-                        qcUpdating !== null || !canRunQc(selected.status)
-                      }
-                    >
-                      {qcUpdating === "pass" ? "Saving..." : "Pass QC"}
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => void handleQcUpdate("fail")}
-                      disabled={
-                        qcUpdating !== null || !canRunQc(selected.status)
-                      }
-                    >
-                      {qcUpdating === "fail" ? "Saving..." : "Fail QC"}
-                    </Button>
+                  <div className="flex items-center justify-between gap-4 border-b border-dashed border-border pb-3 text-sm">
+                    <span className="text-plum-muted">QC status</span>
+                    <QcStatusBadge row={selected} />
                   </div>
-                  <p className="text-xs text-plum-muted">
-                    QC is available after the participant completes the form.
-                    Pass moves them to successful; fail moves them to
-                    unsuccessful.
-                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(["fail", "review"] as const).includes(
+                      computeEffectiveQcStatus(selected),
+                    ) ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => openOverrideModal(selected, "pass")}
+                      >
+                        Override to Pass
+                      </Button>
+                    ) : null}
+                    {computeEffectiveQcStatus(selected) === "pass" ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openOverrideModal(selected, "fail")}
+                      >
+                        Override to Fail
+                      </Button>
+                    ) : null}
+                  </div>
+                  {qcLog.length > 0 ? (
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-plum-muted">
+                        Override history
+                      </p>
+                      <ul className="max-h-40 space-y-2 overflow-y-auto text-xs">
+                        {qcLog.map((entry) => (
+                          <li
+                            key={entry.id}
+                            className="rounded-lg border border-border bg-accent-soft/40 p-2"
+                          >
+                            <p className="font-medium text-foreground">
+                              {entry.previousEffectiveStatus} →{" "}
+                              {entry.newEffectiveStatus}
+                            </p>
+                            <p className="mt-1 text-plum-muted">{entry.reason}</p>
+                            <p className="mt-1 text-[10px] text-plum-faint">
+                              {entry.changedByEmail} ·{" "}
+                              {new Date(entry.createdAt).toLocaleString("en-IN")}
+                            </p>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-plum-muted">No overrides logged yet.</p>
+                  )}
                 </div>
               </div>
             </>
           ) : null}
         </SheetContent>
       </Sheet>
+
+      <QcOverrideModal
+        target={overrideTarget}
+        busy={overrideBusy}
+        onOpenChange={(open) => {
+          if (!open) setOverrideTarget(null);
+        }}
+        onConfirm={handleQcOverrideConfirm}
+      />
 
       {canDelete ? (
         <RespondentDeleteDialog

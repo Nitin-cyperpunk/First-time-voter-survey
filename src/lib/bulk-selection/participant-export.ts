@@ -1,5 +1,10 @@
 import { downloadCsv, downloadExcel } from "@/lib/export";
 import { buildDuplicateExportFields } from "@/lib/respondents/duplicate-visibility";
+import {
+  computeEffectiveQcStatus,
+  isQcStatusOverridden,
+  QC_STATUS_LABELS,
+} from "@/lib/respondents/qc-status";
 
 export const PARTICIPANT_LIST_EXPORT_HEADERS = [
   "Lead_ID",
@@ -14,6 +19,11 @@ export const PARTICIPANT_LIST_EXPORT_HEADERS = [
   "duplicate_cluster_id",
   "is_fingerprint_cluster_original",
   "duplicate_gaming_pattern",
+  "qc_status",
+  "qc_overridden",
+  "qc_override_reason_latest",
+  "qc_decided_by_latest",
+  "qc_decided_at_latest",
 ] as const;
 
 export function rowsToParticipantExport(
@@ -30,6 +40,10 @@ export function rowsToParticipantExport(
     duplicateClusterId?: string | null;
     isFingerprintClusterOriginal?: boolean;
     duplicateGamingPattern?: string | null;
+    qcStatusOverride?: "pass" | "fail" | "review" | null;
+    qcOverrideReasonLatest?: string | null;
+    qcDecidedByLatest?: string | null;
+    qcDecidedAtLatest?: string | null;
   }>,
 ): Record<string, string | number>[] {
   return rows.map((row) => {
@@ -40,6 +54,12 @@ export function rowsToParticipantExport(
       duplicateClusterId: row.duplicateClusterId ?? null,
       isFingerprintClusterOriginal: row.isFingerprintClusterOriginal ?? false,
       duplicateGamingPattern: row.duplicateGamingPattern ?? null,
+    });
+    const effective = computeEffectiveQcStatus({
+      status: row.status,
+      duplicateFlag: Boolean(row.duplicateFlag),
+      isFlaggedDuplicate: Boolean(row.isFlaggedDuplicate),
+      qcStatusOverride: row.qcStatusOverride ?? null,
     });
     return {
       Lead_ID: row.leadId,
@@ -54,6 +74,18 @@ export function rowsToParticipantExport(
       duplicate_cluster_id: duplicate.duplicate_cluster_id,
       is_fingerprint_cluster_original: duplicate.is_fingerprint_cluster_original,
       duplicate_gaming_pattern: duplicate.duplicate_gaming_pattern,
+      qc_status: QC_STATUS_LABELS[effective],
+      qc_overridden: isQcStatusOverridden({
+        status: row.status,
+        duplicateFlag: Boolean(row.duplicateFlag),
+        isFlaggedDuplicate: Boolean(row.isFlaggedDuplicate),
+        qcStatusOverride: row.qcStatusOverride ?? null,
+      })
+        ? "Yes"
+        : "",
+      qc_override_reason_latest: row.qcOverrideReasonLatest ?? "",
+      qc_decided_by_latest: row.qcDecidedByLatest ?? "",
+      qc_decided_at_latest: row.qcDecidedAtLatest ?? "",
     };
   });
 }

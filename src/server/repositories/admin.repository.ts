@@ -48,7 +48,7 @@ function matchesReferrerSearch(
   );
 }
 
-export async function listParticipants(limit = 200) {
+export async function listParticipants(limit = 10_000) {
   const { data, error } = await getSupabaseAdmin()
     .from("participants")
     .select("*")

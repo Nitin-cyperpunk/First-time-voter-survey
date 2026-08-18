@@ -8,6 +8,7 @@ import {
   isIpReviewOnly,
   matchesDuplicateFilter,
   matchesPayoutDuplicateFilter,
+  surveyEarningsAmount,
 } from "@/lib/respondents/duplicate-visibility";
 
 test("NULL duplicate signals count as Clean, not Flagged", () => {
@@ -88,4 +89,21 @@ test("deliverable clean excludes fingerprint and QC fail; IP-only stays", () => 
   assert.equal(isDeliverableClean(qcFail), false);
   assert.equal(isDeliverableClean(adminPass), true);
   assert.equal(isDeliverableClean(terminated), false);
+});
+
+test("survey earnings match deliverable clean eligibility", () => {
+  const rate = 75;
+  const cleanComplete = {
+    status: "completed",
+    isFlaggedDuplicate: false,
+    duplicateFlag: false,
+  };
+  const fpComplete = {
+    status: "completed",
+    isFlaggedDuplicate: false,
+    duplicateFlag: true,
+  };
+
+  assert.equal(surveyEarningsAmount(cleanComplete, rate), 75);
+  assert.equal(surveyEarningsAmount(fpComplete, rate), 0);
 });
